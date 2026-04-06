@@ -20,6 +20,7 @@ app.get('/api/status', (req, res) => {
 app.use('/api/inventario', inventarioRoutes);
 app.use('/api/utilizadores', utilizadorRoutes); 
 app.use('/api/aulas', aulaRoutes);
+app.use('/api/marcacoes', marcacaoRoutes);
 
 app.listen(PORT, () => {
     console.log(`Servidor a correr em http://localhost:${PORT}`);

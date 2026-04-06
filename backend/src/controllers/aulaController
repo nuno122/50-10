@@ -21,7 +21,7 @@ const criarAula = async (req, res) => {
     try {
         const { Data, HoraInicio, HoraFim, CapacidadeMaxima, Preco, IdProfessor, IdEstudio, IdEstiloDanca } = req.body;
 
-        
+        // --- INÍCIO DO MOTOR DE WORKFLOW (VALIDAÇÃO NO NODE.JS) ---
         const aulasNoDia = await prisma.aula.findMany({
             where: {
                 IdEstudio: IdEstudio,
