@@ -1,57 +1,32 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-
+const utilizadorRepo = require('../repositories/utilizadorRepository');
 
 const getUtilizadores = async (req, res) => {
     try {
-        const utilizadores = await prisma.utilizador.findMany();
+        const utilizadores = await utilizadorRepo.findAll();
         res.json(utilizadores);
     } catch (erro) {
-        console.error("Erro ao procurar utilizadores:", erro);
-        res.status(500).json({ erro: "Não foi possível carregar os utilizadores." });
+        res.status(500).json({ erro: "Erro ao carregar utilizadores." });
     }
 };
-
 
 const criarUtilizador = async (req, res) => {
     try {
-        // Adicionámos a Morada e o CodigoPostal à lista de dados recebidos
-        const { NomeCompleto, NomeUtilizador, Email, PalavraPasseHash, Permissoes, Nif, Morada, CodigoPostal } = req.body;
-
-        const novoUtilizador = await prisma.utilizador.create({
-            data: {
-                NomeCompleto,
-                NomeUtilizador,
-                Email,
-                PalavraPasseHash, 
-                Permissoes,       
-                Nif,
-                EstaAtivo: true,
-                Morada, // Campo obrigatório
-                // Ligação obrigatória à tabela de Códigos Postais
-                CodigoPostal_Utilizador_CodigoPostalToCodigoPostal: {
-                    connect: { CodigoPostal: CodigoPostal }
-                }
-            }
-        });
-
+        const novoUtilizador = await utilizadorRepo.create(req.body);
         res.status(201).json(novoUtilizador);
     } catch (erro) {
-        console.error("Erro ao criar utilizador:", erro);
-        res.status(500).json({ erro: "Não foi possível criar o utilizador." });
+        console.error(erro);
+        res.status(500).json({ erro: "Erro ao criar utilizador. Verifica se o Código Postal existe." });
     }
 };
 
-
-// Função de Login
 const login = async (req, res) => {
     try {
         const { Email, PalavraPasseHash } = req.body;
 
-        const utilizador = await prisma.utilizador.findUnique({
-            where: { Email: Email }
-        });
+        // 1. Pedir ao Repo para procurar o utilizador
+        const utilizador = await utilizadorRepo.findByEmail(Email);
 
+        // 2. Validações de segurança (Responsabilidade do Controller)
         if (!utilizador) {
             return res.status(401).json({ erro: "Utilizador não encontrado." });
         }
@@ -60,7 +35,8 @@ const login = async (req, res) => {
             return res.status(401).json({ erro: "Palavra-passe incorreta." });
         }
 
-        const { PalavraPasseHash: passwordRemovida, ...dadosSeguros } = utilizador;
+        // 3. Limpar dados sensíveis antes de enviar para o Frontend
+        const { PalavraPasseHash: _, ...dadosSeguros } = utilizador;
 
         res.json({ 
             mensagem: "Login efetuado com sucesso!", 
@@ -68,13 +44,8 @@ const login = async (req, res) => {
         });
 
     } catch (erro) {
-        console.error("Erro no login:", erro);
-        res.status(500).json({ erro: "Não foi possível processar o login." });
+        res.status(500).json({ erro: "Erro no processo de login." });
     }
 };
 
-module.exports = {
-    getUtilizadores,
-    criarUtilizador,
-    login
-};
+module.exports = { getUtilizadores, criarUtilizador, login };

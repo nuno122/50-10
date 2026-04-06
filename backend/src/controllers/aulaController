@@ -1,36 +1,23 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const aulaRepo = require('../repositories/aulaRepository');
 
 const getAulas = async (req, res) => {
     try {
-        const aulas = await prisma.aula.findMany({
-            include: {
-                Professor: true,
-                Estudio: true,
-                EstiloDanca: true
-            }
-        });
+        const aulas = await aulaRepo.findAll();
         res.json(aulas);
     } catch (erro) {
-        console.error("Erro ao procurar aulas:", erro);
-        res.status(500).json({ erro: "Não foi possível carregar as aulas." });
+        res.status(500).json({ erro: "Erro ao carregar as aulas." });
     }
 };
 
 const criarAula = async (req, res) => {
     try {
-        const { Data, HoraInicio, HoraFim, CapacidadeMaxima, Preco, IdProfessor, IdEstudio, IdEstiloDanca } = req.body;
+        const dados = req.body;
 
-        // --- INÍCIO DO MOTOR DE WORKFLOW (VALIDAÇÃO NO NODE.JS) ---
-        const aulasNoDia = await prisma.aula.findMany({
-            where: {
-                IdEstudio: IdEstudio,
-                Data: new Date(Data)
-            }
-        });
+        // 1. Validar sobreposição usando o Repository
+        const aulasNoDia = await aulaRepo.findOverlapping(dados.IdEstudio, dados.Data);
 
-        const novaHoraInicio = new Date(HoraInicio).getTime();
-        const novaHoraFim = new Date(HoraFim).getTime();
+        const novaHoraInicio = new Date(dados.HoraInicio).getTime();
+        const novaHoraFim = new Date(dados.HoraFim).getTime();
 
         const aulaSobreposta = aulasNoDia.find(aulaExistente => {
             const existenteInicio = new Date(aulaExistente.HoraInicio).getTime();
@@ -39,37 +26,17 @@ const criarAula = async (req, res) => {
         });
 
         if (aulaSobreposta) {
-            return res.status(400).json({ 
-                erro: "Conflito de horário! O estúdio já está ocupado nesse período." 
-            });
+            return res.status(400).json({ erro: "Conflito de horário! Estúdio ocupado." });
         }
-        
 
-        const novaAula = await prisma.aula.create({
-            data: {
-                Data: new Date(Data),
-                HoraInicio: new Date(HoraInicio),
-                HoraFim: new Date(HoraFim),
-                CapacidadeMaxima,
-                Preco,
-                ConfirmacaoProfessor: false,
-                ValidacaoDirecao: false,
-                EstaAtivo: true,
-                IdProfessor,
-                IdEstudio,
-                IdEstiloDanca
-            }
-        });
-
-        res.status(201).json({ mensagem: "Aula agendada com sucesso!", aula: novaAula });
+        // 2. Mandar criar
+        const novaAula = await aulaRepo.create(dados);
+        res.status(201).json({ mensagem: "Aula agendada!", aula: novaAula });
 
     } catch (erro) {
-        console.error("Erro ao criar aula:", erro);
+        console.error(erro);
         res.status(500).json({ erro: "Não foi possível agendar a aula." });
     }
 };
 
-module.exports = {
-    getAulas,
-    criarAula
-};
+module.exports = { getAulas, criarAula };

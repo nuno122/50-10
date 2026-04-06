@@ -1,96 +1,57 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const marcacaoRepo = require('../repositories/marcacaoRepository');
 
 const criarMarcacao = async (req, res) => {
     try {
-        const { IdAluno, IdAula } = req.body; 
+        const { IdAluno, IdAula } = req.body;
 
-     
+        // 1. Validação de Input
         if (!IdAluno || !IdAula) {
-            return res.status(400).json({ 
-                erro: "Dados incompletos! É obrigatório enviar o IdAluno e o IdAula." 
-            });
+            return res.status(400).json({ erro: "IdAluno e IdAula são obrigatórios." });
         }
 
-     
-        const alunoExiste = await prisma.aluno.findUnique({
-            where: { IdUtilizador: IdAluno }
-        });
-        if (!alunoExiste) {
-            return res.status(404).json({ erro: "Aluno não encontrado no sistema." });
-        }
+        // 2. Verificar se Aluno existe
+        const aluno = await marcacaoRepo.findAlunoById(IdAluno);
+        if (!aluno) return res.status(404).json({ erro: "Aluno não encontrado." });
 
-        const aula = await prisma.aula.findUnique({
-            where: { IdAula: IdAula },
-            include: { Marcacao: true } 
-        });
-        if (!aula) {
-            return res.status(404).json({ erro: "Aula não encontrada no sistema." });
-        }
+        // 3. Verificar se Aula existe e obter dados
+        const aula = await marcacaoRepo.findAulaWithMarcacoes(IdAula);
+        if (!aula) return res.status(404).json({ erro: "Aula não encontrada." });
 
-    
-        const dataDaAula = new Date(aula.Data);
+        // 4. Regra de Negócio: Data da Aula
         const hoje = new Date();
         hoje.setHours(0, 0, 0, 0);
-
-        if (dataDaAula < hoje) {
-            return res.status(400).json({ 
-                erro: "Não é possível fazer marcações para aulas que já começaram ou já passaram." 
-            });
+        if (new Date(aula.Data) < hoje) {
+            return res.status(400).json({ erro: "Não podes marcar aulas passadas." });
         }
 
-     
+        // 5. Regra de Negócio: Capacidade
         if (aula.Marcacao.length >= aula.CapacidadeMaxima) {
-            return res.status(400).json({ 
-                erro: "Turma cheia! Já não há vagas para esta aula." 
-            });
+            return res.status(400).json({ erro: "Aula lotada!" });
         }
-        
-       
-        const jaInscrito = await prisma.marcacao.findFirst({
-            where: {
-                Aluno: { IdUtilizador: IdAluno }, 
-                Aula: { IdAula: IdAula }     
-            }
-        });
 
+        // 6. Regra de Negócio: Duplicação
+        const jaInscrito = await marcacaoRepo.findExisting(IdAluno, IdAula);
         if (jaInscrito) {
-            return res.status(400).json({ 
-                erro: "Já tens uma inscrição ativa para esta aula!" 
-            });
+            return res.status(400).json({ erro: "Já estás inscrito nesta aula!" });
         }
 
-      
-        const novaMarcacao = await prisma.marcacao.create({
-            data: {
-                Aluno: { connect: { IdUtilizador: IdAluno } }, 
-                Aula: { connect: { IdAula: IdAula } },    
-                EstaAtivo: true,
-                PresencaConfirmada: false
-            }
-        });
-
-        res.status(201).json({ mensagem: "Lugar reservado com sucesso!", marcacao: novaMarcacao });
+        // 7. Sucesso: Criar
+        const novaMarcacao = await marcacaoRepo.create(IdAluno, IdAula);
+        res.status(201).json({ mensagem: "Lugar reservado!", marcacao: novaMarcacao });
 
     } catch (erro) {
-        console.error("Erro ao fazer marcação:", erro);
-        res.status(500).json({ erro: "Ocorreu um erro interno ao processar a marcação." });
+        console.error(erro);
+        res.status(500).json({ erro: "Erro ao processar a marcação." });
     }
 };
 
 const getMarcacoes = async (req, res) => {
     try {
-        const marcacoes = await prisma.marcacao.findMany({
-            include: { Aluno: true, Aula: true }
-        });
+        const marcacoes = await marcacaoRepo.findAll();
         res.json(marcacoes);
     } catch (erro) {
-        console.error("Erro ao carregar marcações:", erro);
-        res.status(500).json({ erro: "Não foi possível carregar as marcações." });
+        res.status(500).json({ erro: "Erro ao carregar marcações." });
     }
 };
 
-module.exports = {
-    criarMarcacao,
-    getMarcacoes
-};
+module.exports = { criarMarcacao, getMarcacoes };
