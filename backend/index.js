@@ -5,6 +5,7 @@ const cors = require('cors');
 const inventarioRoutes = require('./src/routes/inventarioRoutes');
 const utilizadorRoutes = require('./src/routes/utilizadorRoutes'); 
 const aulaRoutes = require('./src/routes/aulaRoutes');
+const marcacaoRoutes = require('./src/routes/marcacaoRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
