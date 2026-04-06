@@ -1,13 +1,26 @@
-const express = require('express')
-const app = express()
+const express = require('express');
+const cors = require('cors');
 
-app.use(express.json())
+// Importar as rotas
+const inventarioRoutes = require('./src/routes/inventarioRoutes');
+const utilizadorRoutes = require('./src/routes/utilizadorRoutes'); 
+const aulaRoutes = require('./src/routes/aulaRoutes');
 
-// rota de teste
-app.get('/', (req, res) => {
-  res.send('API a funcionar 🚀')
-})
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-app.listen(3000, () => {
-  console.log('Servidor a correr em http://localhost:3000')
-})
+app.use(cors());
+app.use(express.json());
+
+app.get('/api/status', (req, res) => {
+    res.json({ sucesso: true, mensagem: "O servidor da Ent'Artes está online! 🚀" });
+});
+
+// Ligar as rotas aos URLs
+app.use('/api/inventario', inventarioRoutes);
+app.use('/api/utilizadores', utilizadorRoutes); 
+app.use('/api/aulas', aulaRoutes);
+
+app.listen(PORT, () => {
+    console.log(`Servidor a correr em http://localhost:${PORT}`);
+});

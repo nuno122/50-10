@@ -1,0 +1,75 @@
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+const getAulas = async (req, res) => {
+    try {
+        const aulas = await prisma.aula.findMany({
+            include: {
+                Professor: true,
+                Estudio: true,
+                EstiloDanca: true
+            }
+        });
+        res.json(aulas);
+    } catch (erro) {
+        console.error("Erro ao procurar aulas:", erro);
+        res.status(500).json({ erro: "Não foi possível carregar as aulas." });
+    }
+};
+
+const criarAula = async (req, res) => {
+    try {
+        const { Data, HoraInicio, HoraFim, CapacidadeMaxima, Preco, IdProfessor, IdEstudio, IdEstiloDanca } = req.body;
+
+        
+        const aulasNoDia = await prisma.aula.findMany({
+            where: {
+                IdEstudio: IdEstudio,
+                Data: new Date(Data)
+            }
+        });
+
+        const novaHoraInicio = new Date(HoraInicio).getTime();
+        const novaHoraFim = new Date(HoraFim).getTime();
+
+        const aulaSobreposta = aulasNoDia.find(aulaExistente => {
+            const existenteInicio = new Date(aulaExistente.HoraInicio).getTime();
+            const existenteFim = new Date(aulaExistente.HoraFim).getTime();
+            return (novaHoraInicio < existenteFim && novaHoraFim > existenteInicio);
+        });
+
+        if (aulaSobreposta) {
+            return res.status(400).json({ 
+                erro: "Conflito de horário! O estúdio já está ocupado nesse período." 
+            });
+        }
+        
+
+        const novaAula = await prisma.aula.create({
+            data: {
+                Data: new Date(Data),
+                HoraInicio: new Date(HoraInicio),
+                HoraFim: new Date(HoraFim),
+                CapacidadeMaxima,
+                Preco,
+                ConfirmacaoProfessor: false,
+                ValidacaoDirecao: false,
+                EstaAtivo: true,
+                IdProfessor,
+                IdEstudio,
+                IdEstiloDanca
+            }
+        });
+
+        res.status(201).json({ mensagem: "Aula agendada com sucesso!", aula: novaAula });
+
+    } catch (erro) {
+        console.error("Erro ao criar aula:", erro);
+        res.status(500).json({ erro: "Não foi possível agendar a aula." });
+    }
+};
+
+module.exports = {
+    getAulas,
+    criarAula
+};
