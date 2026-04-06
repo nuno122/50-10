@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ent'Artes - Gestão de Inventário</title>
+    <style>
+        /* Estilo Geral */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 40px;
+            color: #333;
+        }
+
+        h1 { color: #2c3e50; }
+
+        /* Botão Principal */
+        .btn-add {
+            background-color: #000;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-bottom: 30px;
+            transition: background 0.3s;
+        }
+
+        .btn-add:hover { background-color: #333; }
+
+        /* Lista de Artigos */
+        #lista-artigos {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .artigo-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-left: 5px solid #2c3e50;
+        }
+
+        .artigo-card h3 { margin: 0 0 10px 0; font-size: 1.2em; }
+        .artigo-card p { margin: 5px 0; color: #666; }
+
+        /* Estilo do Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            backdrop-filter: blur(3px);
+        }
+
+        .modal-content {
+            background: white;
+            width: 400px;
+            margin: 100px auto;
+            padding: 30px;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .modal-content h2 { margin-top: 0; font-size: 1.5em; }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; }
+        
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box; /* Garante que o padding não estica o input */
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        .btn-cancelar { background: #eee; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+        .btn-gravar { background: #000; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h1>Catálogo de Inventário</h1>
+    
+    <button class="btn-add" onclick="abrirModal()">+ Adicionar Novo Artigo</button>
+
+    <div id="lista-artigos">
+        <p>A carregar inventário...</p>
+    </div>
+
+    <div id="modalArtigo" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Adicionar Artigo</h2>
+            <form id="formInventario">
+                <div class="form-group">
+                    <label>Nome do Artigo:</label>
+                    <input type="text" id="nome" placeholder="Ex: Tutu de Ballet" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Custo por Dia (€):</label>
+                    <input type="number" id="custo" step="0.01" placeholder="0.00" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Estado do Artigo:</label>
+                    <select id="estado">
+                        <option value="Excelente">Excelente</option>
+                        <option value="Bom">Bom</option>
+                        <option value="Usado">Usado</option>
+                        <option value="Necessita Reparação">Necessita Reparação</option>
+                    </select>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
+                    <button type="submit" class="btn-gravar">Gravar Artigo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api/inventario';
+
+        // 1. Abrir/Fechar Modal
+        function abrirModal() { document.getElementById('modalArtigo').style.display = 'block'; }
+        function fecharModal() { document.getElementById('modalArtigo').style.display = 'none'; }
+
+        // 2. Carregar Artigos da Base de Dados
+        async function carregarInventario() {
+            try {
+                const res = await fetch(API_URL);
+                const artigos = await res.json();
+                
+                const contentor = document.getElementById('lista-artigos');
+                contentor.innerHTML = '';
+
+                if (artigos.length === 0) {
+                    contentor.innerHTML = '<p>O inventário está vazio.</p>';
+                    return;
+                }
+
+                artigos.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'artigo-card';
+                    card.innerHTML = `
+                        <h3>${item.Nome}</h3>
+                        <p><strong>Custo:</strong> ${item.CustoPorDia}€ / dia</p>
+                        <p><strong>Estado:</strong> ${item.EstadoArtigo}</p>
+                    `;
+                    contentor.appendChild(card);
+                });
+            } catch (err) {
+                document.getElementById('lista-artigos').innerHTML = '<p style="color:red;">Erro ao ligar ao servidor.</p>';
+            }
+        }
+
+        // 3. Enviar Novo Artigo (POST)
+        document.getElementById('formInventario').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const novoItem = {
+                Nome: document.getElementById('nome').value,
+                CustoPorDia: document.getElementById('custo').value,
+                EstadoArtigo: document.getElementById('estado').value
+            };
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(novoItem)
+                });
+
+                if (res.ok) {
+                    fecharModal();
+                    document.getElementById('formInventario').reset();
+                    carregarInventario(); // Atualiza a lista automaticamente
+                } else {
+                    alert("Erro ao gravar artigo no servidor.");
+                }
+            } catch (err) {
+                alert("Erro de ligação ao servidor.");
+            }
+        });
+
+        // Iniciar a carregar os dados mal a página abre
+        carregarInventario();
+    </script>
+</body>
+</html>
