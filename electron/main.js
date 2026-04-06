@@ -1,4 +1,5 @@
 const { app, BrowserWindow } = require('electron');
+const path = require('path'); // <--- FALTA ESTA LINHA!
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -6,16 +7,15 @@ function createWindow() {
     height: 600,
     webPreferences: {
       nodeIntegration: true,
+      contextIsolation: false, // Adiciona isto para o nodeIntegration funcionar bem
     },
   });
 
-
-  win.loadURL('data:text/html;charset=utf-8,<h1 style="font-family:sans-serif; text-align:center; margin-top:20%;">Olá Desktop!<br>O Electron está a funcionar \uD83D\uDE80</h1>');
+  // Isto vai buscar o index.html na pasta frontend que está fora da pasta electron
+  win.loadFile(path.join(__dirname, '../frontend/index.html'));
 }
 
-
 app.whenReady().then(createWindow);
-
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
