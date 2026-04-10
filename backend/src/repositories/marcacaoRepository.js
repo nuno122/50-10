@@ -2,21 +2,21 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const marcacaoRepository = {
-    // Buscar todas as marcações com detalhes
+    // Procurar todas as marcações com detalhes
     findAll: async () => {
         return await prisma.marcacao.findMany({
             include: { Aluno: true, Aula: true }
         });
     },
 
-    // Buscar um aluno específico
+    // Procurar um aluno específico
     findAlunoById: async (idUtilizador) => {
         return await prisma.aluno.findUnique({
             where: { IdUtilizador: idUtilizador }
         });
     },
 
-    // Buscar uma aula com as suas marcações (para contar vagas)
+    // Procurar uma aula com as suas marcações (para contar vagas)
     findAulaWithMarcacoes: async (idAula) => {
         return await prisma.aula.findUnique({
             where: { IdAula: idAula },
