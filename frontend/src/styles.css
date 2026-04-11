@@ -1,0 +1,23 @@
+:root {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #1f2937;
+  background:
+    radial-gradient(circle at top, rgba(194, 149, 87, 0.18), transparent 30%),
+    linear-gradient(180deg, #f7f2ea 0%, #efe4d2 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}

@@ -1,10 +1,31 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { query } = require('../database/sqlServer');
 
 const utilizadorRepository = {
     // Buscar todos
     findAll: async () => {
-        return await prisma.utilizador.findMany();
+        try {
+            return await prisma.utilizador.findMany();
+        } catch (error) {
+            return await query(`
+                SELECT
+                    IdUtilizador,
+                    CodigoPostal,
+                    Morada,
+                    Permissoes,
+                    NomeCompleto,
+                    NomeUtilizador,
+                    Email,
+                    NumeroTelemovel,
+                    Nif,
+                    EstaAtivo,
+                    NumeroCartaoCidadao,
+                    ValidadeCartaoCidadao
+                FROM Utilizador
+                ORDER BY NomeCompleto
+            `);
+        }
     },
 
     // Buscar um único por Email (Usado no Login)
