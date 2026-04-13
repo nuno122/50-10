@@ -1,9 +1,9 @@
-const autenticacaoService = require('../services/autenticacaoService');
+const authenticationService = require('../services/authenticationService');
 
 const login = async (req, res) => {
     try {
         const { Email, Password } = req.body;
-        const resultado = await autenticacaoService.login(Email, Password);
+        const resultado = await authenticationService.login(Email, Password);
         res.json(resultado);
     } catch (erro) {
         console.error('Erro no login:', erro);

@@ -2,7 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { query } = require('../database/sqlServer');
 
-const utilizadorRepository = {
+const userRepository = {
     // Buscar todos
     findAll: async () => {
         try {
@@ -56,4 +56,4 @@ const utilizadorRepository = {
     }
 };
 
-module.exports = utilizadorRepository;
+module.exports = userRepository;

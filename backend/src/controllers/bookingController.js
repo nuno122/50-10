@@ -1,9 +1,9 @@
-const marcacaoService = require('../services/marcacaoService');
+const bookingService = require('../services/bookingService');
 
 const criarMarcacao = async (req, res) => {
     try {
         const { IdAluno, IdAula } = req.body;
-        const resultado = await marcacaoService.criarMarcacao(IdAluno, IdAula);
+        const resultado = await bookingService.criarMarcacao(IdAluno, IdAula);
         res.status(201).json(resultado);
     } catch (erro) {
         console.error(erro);
@@ -15,7 +15,7 @@ const criarMarcacao = async (req, res) => {
 
 const getMarcacoes = async (req, res) => {
     try {
-        const marcacoes = await marcacaoService.listarMarcacoes();
+        const marcacoes = await bookingService.listarMarcacoes();
         res.json(marcacoes);
     } catch (erro) {
         console.error(erro);

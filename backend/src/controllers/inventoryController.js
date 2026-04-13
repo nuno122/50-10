@@ -1,8 +1,8 @@
-const inventarioService = require('../services/inventarioService');
+const inventoryService = require('../services/inventoryService');
 
 const getInventario = async (req, res) => {
     try {
-        const artigos = await inventarioService.listarArtigos();
+        const artigos = await inventoryService.listarArtigos();
         res.json(artigos);
     } catch (erro) {
         console.error(erro);
@@ -14,7 +14,7 @@ const getInventario = async (req, res) => {
 
 const criarArtigo = async (req, res) => {
     try {
-        const novoArtigo = await inventarioService.criarArtigo(req.body);
+        const novoArtigo = await inventoryService.criarArtigo(req.body);
         res.status(201).json(novoArtigo);
     } catch (erro) {
         console.error(erro);
@@ -26,7 +26,7 @@ const criarArtigo = async (req, res) => {
 
 const editarArtigo = async (req, res) => {
     try {
-        const artigoAtualizado = await inventarioService.editarArtigo(req.params.id, req.body);
+        const artigoAtualizado = await inventoryService.editarArtigo(req.params.id, req.body);
         res.json(artigoAtualizado);
     } catch (erro) {
         console.error(erro);
@@ -38,7 +38,7 @@ const editarArtigo = async (req, res) => {
 
 const removerArtigo = async (req, res) => {
     try {
-        const resultado = await inventarioService.removerArtigo(req.params.id);
+        const resultado = await inventoryService.removerArtigo(req.params.id);
         res.json(resultado);
     } catch (erro) {
         console.error(erro);

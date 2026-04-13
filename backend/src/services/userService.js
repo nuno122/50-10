@@ -1,4 +1,4 @@
-const utilizadorRepo = require('../repositories/utilizadorRepository');
+const userRepo = require('../repositories/userRepository');
 
 const criarErro = (mensagem, statusCode) => {
     const erro = new Error(mensagem);
@@ -7,7 +7,7 @@ const criarErro = (mensagem, statusCode) => {
 };
 
 const listarUtilizadores = async () => {
-    return await utilizadorRepo.findAll();
+    return await userRepo.findAll();
 };
 
 const criarUtilizador = async (dados) => {
@@ -30,7 +30,7 @@ const criarUtilizador = async (dados) => {
         throw criarErro(`Campos obrigatorios em falta: ${emFalta.join(', ')}`, 400);
     }
 
-    return await utilizadorRepo.create(dados);
+    return await userRepo.create(dados);
 };
 
 const autenticarUtilizador = async (email, palavraPasseHash) => {
@@ -38,7 +38,7 @@ const autenticarUtilizador = async (email, palavraPasseHash) => {
         throw criarErro('Email e PalavraPasseHash sao obrigatorios.', 400);
     }
 
-    const utilizador = await utilizadorRepo.findByEmail(email);
+    const utilizador = await userRepo.findByEmail(email);
 
     if (!utilizador) {
         throw criarErro('Utilizador nao encontrado.', 401);

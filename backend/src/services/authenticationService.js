@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const utilizadorRepository = require('../repositories/utilizadorRepository');
+const userRepository = require('../repositories/userRepository');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'ChaveSuperSecretaDaEntArtes_2026';
 
@@ -14,7 +14,7 @@ const login = async (email, password) => {
         throw criarErro('Por favor, introduza o email e a palavra-passe.', 400);
     }
 
-    const utilizador = await utilizadorRepository.findByEmail(email);
+    const utilizador = await userRepository.findByEmail(email);
 
     if (!utilizador) {
         throw criarErro('Credenciais invalidas.', 401);

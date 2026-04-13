@@ -1,7 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-const inventarioRepository = {
+const inventoryRepository = {
     // Buscar todos os artigos
     findAll: async () => {
         return await prisma.artigo.findMany();
@@ -37,4 +37,4 @@ const inventarioRepository = {
     }
 };
 
-module.exports = inventarioRepository;
+module.exports = inventoryRepository;

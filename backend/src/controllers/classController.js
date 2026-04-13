@@ -1,8 +1,8 @@
-const aulaService = require('../services/aulaService');
+const classService = require('../services/classService');
 
 const getAulas = async (req, res) => {
     try {
-        const aulas = await aulaService.listarAulas();
+        const aulas = await classService.listarAulas();
         res.json(aulas);
     } catch (erro) {
         console.error(erro);
@@ -14,7 +14,7 @@ const getAulas = async (req, res) => {
 
 const criarAula = async (req, res) => {
     try {
-        const resultado = await aulaService.criarAula(req.body);
+        const resultado = await classService.criarAula(req.body);
         res.status(201).json(resultado);
     } catch (erro) {
         console.error(erro);

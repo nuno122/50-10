@@ -2,12 +2,12 @@ const express = require('express');
 const cors = require('cors');
 
 // Importar as rotas
-const inventarioRoutes = require('./src/routes/inventarioRoutes');
-const utilizadorRoutes = require('./src/routes/utilizadorRoutes'); 
-const aulaRoutes = require('./src/routes/aulaRoutes');
-const marcacaoRoutes = require('./src/routes/marcacaoRoutes');
-const autenticacaoRoutes = require('./src/routes/autenticacaoRoutes');
-const aluguerRoutes = require('./src/routes/aluguerRoutes');
+const inventoryRoutes = require('./src/routes/inventoryRoutes');
+const userRoutes = require('./src/routes/userRoutes'); 
+const classRoutes = require('./src/routes/classRoutes');
+const bookingRoutes = require('./src/routes/bookingRoutes');
+const authenticationRoutes = require('./src/routes/authenticationRoutes');
+const rentalRoutes = require('./src/routes/rentalRoutes');
 const masterRoutes = require('./src/routes/masterRoutes');
 
 const app = express();
@@ -21,12 +21,12 @@ app.get('/api/status', (req, res) => {
 });
 
 // Ligar as rotas aos URLs
-app.use('/api/inventario', inventarioRoutes);
-app.use('/api/utilizadores', utilizadorRoutes); 
-app.use('/api/aulas', aulaRoutes);
-app.use('/api/marcacoes', marcacaoRoutes);
-app.use('/api/autenticacao', autenticacaoRoutes);
-app.use('/api/alugueres', aluguerRoutes);
+app.use('/api/inventario', inventoryRoutes);
+app.use('/api/utilizadores', userRoutes); 
+app.use('/api/aulas', classRoutes);
+app.use('/api/marcacoes', bookingRoutes);
+app.use('/api/autenticacao', authenticationRoutes);
+app.use('/api/alugueres', rentalRoutes);
 app.use('/api/master', masterRoutes);
 
 app.listen(PORT, () => {

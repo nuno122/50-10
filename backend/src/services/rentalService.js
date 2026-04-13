@@ -1,4 +1,4 @@
-const aluguerRepository = require('../repositories/aluguerRepository');
+const rentalRepository = require('../repositories/rentalRepository');
 
 const criarErro = (mensagem, statusCode) => {
     const erro = new Error(mensagem);
@@ -7,7 +7,7 @@ const criarErro = (mensagem, statusCode) => {
 };
 
 const listarAlugueres = async () => {
-    return await aluguerRepository.buscarTodos();
+    return await rentalRepository.buscarTodos();
 };
 
 const criarAluguer = async ({ IdUtilizador, DataLevantamento, DataEntrega, ListaArtigos }) => {
@@ -35,7 +35,7 @@ const criarAluguer = async ({ IdUtilizador, DataLevantamento, DataEntrega, Lista
             throw criarErro('Cada artigo deve ter IdTamanhoArtigo e Quantidade.', 400);
         }
 
-        const stock = await aluguerRepository.buscarStockArtigo(artigo.IdTamanhoArtigo);
+        const stock = await rentalRepository.buscarStockArtigo(artigo.IdTamanhoArtigo);
 
         if (!stock) {
             throw criarErro(`Artigo/Tamanho nao encontrado: ${artigo.IdTamanhoArtigo}`, 404);
@@ -46,7 +46,7 @@ const criarAluguer = async ({ IdUtilizador, DataLevantamento, DataEntrega, Lista
         }
     }
 
-    const aluguer = await aluguerRepository.criarComTransacao(
+    const aluguer = await rentalRepository.criarComTransacao(
         IdUtilizador,
         DataLevantamento,
         DataEntrega,

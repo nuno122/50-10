@@ -1,4 +1,4 @@
-const inventarioRepo = require('../repositories/inventarioRepository');
+const inventoryRepo = require('../repositories/inventoryRepository');
 
 const criarErro = (mensagem, statusCode) => {
     const erro = new Error(mensagem);
@@ -7,7 +7,7 @@ const criarErro = (mensagem, statusCode) => {
 };
 
 const listarArtigos = async () => {
-    return await inventarioRepo.findAll();
+    return await inventoryRepo.findAll();
 };
 
 const criarArtigo = async ({ Nome, CustoPorDia }) => {
@@ -15,7 +15,7 @@ const criarArtigo = async ({ Nome, CustoPorDia }) => {
         throw criarErro('O Nome e o CustoPorDia sao obrigatorios.', 400);
     }
 
-    return await inventarioRepo.create({ Nome, CustoPorDia });
+    return await inventoryRepo.create({ Nome, CustoPorDia });
 };
 
 const editarArtigo = async (id, dados) => {
@@ -23,7 +23,7 @@ const editarArtigo = async (id, dados) => {
         throw criarErro('O id do artigo e obrigatorio.', 400);
     }
 
-    return await inventarioRepo.update(id, dados);
+    return await inventoryRepo.update(id, dados);
 };
 
 const removerArtigo = async (id) => {
@@ -31,7 +31,7 @@ const removerArtigo = async (id) => {
         throw criarErro('O id do artigo e obrigatorio.', 400);
     }
 
-    await inventarioRepo.delete(id);
+    await inventoryRepo.delete(id);
 
     return { mensagem: 'Artigo removido com sucesso do catalogo!' };
 };

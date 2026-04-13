@@ -1,9 +1,9 @@
-const pagamentoRepository = require('../repositories/pagamentoRepository');
+const paymentRepository = require('../repositories/paymentRepository');
 
 // 1. Listar toda a faturação
 const getPagamentos = async (req, res) => {
     try {
-        const pagamentos = await pagamentoRepository.buscarTodosPagamentos();
+        const pagamentos = await paymentRepository.buscarTodosPagamentos();
         res.json(pagamentos);
     } catch (erro) {
         console.error("Erro ao carregar pagamentos:", erro);
@@ -14,7 +14,7 @@ const getPagamentos = async (req, res) => {
 // 2. O pesadelo dos devedores (Listar Atrasos)
 const getAtrasados = async (req, res) => {
     try {
-        const pagamentosAtrasados = await pagamentoRepository.buscarPagamentosEmAtraso();
+        const pagamentosAtrasados = await paymentRepository.buscarPagamentosEmAtraso();
         res.json(pagamentosAtrasados);
     } catch (erro) {
         console.error("Erro ao carregar dívidas:", erro);
@@ -29,7 +29,7 @@ const pagar = async (req, res) => {
         const { id } = req.params;
 
         // Validar se o pagamento existe
-        const pagamento = await pagamentoRepository.buscarPagamentoPorId(id);
+        const pagamento = await paymentRepository.buscarPagamentoPorId(id);
         if (!pagamento) {
             return res.status(404).json({ erro: "Fatura não encontrada no sistema." });
         }
@@ -40,7 +40,7 @@ const pagar = async (req, res) => {
         }
 
         // Registar o pagamento
-        const pagamentoAtualizado = await pagamentoRepository.registarRecebimento(id);
+        const pagamentoAtualizado = await paymentRepository.registarRecebimento(id);
         
         res.json({ 
             mensagem: "Pagamento registado com sucesso!", 

@@ -1,7 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-const marcacaoRepository = {
+const bookingRepository = {
     // Procurar todas as marcações com detalhes
     findAll: async () => {
         return await prisma.marcacao.findMany({
@@ -47,4 +47,4 @@ const marcacaoRepository = {
     }
 };
 
-module.exports = marcacaoRepository;
+module.exports = bookingRepository;

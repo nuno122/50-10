@@ -1,7 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-const aulaRepository = {
+const classRepository = {
     // Buscar todas as aulas com as relações
     findAll: async () => {
         return await prisma.aula.findMany({
@@ -43,4 +43,4 @@ const aulaRepository = {
     }
 };
 
-module.exports = aulaRepository;
+module.exports = classRepository;

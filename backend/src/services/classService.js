@@ -1,4 +1,4 @@
-const aulaRepo = require('../repositories/aulaRepository');
+const classRepo = require('../repositories/classRepository');
 
 const criarErro = (mensagem, statusCode) => {
     const erro = new Error(mensagem);
@@ -7,7 +7,7 @@ const criarErro = (mensagem, statusCode) => {
 };
 
 const listarAulas = async () => {
-    return await aulaRepo.findAll();
+    return await classRepo.findAll();
 };
 
 const criarAula = async (dados) => {
@@ -31,7 +31,7 @@ const criarAula = async (dados) => {
         throw criarErro(`Campos obrigatorios em falta: ${emFalta.join(', ')}`, 400);
     }
 
-    const aulasNoDia = await aulaRepo.findOverlapping(dados.IdEstudio, dados.Data);
+    const aulasNoDia = await classRepo.findOverlapping(dados.IdEstudio, dados.Data);
 
     const novaHoraInicio = new Date(dados.HoraInicio).getTime();
     const novaHoraFim = new Date(dados.HoraFim).getTime();
@@ -46,7 +46,7 @@ const criarAula = async (dados) => {
         throw criarErro('Conflito de horario! Estudio ocupado.', 400);
     }
 
-    const novaAula = await aulaRepo.create(dados);
+    const novaAula = await classRepo.create(dados);
 
     return {
         mensagem: 'Aula agendada!',

@@ -1,8 +1,8 @@
-const utilizadorService = require('../services/utilizadorService');
+const userService = require('../services/userService');
 
 const getUtilizadores = async (req, res) => {
     try {
-        const utilizadores = await utilizadorService.listarUtilizadores();
+        const utilizadores = await userService.listarUtilizadores();
         res.json(utilizadores);
     } catch (erro) {
         console.error('Erro getUtilizadores:', erro);
@@ -14,7 +14,7 @@ const getUtilizadores = async (req, res) => {
 
 const criarUtilizador = async (req, res) => {
     try {
-        const novoUtilizador = await utilizadorService.criarUtilizador(req.body);
+        const novoUtilizador = await userService.criarUtilizador(req.body);
         res.status(201).json(novoUtilizador);
     } catch (erro) {
         console.error(erro);
@@ -27,7 +27,7 @@ const criarUtilizador = async (req, res) => {
 const login = async (req, res) => {
     try {
         const { Email, PalavraPasseHash } = req.body;
-        const resultado = await utilizadorService.autenticarUtilizador(Email, PalavraPasseHash);
+        const resultado = await userService.autenticarUtilizador(Email, PalavraPasseHash);
         res.json(resultado);
     } catch (erro) {
         console.error(erro);

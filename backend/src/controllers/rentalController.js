@@ -1,8 +1,8 @@
-const aluguerService = require('../services/aluguerService');
+const rentalService = require('../services/rentalService');
 
 const getAlugueres = async (req, res) => {
     try {
-        const alugueres = await aluguerService.listarAlugueres();
+        const alugueres = await rentalService.listarAlugueres();
         res.json(alugueres);
     } catch (erro) {
         console.error(erro);
@@ -14,7 +14,7 @@ const getAlugueres = async (req, res) => {
 
 const criarAluguer = async (req, res) => {
     try {
-        const resultado = await aluguerService.criarAluguer(req.body);
+        const resultado = await rentalService.criarAluguer(req.body);
         res.status(201).json(resultado);
     } catch (erro) {
         console.error(erro);

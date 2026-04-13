@@ -1,4 +1,4 @@
-const marcacaoRepo = require('../repositories/marcacaoRepository');
+const bookingRepo = require('../repositories/bookingRepository');
 
 const criarMarcacao = async (idAluno, idAula) => {
     if (!idAluno || !idAula) {
@@ -7,14 +7,14 @@ const criarMarcacao = async (idAluno, idAula) => {
         throw erro;
     }
 
-    const aluno = await marcacaoRepo.findAlunoById(idAluno);
+    const aluno = await bookingRepo.findAlunoById(idAluno);
     if (!aluno) {
         const erro = new Error('Aluno nao encontrado.');
         erro.statusCode = 404;
         throw erro;
     }
 
-    const aula = await marcacaoRepo.findAulaWithMarcacoes(idAula);
+    const aula = await bookingRepo.findAulaWithMarcacoes(idAula);
     if (!aula) {
         const erro = new Error('Aula nao encontrada.');
         erro.statusCode = 404;
@@ -35,14 +35,14 @@ const criarMarcacao = async (idAluno, idAula) => {
         throw erro;
     }
 
-    const jaInscrito = await marcacaoRepo.findExisting(idAluno, idAula);
+    const jaInscrito = await bookingRepo.findExisting(idAluno, idAula);
     if (jaInscrito) {
         const erro = new Error('Ja estas inscrito nesta aula.');
         erro.statusCode = 400;
         throw erro;
     }
 
-    const novaMarcacao = await marcacaoRepo.create(idAluno, idAula);
+    const novaMarcacao = await bookingRepo.create(idAluno, idAula);
 
     return {
         mensagem: 'Lugar reservado!',
@@ -51,7 +51,7 @@ const criarMarcacao = async (idAluno, idAula) => {
 };
 
 const listarMarcacoes = async () => {
-    return await marcacaoRepo.findAll();
+    return await bookingRepo.findAll();
 };
 
 module.exports = { criarMarcacao, listarMarcacoes };
