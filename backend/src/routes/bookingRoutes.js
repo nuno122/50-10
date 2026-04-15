@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const bookingController = require('../controllers/bookingController');
+const { verificarToken } = require('../authMiddleware');
 
-router.get('/', bookingController.getMarcacoes);
-router.post('/', bookingController.criarMarcacao);
+router.get('/', verificarToken, bookingController.getMarcacoes);
+router.post('/', verificarToken, bookingController.criarMarcacao);
 
 module.exports = router;
