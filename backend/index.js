@@ -8,6 +8,7 @@ const classRoutes = require('./src/routes/classRoutes');
 const bookingRoutes = require('./src/routes/bookingRoutes');
 const authenticationRoutes = require('./src/routes/authenticationRoutes');
 const rentalRoutes = require('./src/routes/rentalRoutes');
+const disponibilidadeRoutes = require('./src/routes/disponibilidadeRoutes');
 const masterRoutes = require('./src/routes/masterRoutes');
 
 const app = express();
@@ -27,6 +28,8 @@ app.use('/api/aulas', classRoutes);
 app.use('/api/marcacoes', bookingRoutes);
 app.use('/api/autenticacao', authenticationRoutes);
 app.use('/api/alugueres', rentalRoutes);
+app.use('/api/disponibilidade', disponibilidadeRoutes);
+
 app.use('/api/master', masterRoutes);
 
 app.listen(PORT, () => {

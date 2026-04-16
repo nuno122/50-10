@@ -11,9 +11,13 @@ const handleResponse = async (response) => {
 };
 
 const request = async (path, options = {}) => {
+    // Get token from localStorage for auth
+    const token = localStorage.getItem('authToken');
+    
     const response = await fetch(`${API_BASE_URL}${path}`, {
         headers: {
             'Content-Type': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` }),
             ...(options.headers || {})
         },
         ...options
@@ -73,3 +77,5 @@ export const getEstudios = async () => request('/master/estudios');
 export const getEstilos = async () => request('/master/estilos');
 
 export const getGeografia = async () => request('/master/geografia');
+export const criarDisponibilidade = async (dados) => request('/disponibilidade', { method: 'POST', body: JSON.stringify(dados) });
+export const getMinhasDisponibilidades = async () => request('/disponibilidade/minhas');

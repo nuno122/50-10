@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import {
     criarAluguer,
     criarArtigo,
@@ -9,8 +10,6 @@ import {
     getInventario,
     getMarcacoes,
     getUtilizadores,
-    loginAutenticacao,
-    loginUtilizador,
     getEstudios,
     getEstilos,
     getGeografia
@@ -61,8 +60,6 @@ const secondaryButtonStyle = {
 
 const initialData = {
     utilizadores: null,
-    login: null,
-    autenticacao: null,
     inventario: null,
     criarArtigo: null,
     aulas: null,
@@ -78,8 +75,6 @@ const initialData = {
 
 const initialLoading = {
     utilizadores: false,
-    login: false,
-    autenticacao: false,
     inventario: false,
     criarArtigo: false,
     aulas: false,
@@ -97,14 +92,6 @@ const TestesBackend = () => {
     const [results, setResults] = useState(initialData);
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(initialLoading);
-    const [loginForm, setLoginForm] = useState({
-        Email: 'geral@entartes.pt',
-        PalavraPasseHash: '12345'
-    });
-    const [authForm, setAuthForm] = useState({
-        Email: 'geral@entartes.pt',
-        Password: '12345'
-    });
     const [artigoForm, setArtigoForm] = useState({
         Nome: 'Saia de teste',
         CustoPorDia: '12.50'
@@ -208,8 +195,29 @@ const TestesBackend = () => {
                         lineHeight: 1.6,
                         color: '#5f5447'
                     }}>
-                        O backend ficou separado em route, controller, service e repository. Aqui podes testar os principais endpoints de utilizadores, inventario, aulas e marcacoes.
+                        ✅ Autenticado! Backend separado em MVC. Testa endpoints protegidos (utilizadores, inventario, aulas, etc.).
                     </p>
+                    <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: '#e8f5e8', borderRadius: '8px', borderLeft: '4px solid #4caf50' }}>
+                        <strong>Token ativo:</strong> {localStorage.getItem('authToken')?.substring(0, 40)}...
+                    </div>
+                    <button
+                        onClick={() => {
+                            localStorage.removeItem('authToken');
+                            localStorage.removeItem('authUser');
+                            window.location.reload();
+                        }}
+                        style={{
+                            ...secondaryButtonStyle,
+                            background: '#fee',
+                            color: '#9f2d2d',
+                            border: '1px solid #fcc',
+                            padding: '8px 16px',
+                            fontSize: '14px',
+                            marginBottom: '16px'
+                        }}
+                    >
+                        🚪 Logout
+                    </button>
                 </div>
 
                 <div style={{
@@ -228,70 +236,6 @@ const TestesBackend = () => {
                         </button>
                         {renderResult('utilizadores', 'Ainda nao carregaste a lista de utilizadores.')}
                     </div>
-
-                    <form
-                        onSubmit={(event) => {
-                            event.preventDefault();
-                            runAction('login', () => loginUtilizador(loginForm));
-                        }}
-                        style={panelStyle}
-                    >
-                        <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>Login</h2>
-                        <label style={{ display: 'block', marginBottom: '12px' }}>
-                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Email</span>
-                            <input
-                                type="text"
-                                value={loginForm.Email}
-                                onChange={(event) => setLoginForm({ ...loginForm, Email: event.target.value })}
-                                style={inputStyle}
-                            />
-                        </label>
-                        <label style={{ display: 'block', marginBottom: '16px' }}>
-                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>PalavraPasseHash</span>
-                            <input
-                                type="text"
-                                value={loginForm.PalavraPasseHash}
-                                onChange={(event) => setLoginForm({ ...loginForm, PalavraPasseHash: event.target.value })}
-                                style={inputStyle}
-                            />
-                        </label>
-                        <button type="submit" disabled={loading.login} style={{ ...buttonStyle, marginBottom: '16px' }}>
-                            {loading.login ? 'A autenticar...' : 'POST /api/utilizadores/login'}
-                        </button>
-                        {renderResult('login', 'Submete o formulario para testar a autenticacao.')}
-                    </form>
-
-                    <form
-                        onSubmit={(event) => {
-                            event.preventDefault();
-                            runAction('autenticacao', () => loginAutenticacao(authForm));
-                        }}
-                        style={panelStyle}
-                    >
-                        <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>Autenticacao JWT</h2>
-                        <label style={{ display: 'block', marginBottom: '12px' }}>
-                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Email</span>
-                            <input
-                                type="text"
-                                value={authForm.Email}
-                                onChange={(event) => setAuthForm({ ...authForm, Email: event.target.value })}
-                                style={inputStyle}
-                            />
-                        </label>
-                        <label style={{ display: 'block', marginBottom: '16px' }}>
-                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Password</span>
-                            <input
-                                type="text"
-                                value={authForm.Password}
-                                onChange={(event) => setAuthForm({ ...authForm, Password: event.target.value })}
-                                style={inputStyle}
-                            />
-                        </label>
-                        <button type="submit" disabled={loading.autenticacao} style={{ ...buttonStyle, marginBottom: '16px' }}>
-                            {loading.autenticacao ? 'A autenticar...' : 'POST /api/autenticacao/login'}
-                        </button>
-                        {renderResult('autenticacao', 'Submete o formulario para testar o novo controller de autenticacao.')}
-                    </form>
 
                     <div style={panelStyle}>
                         <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>Inventario</h2>
@@ -484,7 +428,7 @@ const TestesBackend = () => {
                         </label>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                             <label>
-                                <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>DataLevantamento</span>
+                                <span style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>DataLevantamento</span>
                                 <input
                                     type="date"
                                     value={aluguerForm.DataLevantamento}
@@ -493,7 +437,7 @@ const TestesBackend = () => {
                                 />
                             </label>
                             <label>
-                                <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>DataEntrega</span>
+                                <span style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>DataEntrega</span>
                                 <input
                                     type="date"
                                     value={aluguerForm.DataEntrega}
@@ -503,7 +447,7 @@ const TestesBackend = () => {
                             </label>
                         </div>
                         <label style={{ display: 'block', marginTop: '12px', marginBottom: '16px' }}>
-                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>ListaArtigos JSON</span>
+                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>ListaArtigos JSON</span>
                             <textarea
                                 value={aluguerForm.ListaArtigosJson}
                                 onChange={(event) => setAluguerForm({ ...aluguerForm, ListaArtigosJson: event.target.value })}
