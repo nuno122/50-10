@@ -12,7 +12,8 @@ import {
     getUtilizadores,
     getEstudios,
     getEstilos,
-    getGeografia
+    getGeografia,
+    cancelarMarcacao
 } from '../services/api';
 
 const panelStyle = {
@@ -66,6 +67,7 @@ const initialData = {
     criarAula: null,
     marcacoes: null,
     criarMarcacao: null,
+    cancelarMarcacao: null,
     alugueres: null,
     criarAluguer: null,
     estudios: null,
@@ -81,6 +83,7 @@ const initialLoading = {
     criarAula: false,
     marcacoes: false,
     criarMarcacao: false,
+    cancelarMarcacao: false,
     alugueres: false,
     criarAluguer: false,
     estudios: false,
@@ -110,11 +113,14 @@ const TestesBackend = () => {
         IdAluno: '48bd28c1-6030-f111-9a32-010101010000',
         IdAula: 'f116e3e6-4e31-f111-9a32-010101010000'
     });
+    const [cancelForm, setCancelForm] = useState({
+        idMarcacao: '282c7868-b33a-f111-9a35-010101010000'
+    });
     const [aluguerForm, setAluguerForm] = useState({
         IdUtilizador: '48bd28c1-6030-f111-9a32-010101010000',
         DataLevantamento: '2026-12-20',
         DataEntrega: '2026-12-22',
-        ListaArtigosJson: '[\n  {\n    "IdTamanhoArtigo": "",\n    "Quantidade": 1\n  }\n]'
+        ListaArtigosJson: `[\n  {\n    "IdTamanhoArtigo": "",\n    "Quantidade": 1\n  }\n]`
     });
 
     const runAction = async (key, action) => {
@@ -195,7 +201,7 @@ const TestesBackend = () => {
                         lineHeight: 1.6,
                         color: '#5f5447'
                     }}>
-                        ✅ Autenticado! Backend separado em MVC. Testa endpoints protegidos (utilizadores, inventario, aulas, etc.).
+                        ✅ Autenticado! Backend separado em MVC. Testa endpoints protegidos + CANCELAMENTO!
                     </p>
                     <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: '#e8f5e8', borderRadius: '8px', borderLeft: '4px solid #4caf50' }}>
                         <strong>Token ativo:</strong> {localStorage.getItem('authToken')?.substring(0, 40)}...
@@ -400,6 +406,30 @@ const TestesBackend = () => {
                         </button>
                         {renderResult('alugueres', 'Ainda nao carregaste os alugueres.')}
                     </div>
+
+                    <form
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            runAction('cancelarMarcacao', () => cancelarMarcacao(cancelForm.idMarcacao));
+                        }}
+                        style={panelStyle}
+                    >
+                        <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>🚫 Cancelar Marcação</h2>
+                        <label style={{ display: 'block', marginBottom: '12px' }}>
+                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>IdMarcacao</span>
+                            <input
+                                type="text"
+                                value={cancelForm.idMarcacao}
+                                onChange={(event) => setCancelForm({ ...cancelForm, idMarcacao: event.target.value })}
+                                style={inputStyle}
+                                placeholder="282c7868-b33a-f111-9a35-010101010000"
+                            />
+                        </label>
+                        <button type="submit" disabled={loading.cancelarMarcacao} style={{ ...buttonStyle, background: 'linear-gradient(135deg, #d32f2f 0%, #f44336 100%)', marginBottom: '16px' }}>
+                            {loading.cancelarMarcacao ? 'Cancelando...' : 'PATCH /marcacoes/:id/cancelar'}
+                        </button>
+                        {renderResult('cancelarMarcacao', '1. GET Marcacoes → copia ID 2. Cola aqui 3. Clica CANCELAR 4. GET novamente!')}
+                    </form>
 
                     <form
                         onSubmit={(event) => {

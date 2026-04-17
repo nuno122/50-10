@@ -28,7 +28,7 @@ const bookingRepository = {
     findExisting: async (idAluno, idAula) => {
         return await prisma.marcacao.findFirst({
             where: {
-                IdAluno: idAluno, // Assumindo que a FK no Prisma é IdAluno
+                IdAluno: idAluno,
                 IdAula: idAula
             }
         });
@@ -42,6 +42,27 @@ const bookingRepository = {
                 Aula: { connect: { IdAula: idAula } },
                 EstaAtivo: true,
                 PresencaConfirmada: false
+            }
+        });
+    },
+
+    // NOVA: Encontrar marcação com aula associada
+    findByIdComAula: async (idMarcacao) => {
+        return await prisma.marcacao.findUnique({
+            where: { IdMarcacao: idMarcacao },
+            include: {
+                Aula: true
+            }
+        });
+    },
+
+    // NOVA: Atualizar estado da marcação
+    atualizarEstadoCancelamento: async (idMarcacao, estado) => {
+        return await prisma.marcacao.update({
+            where: { IdMarcacao: idMarcacao },
+            data: { 
+                EstaAtivo: false,
+                MotivoCancelamento: estado === 'Pendente_Cancelamento' ? 'Pedido pelo aluno' : estado
             }
         });
     }

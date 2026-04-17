@@ -23,4 +23,18 @@ const getMarcacoes = async (req, res) => {
     }
 };
 
-module.exports = { criarMarcacao, getMarcacoes };
+// NOVA: Cancelar marcação
+const cancelarMarcacao = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const resultado = await bookingService.processarCancelamento(id);
+        res.status(200).json(resultado);
+    } catch (erro) {
+        console.error(erro);
+        res.status(erro.statusCode || 400).json({
+            erro: erro.message
+        });
+    }
+};
+
+module.exports = { criarMarcacao, getMarcacoes, cancelarMarcacao };

@@ -77,5 +77,6 @@ export const getEstudios = async () => request('/master/estudios');
 export const getEstilos = async () => request('/master/estilos');
 
 export const getGeografia = async () => request('/master/geografia');
+export const cancelarMarcacao = async (idMarcacao) => request(`/marcacoes/${idMarcacao}/cancelar`, { method: 'PATCH' });
 export const criarDisponibilidade = async (dados) => request('/disponibilidade', { method: 'POST', body: JSON.stringify(dados) });
 export const getMinhasDisponibilidades = async () => request('/disponibilidade/minhas');
