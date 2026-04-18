@@ -24,4 +24,40 @@ const criarAluguer = async (req, res) => {
     }
 };
 
-module.exports = { getAlugueres, criarAluguer };
+const solicitarExtensaoController = async (req, res) => {
+    try {
+        const resultado = await rentalService.solicitarExtensao({ 
+            IdAluguer: req.params.id,
+            NovaDataProposta: req.body.NovaDataProposta
+        });
+        res.status(201).json(resultado);
+    } catch (erro) {
+        console.error(erro);
+        res.status(erro.statusCode || 500).json({
+            erro: erro.message || 'Erro ao solicitar extensao.'
+        });
+    }
+};
+
+const avaliarPedidoController = async (req, res) => {
+    try {
+        const resultado = await rentalService.avaliarPedidoExtensao({
+            IdPedido: req.params.id,
+            Aprovado: req.body.Aprovado === 'true' || req.body.Aprovado === true,
+            ValorAdicional: req.body.ValorAdicional || 0
+        });
+        res.json(resultado);
+    } catch (erro) {
+        console.error(erro);
+        res.status(erro.statusCode || 500).json({
+            erro: erro.message || 'Erro ao avaliar pedido.'
+        });
+    }
+};
+
+module.exports = { 
+    getAlugueres, 
+    criarAluguer,
+    solicitarExtensao: solicitarExtensaoController,
+    avaliarPedidoExtensao: avaliarPedidoController 
+};

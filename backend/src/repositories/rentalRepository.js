@@ -53,8 +53,52 @@ const criarComTransacao = async (idUtilizador, dataLevantamento, dataEntrega, li
     });
 };
 
+const criarPedidoExtensao = async (idAluguer, novaDataProposta) => {
+    return await prisma.pedidoExtensao.create({
+        data: {
+            IdAluguer: idAluguer,
+            NovaDataProposta: new Date(novaDataProposta),
+            EstadoAprovacao: 'Pendente',
+            ValorAdicional: 0
+        },
+        include: {
+            Aluguer: true
+        }
+    });
+};
+
+const getPedidoExtensaoById = async (idPedido) => {
+    return await prisma.pedidoExtensao.findUnique({
+        where: { IdPedido: idPedido },
+        include: {
+            Aluguer: true
+        }
+    });
+};
+
+const atualizarEstadoPedido = async (idPedido, estado) => {
+    return await prisma.pedidoExtensao.update({
+        where: { IdPedido: idPedido },
+        data: { EstadoAprovacao: estado }
+    });
+};
+
+const atualizarAluguer = async (idAluguer, novaDataEntrega, custoAdicional) => {
+    return await prisma.aluguer.update({
+        where: { IdAluguer: idAluguer },
+        data: {
+            DataEntrega: new Date(novaDataEntrega),
+            // Nota: adicionar campo CustoTotal se necessário
+        }
+    });
+};
+
 module.exports = {
     buscarTodos,
     buscarStockArtigo,
-    criarComTransacao
+    criarComTransacao,
+    criarPedidoExtensao,
+    getPedidoExtensaoById,
+    atualizarEstadoPedido,
+    atualizarAluguer
 };

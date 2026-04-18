@@ -13,8 +13,43 @@ import {
     getEstudios,
     getEstilos,
     getGeografia,
+    confirmarAulaProfessor,
+    validarAulaDirecao,
+    getPagamentos,
     cancelarMarcacao
 } from '../services/api';
+
+const solicitarExtensaoAluguer = async (idAluguer, novaDataProposta) => {
+    return await fetch(`http://localhost:3000/api/alugueres/${idAluguer}/extensao`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({ NovaDataProposta: novaDataProposta })
+    }).then(handleResponse);
+};
+
+const avaliarPedidoExtensao = async (idPedido, aprovado, valorAdicional = 0) => {
+    return await fetch(`http://localhost:3000/api/alugueres/pedidos-extensao/${idPedido}/avaliar`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({ Aprovado: aprovado, ValorAdicional: valorAdicional })
+    }).then(handleResponse);
+};
+
+const handleResponse = async (response) => {
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+        throw new Error(data?.erro || `Erro: ${response.status}`);
+    }
+    return data;
+};
+
+
 
 const panelStyle = {
     border: '1px solid #e6d6bf',
@@ -65,6 +100,9 @@ const initialData = {
     criarArtigo: null,
     aulas: null,
     criarAula: null,
+    confirmarProfessor: null,
+    validarDirecao: null,
+    pagamentos: null,
     marcacoes: null,
     criarMarcacao: null,
     cancelarMarcacao: null,
@@ -75,12 +113,16 @@ const initialData = {
     geografia: null
 };
 
+
 const initialLoading = {
     utilizadores: false,
     inventario: false,
     criarArtigo: false,
     aulas: false,
     criarAula: false,
+    confirmarProfessor: false,
+    validarDirecao: false,
+    pagamentos: false,
     marcacoes: false,
     criarMarcacao: false,
     cancelarMarcacao: false,
@@ -91,14 +133,19 @@ const initialLoading = {
     geografia: false
 };
 
+
 const TestesBackend = () => {
     const [results, setResults] = useState(initialData);
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(initialLoading);
+    const [validacaoForm, setValidacaoForm] = useState({
+        idAula: 'f116e3e6-4e31-f111-9a32-010101010000'
+    });
     const [artigoForm, setArtigoForm] = useState({
         Nome: 'Saia de teste',
         CustoPorDia: '12.50'
     });
+
     const [aulaForm, setAulaForm] = useState({
         Data: '2026-12-31',
         HoraInicio: '2026-12-31T18:00:00.000Z',
@@ -224,6 +271,66 @@ const TestesBackend = () => {
                     >
                         🚪 Logout
                     </button>
+                    <form
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            runAction('confirmarProfessor', () => confirmarAulaProfessor(validacaoForm.idAula));
+                        }}
+                        style={panelStyle}
+                    >
+                        <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>👨‍🏫 Confirmar Professor</h2>
+                        <label style={{ display: 'block', marginBottom: '12px' }}>
+                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>IdAula</span>
+                            <input
+                                type="text"
+                                value={validacaoForm.idAula}
+                                onChange={(event) => setValidacaoForm({ ...validacaoForm, idAula: event.target.value })}
+                                style={inputStyle}
+                                placeholder="f116e3e6-4e31-f111-9a32-010101010000"
+                            />
+                        </label>
+                        <button type="submit" disabled={loading.confirmarProfessor} style={{ ...buttonStyle, marginBottom: '16px' }}>
+                            {loading.confirmarProfessor ? 'Confirmando...' : 'PATCH /aulas/:id/confirmar-professor'}
+                        </button>
+                        {renderResult('confirmarProfessor', '1. GET aulas → ID 2. Clica aqui')}
+                    </form>
+
+                    <form
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            runAction('validarDirecao', () => validarAulaDirecao(validacaoForm.idAula));
+                        }}
+                        style={panelStyle}
+                    >
+                        <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>👩‍💼 Validar Direção (💰 Pagamentos!)</h2>
+                        <label style={{ display: 'block', marginBottom: '12px' }}>
+                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>IdAula</span>
+                            <input
+                                type="text"
+                                value={validacaoForm.idAula}
+                                onChange={(event) => setValidacaoForm({ ...validacaoForm, idAula: event.target.value })}
+                                style={inputStyle}
+                                placeholder="f116e3e6-4e31-f111-9a32-010101010000"
+                            />
+                        </label>
+                        <button type="submit" disabled={loading.validarDirecao} style={{ ...buttonStyle, marginBottom: '16px' }}>
+                            {loading.validarDirecao ? 'Validando...' : 'PATCH /aulas/:id/validar-direcao'}
+                        </button>
+                        {renderResult('validarDirecao', 'Gera pagamentos automáticos para alunos ativos!')}
+                    </form>
+
+                    <div style={panelStyle}>
+                        <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>💳 Pagamentos</h2>
+                        <button
+                            onClick={() => runAction('pagamentos', getPagamentos)}
+                            disabled={loading.pagamentos}
+                            style={{ ...secondaryButtonStyle, marginBottom: '16px' }}
+                        >
+                            {loading.pagamentos ? 'Carregando...' : 'GET /api/pagamentos'}
+                        </button>
+                        {renderResult('pagamentos', 'Vê pagamentos gerados após validar direção!')}
+                    </div>
+
                 </div>
 
                 <div style={{
@@ -231,6 +338,7 @@ const TestesBackend = () => {
                     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
                     gap: '20px'
                 }}>
+
                     <div style={panelStyle}>
                         <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>Utilizadores</h2>
                         <button

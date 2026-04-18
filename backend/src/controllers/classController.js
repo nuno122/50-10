@@ -24,4 +24,26 @@ const criarAula = async (req, res) => {
     }
 };
 
-module.exports = { getAulas, criarAula };
+const confirmarAula = async (req, res) => {
+    try {
+        const idAula = req.params.id;
+        const resultado = await classService.confirmarPresencaProfessor(idAula);
+        res.json({ mensagem: 'Aula confirmada pelo professor.', aula: resultado });
+    } catch (erro) {
+        console.error(erro);
+        res.status(erro.statusCode || 500).json({ erro: erro.message });
+    }
+};
+
+const validarAula = async (req, res) => {
+    try {
+        const idAula = req.params.id;
+        const resultado = await classService.validarAulaDirecao(idAula);
+        res.json(resultado);
+    } catch (erro) {
+        console.error(erro);
+        res.status(400).json({ erro: erro.message || 'Erro na validação da aula.' });
+    }
+};
+
+module.exports = { getAulas, criarAula, confirmarAula, validarAula };

@@ -40,7 +40,69 @@ const classRepository = {
                 IdEstiloDanca: dados.IdEstiloDanca
             }
         });
+    },
+
+    atualizarConfirmacaoProfessor: async (idAula) => {
+        return await prisma.aula.update({
+            where: { IdAula: idAula },
+            data: { ConfirmacaoProfessor: true }
+        });
+    },
+
+    atualizarValidacaoDirecao: async (idAula) => {
+        return await prisma.aula.update({
+            where: { IdAula: idAula },
+            data: { ValidacaoDirecao: true }
+        });
+    },
+
+    findByIdComAlunos: async (idAula) => {
+        return await prisma.aula.findUnique({
+            where: { IdAula: idAula },
+            include: {
+                Marcacao: {
+                    where: {
+                        EstaAtivo: true
+                    },
+                    include: {
+                        Aluno: true
+                    }
+                }
+            }
+        });
     }
+
+};
+
+
+const atualizarConfirmacaoProfessor = async (idAula) => {
+    return await prisma.aula.update({
+        where: { IdAula: idAula },
+        data: { ConfirmacaoProfessor: true }
+    });
+};
+
+const atualizarValidacaoDirecao = async (idAula) => {
+    return await prisma.aula.update({
+        where: { IdAula: idAula },
+        data: { ValidacaoDirecao: true }
+    });
+};
+
+const findByIdComAlunos = async (idAula) => {
+    return await prisma.aula.findUnique({
+        where: { IdAula: idAula },
+        include: {
+            Marcacao: {
+                where: {
+                    EstaAtivo: true
+                },
+                include: {
+                    Utilizador: true // Aluno
+                }
+            }
+        }
+    });
 };
 
 module.exports = classRepository;

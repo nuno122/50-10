@@ -59,7 +59,57 @@ const criarAluguer = async ({ IdUtilizador, DataLevantamento, DataEntrega, Lista
     };
 };
 
+const solicitarExtensao = async ({ IdAluguer, NovaDataProposta }) => {
+    if (!IdAluguer || !NovaDataProposta) {
+        throw criarErro('IdAluguer e NovaDataProposta sao obrigatorios.', 400);
+    }
+
+    const dataProposta = new Date(NovaDataProposta);
+    if (Number.isNaN(dataProposta.getTime())) {
+        throw criarErro('NovaDataProposta invalida.', 400);
+    }
+
+    const pedido = await rentalRepository.criarPedidoExtensao(IdAluguer, NovaDataProposta);
+    return {
+        mensagem: 'Pedido de extensao criado com sucesso!',
+        pedido
+    };
+};
+
+const avaliarPedidoExtensao = async ({ IdPedido, Aprovado, ValorAdicional = 0 }) => {
+    const pedido = await rentalRepository.getPedidoExtensaoById(IdPedido);
+    if (!pedido) {
+        throw criarErro('Pedido de extensao nao encontrado.', 404);
+    }
+
+    if (pedido.EstadoAprovacao !== 'Pendente') {
+        throw criarErro('Pedido ja foi avaliado.', 400);
+    }
+
+    await rentalRepository.atualizarEstadoPedido(IdPedido, Aprovado ? 'Aprovado' : 'Rejeitado');
+
+    if (Aprovado) {
+        const aluguerAtualizado = await rentalRepository.atualizarAluguer(
+            pedido.IdAluguer, 
+            pedido.NovaDataProposta,
+            ValorAdicional
+        );
+        return {
+            mensagem: 'Extensao aprovada e aluguer atualizado!',
+            pedido,
+            aluguerAtualizado
+        };
+    }
+
+    return {
+        mensagem: 'Extensao rejeitada.',
+        pedido
+    };
+};
+
 module.exports = {
     listarAlugueres,
-    criarAluguer
+    criarAluguer,
+    solicitarExtensao,
+    avaliarPedidoExtensao
 };

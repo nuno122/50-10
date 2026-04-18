@@ -25,6 +25,8 @@ app.get('/api/status', (req, res) => {
 app.use('/api/inventario', inventoryRoutes);
 app.use('/api/utilizadores', userRoutes); 
 app.use('/api/aulas', classRoutes);
+app.use('/api/pagamentos', require('./src/routes/paymentRoutes'));
+
 app.use('/api/marcacoes', bookingRoutes);
 app.use('/api/autenticacao', authenticationRoutes);
 app.use('/api/alugueres', rentalRoutes);
