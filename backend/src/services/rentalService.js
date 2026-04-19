@@ -77,6 +77,7 @@ const solicitarExtensao = async ({ IdAluguer, NovaDataProposta }) => {
 };
 
 const avaliarPedidoExtensao = async ({ IdPedido, Aprovado, ValorAdicional = 0 }) => {
+    console.log('Service input ValorAdicional:', ValorAdicional, typeof ValorAdicional); // Debug
     const pedido = await rentalRepository.getPedidoExtensaoById(IdPedido);
     if (!pedido) {
         throw criarErro('Pedido de extensao nao encontrado.', 404);
@@ -86,6 +87,9 @@ const avaliarPedidoExtensao = async ({ IdPedido, Aprovado, ValorAdicional = 0 })
         throw criarErro('Pedido ja foi avaliado.', 400);
     }
 
+    // Update ValorAdicional first
+    await rentalRepository.atualizarPedidoValorAdicional(IdPedido, ValorAdicional);
+
     await rentalRepository.atualizarEstadoPedido(IdPedido, Aprovado ? 'Aprovado' : 'Rejeitado');
 
     if (Aprovado) {
@@ -94,16 +98,18 @@ const avaliarPedidoExtensao = async ({ IdPedido, Aprovado, ValorAdicional = 0 })
             pedido.NovaDataProposta,
             ValorAdicional
         );
-        return {
-            mensagem: 'Extensao aprovada e aluguer atualizado!',
-            pedido,
-            aluguerAtualizado
-        };
+    const pedidoAtualizado = await rentalRepository.getPedidoExtensaoById(IdPedido);
+    return {
+        mensagem: 'Extensao aprovada e aluguer atualizado!',
+        pedido: pedidoAtualizado,
+        aluguerAtualizado
+    };
     }
 
+    const pedidoAtualizado = await rentalRepository.getPedidoExtensaoById(IdPedido);
     return {
         mensagem: 'Extensao rejeitada.',
-        pedido
+        pedido: pedidoAtualizado
     };
 };
 

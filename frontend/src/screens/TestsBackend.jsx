@@ -16,30 +16,10 @@ import {
     confirmarAulaProfessor,
     validarAulaDirecao,
     getPagamentos,
-    cancelarMarcacao
+    cancelarMarcacao,
+    solicitarExtensaoAluguer,
+    avaliarPedidoExtensao
 } from '../services/api';
-
-const solicitarExtensaoAluguer = async (idAluguer, novaDataProposta) => {
-    return await fetch(`http://localhost:3000/api/alugueres/${idAluguer}/extensao`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: JSON.stringify({ NovaDataProposta: novaDataProposta })
-    }).then(handleResponse);
-};
-
-const avaliarPedidoExtensao = async (idPedido, aprovado, valorAdicional = 0) => {
-    return await fetch(`http://localhost:3000/api/alugueres/pedidos-extensao/${idPedido}/avaliar`, {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: JSON.stringify({ Aprovado: aprovado, ValorAdicional: valorAdicional })
-    }).then(handleResponse);
-};
 
 const handleResponse = async (response) => {
     const data = await response.json().catch(() => null);
@@ -108,6 +88,8 @@ const initialData = {
     cancelarMarcacao: null,
     alugueres: null,
     criarAluguer: null,
+    solicitarExtensaoAluguer: null,
+    avaliarPedidoExtensao: null,
     estudios: null,
     estilos: null,
     geografia: null
@@ -128,6 +110,8 @@ const initialLoading = {
     cancelarMarcacao: false,
     alugueres: false,
     criarAluguer: false,
+    solicitarExtensaoAluguer: false,
+    avaliarPedidoExtensao: false,
     estudios: false,
     estilos: false,
     geografia: false
@@ -168,6 +152,17 @@ const TestesBackend = () => {
         DataLevantamento: '2026-12-20',
         DataEntrega: '2026-12-22',
         ListaArtigosJson: '[{"IdTamanhoArtigo": "COLA_ID_AQUI", "Quantidade": 1}]',
+    });
+
+    const [extensaoForm, setExtensaoForm] = useState({
+        IdAluguer: '',
+        NovaDataProposta: ''
+    });
+
+    const [avaliarForm, setAvaliarForm] = useState({
+        IdPedido: '',
+        Aprovado: true,
+        ValorAdicional: 0
     });
 
     const runAction = async (key, action) => {
@@ -522,8 +517,96 @@ const TestesBackend = () => {
                             </button>
                         </div>
                         {renderResult('alugueres', 'Ainda nao carregaste os alugueres.')}
-                        {renderResult('inventario', 'Carrega inventario aqui → copia IdTamanhoArtigo para JSON abaixo!')}
+                        {renderResult('inventario', 'Carrega inventario aqui → copia IdTamanhoArtigo para JSON abaixo! Usa também para extensões!')}
                     </div>
+
+                    <form
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            runAction('solicitarExtensaoAluguer', () => 
+                                solicitarExtensaoAluguer(
+                                    extensaoForm.IdAluguer,
+                                    extensaoForm.NovaDataProposta
+                                )
+                            );
+                        }}
+                        style={panelStyle}
+                    >
+                        <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>⏰ Solicitar Extensão Aluguer</h2>
+                        <label style={{ display: 'block', marginBottom: '12px' }}>
+                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>IdAluguer (de GET alugueres)</span>
+                            <input
+                                type="text"
+                                value={extensaoForm.IdAluguer}
+                                onChange={(event) => setExtensaoForm({ ...extensaoForm, IdAluguer: event.target.value })}
+                                style={inputStyle}
+                                placeholder="abc-123-def-456"
+                            />
+                        </label>
+                        <label style={{ display: 'block', marginBottom: '16px' }}>
+                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>NovaDataProposta</span>
+                            <input
+                                type="date"
+                                value={extensaoForm.NovaDataProposta}
+                                onChange={(event) => setExtensaoForm({ ...extensaoForm, NovaDataProposta: event.target.value })}
+                                style={inputStyle}
+                            />
+                        </label>
+                        <button type="submit" disabled={loading.solicitarExtensaoAluguer} style={{ ...buttonStyle, marginBottom: '16px' }}>
+                            {loading.solicitarExtensaoAluguer ? 'Solicitando...' : 'POST /alugueres/:id/extensao'}
+                        </button>
+                        {renderResult('solicitarExtensaoAluguer', '1. GET alugueres → copia IdAluguer 2. Data futura > DataEntrega atual 3. Submit!')}
+                    </form>
+
+                    <form
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            runAction('avaliarPedidoExtensao', () => 
+                                avaliarPedidoExtensao(
+                                    avaliarForm.IdPedido,
+                                    avaliarForm.Aprovado,
+                                    Number(avaliarForm.ValorAdicional)
+                                )
+                            );
+                        }}
+                        style={panelStyle}
+                    >
+                        <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>✅ Avaliar Pedido Extensão (Direção)</h2>
+                        <label style={{ display: 'block', marginBottom: '12px' }}>
+                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>IdPedido (do resultado acima)</span>
+                            <input
+                                type="text"
+                                value={avaliarForm.IdPedido}
+                                onChange={(event) => setAvaliarForm({ ...avaliarForm, IdPedido: event.target.value })}
+                                style={inputStyle}
+                                placeholder="def-456-ghi-789"
+                            />
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                            <input
+                                type="checkbox"
+                                checked={avaliarForm.Aprovado}
+                                onChange={(event) => setAvaliarForm({ ...avaliarForm, Aprovado: event.target.checked })}
+                                style={{ width: '20px', height: '20px' }}
+                            />
+                            <span style={{ fontWeight: 600 }}>Aprovado</span>
+                        </label>
+                        <label style={{ display: 'block', marginBottom: '16px' }}>
+                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>ValorAdicional (€)</span>
+                            <input
+                                type="number"
+                                value={avaliarForm.ValorAdicional}
+                                onChange={(event) => setAvaliarForm({ ...avaliarForm, ValorAdicional: event.target.value })}
+                                style={inputStyle}
+                                min="0"
+                                step="0.01"
+                            />
+                        </label>
+                        <button type="submit" disabled={loading.avaliarPedidoExtensao} style={{ ...buttonStyle, marginBottom: '16px' }}>
+                            {loading.avaliarPedidoExtensao ? 'Avaliando...' : 'PATCH /alugueres/pedidos-extensao/:id/avaliar'}
+                        </button>
+                        {renderResult('avaliarPedidoExtensao', '1. Solicita extensão → copia IdPedido 2. Aprova/Rejeita 3. GET alugueres para ver update!')}
+                    </form>
 
                     <form
                         onSubmit={(event) => {

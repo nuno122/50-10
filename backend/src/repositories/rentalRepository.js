@@ -67,6 +67,15 @@ const criarPedidoExtensao = async (idAluguer, novaDataProposta) => {
     });
 };
 
+const atualizarPedidoValorAdicional = async (idPedido, valorAdicional) => {
+    return await prisma.pedidoExtensao.update({
+        where: { IdPedido: idPedido },
+        data: { 
+            ValorAdicional: valorAdicional 
+        }
+    });
+};
+
 const getPedidoExtensaoById = async (idPedido) => {
     return await prisma.pedidoExtensao.findUnique({
         where: { IdPedido: idPedido },
@@ -98,6 +107,7 @@ module.exports = {
     buscarStockArtigo,
     criarComTransacao,
     criarPedidoExtensao,
+    atualizarPedidoValorAdicional,
     getPedidoExtensaoById,
     atualizarEstadoPedido,
     atualizarAluguer

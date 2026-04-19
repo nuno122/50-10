@@ -41,14 +41,16 @@ const solicitarExtensaoController = async (req, res) => {
 
 const avaliarPedidoController = async (req, res) => {
     try {
+        console.log('Controller input:', req.body); // Debug
         const resultado = await rentalService.avaliarPedidoExtensao({
             IdPedido: req.params.id,
             Aprovado: req.body.Aprovado === 'true' || req.body.Aprovado === true,
-            ValorAdicional: req.body.ValorAdicional || 0
+            ValorAdicional: Number(req.body.ValorAdicional) || 0
         });
+        console.log('Service result:', resultado); // Debug
         res.json(resultado);
     } catch (erro) {
-        console.error(erro);
+        console.error('Controller error:', erro);
         res.status(erro.statusCode || 500).json({
             erro: erro.message || 'Erro ao avaliar pedido.'
         });
