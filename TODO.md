@@ -1,41 +1,12 @@
-# TODO: Sistema Pedidos de Extensão Aluguer
+# TODO: Fix TestsBackend Rental Tests
 
-## ✅ Ficheiros Existentes
-- [x] rentalRepository.js, rentalService.js, rentalController.js, rentalRoutes.js
+## Plan Breakdown
+- [x] 1. Add GET Inventario button to Alugueres panel ✅
+- [x] 2. Fix aluguerForm.ListaArtigosJson initial value with valid JSON example ✅
+- [x] 3. Add try-catch for JSON.parse in create rental onSubmit ✅
+- [x] 4. Improve textarea label/placeholder ✅
+- [ ] Test flow: 1. Frontend reload → GET Inventario (stock>0 IdTamanhoArtigo) → JSON → POST Criar aluguer → GET Alugueres ✅
+- [ ] cd backend && npx prisma studio → verify TamanhoArtigo.Quantidade >0
 
-## 🔄 Plano Detalhado (4 passos)
-
-### 1. rentalRepository.js (BD Prisma)
-```
-criarPedidoExtensao(idAluguer, novaDataProposta)
-getPedidoExtensaoById(idPedido) { include: Aluguer }
-atualizarEstadoPedido(idPedido, estado)
-atualizarAluguer(idAluguer, novaDataEntrega, custoAdicional)
-```
-
-### 2. rentalService.js (Regras Negócio)
-```
-solicitarExtensao(idAluguer, novaData): valida + cria "Pendente"
-avaliarPedidoExtensao(idPedido, aprovado, valorAdicional): 404 se não existe + update
-```
-
-### 3. rentalController.js (HTTP)
-```
-POST /:id/extensao → 201 + msg
-PATCH /pedidos-extensao/:id/avaliar → 200 + msg (400 erro)
-```
-
-### 4. rentalRoutes.js (Rotas protegidas)
-```
-POST('/:id/extensao', verificarToken, solicitarExtensaoPrazo)
-PATCH('/pedidos-extensao/:id/avaliar', verificarToken, avaliarPedido)
-```
-**index.js:** já tem rentalRoutes ✓
-
-## ⏭️ Próximos Passos
-1. Editar ficheiros conforme plano
-2. `cd backend && npm start` 
-3. Testar: POST aluguer → POST extensao → PATCH avaliar
-
-**Confirma plano antes editar?** 👍
+**Next: Test after frontend reload!**
 

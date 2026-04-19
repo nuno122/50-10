@@ -3,8 +3,18 @@ const prisma = new PrismaClient();
 
 const inventoryRepository = {
     // Buscar todos os artigos
-    findAll: async () => {
-        return await prisma.artigo.findMany();
+findAll: async () => {
+        return await prisma.artigo.findMany({
+            include: {
+                TamanhoArtigo: {
+                    select: {
+                        IdTamanhoArtigo: true,
+                        Tamanho: true,
+                        Quantidade: true
+                    }
+                }
+            }
+        });
     },
 
     // Criar um novo artigo

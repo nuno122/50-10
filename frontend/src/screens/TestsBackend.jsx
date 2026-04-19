@@ -167,7 +167,7 @@ const TestesBackend = () => {
         IdUtilizador: '48bd28c1-6030-f111-9a32-010101010000',
         DataLevantamento: '2026-12-20',
         DataEntrega: '2026-12-22',
-        ListaArtigosJson: `[\n  {\n    "IdTamanhoArtigo": "",\n    "Quantidade": 1\n  }\n]`
+        ListaArtigosJson: '[{"IdTamanhoArtigo": "COLA_ID_AQUI", "Quantidade": 1}]',
     });
 
     const runAction = async (key, action) => {
@@ -459,7 +459,7 @@ const TestesBackend = () => {
                         {renderResult('criarAula', 'Usa IDs validos para testar o agendamento de aulas.')}
                     </form>
 
-                    <div style={panelStyle}>
+    <div style={panelStyle}>
                         <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>Marcacoes</h2>
                         <button
                             onClick={() => runAction('marcacoes', getMarcacoes)}
@@ -505,14 +505,24 @@ const TestesBackend = () => {
 
                     <div style={panelStyle}>
                         <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>Alugueres</h2>
-                        <button
-                            onClick={() => runAction('alugueres', getAlugueres)}
-                            disabled={loading.alugueres}
-                            style={{ ...secondaryButtonStyle, marginBottom: '16px' }}
-                        >
-                            {loading.alugueres ? 'A carregar...' : 'GET /api/alugueres'}
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                            <button
+                                onClick={() => runAction('alugueres', getAlugueres)}
+                                disabled={loading.alugueres}
+                                style={{ ...secondaryButtonStyle, flex: 1 }}
+                            >
+                                {loading.alugueres ? 'A carregar...' : 'GET /api/alugueres'}
+                            </button>
+                            <button
+                                onClick={() => runAction('inventario', getInventario)}
+                                disabled={loading.inventario}
+                                style={{ ...secondaryButtonStyle, flex: 1 }}
+                            >
+                                {loading.inventario ? 'A carregar...' : 'Inventário (para aluguer)'}
+                            </button>
+                        </div>
                         {renderResult('alugueres', 'Ainda nao carregaste os alugueres.')}
+                        {renderResult('inventario', 'Carrega inventario aqui → copia IdTamanhoArtigo para JSON abaixo!')}
                     </div>
 
                     <form
@@ -542,15 +552,19 @@ const TestesBackend = () => {
                     <form
                         onSubmit={(event) => {
                             event.preventDefault();
-                            runAction('criarAluguer', () => {
+                            try {
                                 const ListaArtigos = JSON.parse(aluguerForm.ListaArtigosJson);
-                                return criarAluguer({
-                                    IdUtilizador: aluguerForm.IdUtilizador,
-                                    DataLevantamento: aluguerForm.DataLevantamento,
-                                    DataEntrega: aluguerForm.DataEntrega,
-                                    ListaArtigos
-                                });
-                            });
+                                runAction('criarAluguer', () => 
+                                    criarAluguer({
+                                        IdUtilizador: aluguerForm.IdUtilizador,
+                                        DataLevantamento: aluguerForm.DataLevantamento,
+                                        DataEntrega: aluguerForm.DataEntrega,
+                                        ListaArtigos
+                                    })
+                                );
+                            } catch (error) {
+                                setErrors(prev => ({ ...prev, criarAluguer: `JSON inválido: ${error.message}` }));
+                            }
                         }}
                         style={panelStyle}
                     >
@@ -585,17 +599,18 @@ const TestesBackend = () => {
                             </label>
                         </div>
                         <label style={{ display: 'block', marginTop: '12px', marginBottom: '16px' }}>
-                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>ListaArtigos JSON</span>
+                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>ListaArtigos JSON (copiar IdTamanhoArtigo acima)</span>
                             <textarea
                                 value={aluguerForm.ListaArtigosJson}
                                 onChange={(event) => setAluguerForm({ ...aluguerForm, ListaArtigosJson: event.target.value })}
                                 style={{ ...inputStyle, minHeight: '140px', resize: 'vertical' }}
+                                placeholder='[{"IdTamanhoArtigo": "COLA_ID_DO_INVENTARIO_AQUI", "Quantidade": 1}]'
                             />
                         </label>
                         <button type="submit" disabled={loading.criarAluguer} style={{ ...buttonStyle, marginBottom: '16px' }}>
                             {loading.criarAluguer ? 'A criar...' : 'POST /api/alugueres'}
                         </button>
-                        {renderResult('criarAluguer', 'Indica um IdTamanhoArtigo valido e a quantidade para testar o aluguer.')}
+1. GET inventário → copia IdTamanhoArtigo VÁLIDO (com stock) 2. JSON + Submit!
                     </form>
 
                     <div style={panelStyle}>
