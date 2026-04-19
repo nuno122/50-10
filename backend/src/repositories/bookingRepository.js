@@ -24,13 +24,38 @@ const bookingRepository = {
         });
     },
 
-    // Verificar se já existe uma inscrição específica
+    // Verificar se já existe uma inscrição ativa
     findExisting: async (idAluno, idAula) => {
         return await prisma.marcacao.findFirst({
             where: {
-                IdAluno: idAluno, // Assumindo que a FK no Prisma é IdAluno
-                IdAula: idAula
+                IdAluno: idAluno,
+                IdAula: idAula,
+                EstaAtivo: true  // ← ignorar canceladas
             }
+        });
+    },
+
+    // Procurar uma marcação pelo ID
+    findById: async (idMarcacao) => {
+        return await prisma.marcacao.findUnique({
+            where: { IdMarcacao: idMarcacao }
+        });
+    },
+
+    // Procurar todas as marcações de um aluno
+    findByAluno: async (idAluno) => {
+        return await prisma.marcacao.findMany({
+            where: { IdAluno: idAluno },
+            include: {
+                Aula: {
+                    include: {
+                        EstiloDanca: true,
+                        Estudio: true
+                    }
+                },
+                Pagamento: true
+            },
+            orderBy: { Aula: { Data: 'desc' } }
         });
     },
 
@@ -39,9 +64,32 @@ const bookingRepository = {
         return await prisma.marcacao.create({
             data: {
                 Aluno: { connect: { IdUtilizador: idAluno } },
-                Aula: { connect: { IdAula: idAula } },
-                EstaAtivo: true,
+                Aula:  { connect: { IdAula: idAula } },
+                EstaAtivo:          true,
                 PresencaConfirmada: false
+            }
+        });
+    },
+
+    // Cancelar uma marcação
+    cancelar: async (idMarcacao, motivo) => {
+        return await prisma.marcacao.update({
+            where: { IdMarcacao: idMarcacao },
+            data: {
+                EstaAtivo:          false,
+                MotivoCancelamento: motivo ?? 'Cancelado pelo aluno'
+            }
+        });
+    },
+
+    // Criar pagamento associado à marcação
+    criarPagamento: async (idMarcacao, custo, prazoPagamento) => {
+        return await prisma.pagamento.create({
+            data: {
+                IdMarcacao:      idMarcacao,
+                Custo:           custo,
+                PrazoPagamento:  prazoPagamento,
+                EstadoPagamento: 'Pendente'
             }
         });
     }

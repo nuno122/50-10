@@ -1,6 +1,8 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { query } = require('../database/sqlServer');
+const PERMISSOES = require('../config/permissoes');
+
 
 const userRepository = {
     // Buscar todos
@@ -36,24 +38,52 @@ const userRepository = {
     },
 
     // Criar Utilizador com as relações chatas
-    create: async (dados) => {
-        return await prisma.utilizador.create({
-            data: {
-                NomeCompleto: dados.NomeCompleto,
-                NomeUtilizador: dados.NomeUtilizador,
-                Email: dados.Email,
-                PalavraPasseHash: dados.PalavraPasseHash,
-                Permissoes: dados.Permissoes,
-                Nif: dados.Nif,
-                EstaAtivo: true,
-                Morada: dados.Morada,
-                // Escondemos a complexidade da relação aqui
-                CodigoPostal_Utilizador_CodigoPostalToCodigoPostal: {
-                    connect: { CodigoPostal: dados.CodigoPostal }
+create: async (dados) => {
+    const { Permissoes } = dados;
+
+    return await prisma.utilizador.create({
+        data: {
+            NomeCompleto:    dados.NomeCompleto,
+            NomeUtilizador:  dados.NomeUtilizador,
+            Email:           dados.Email,
+            PalavraPasseHash: dados.PalavraPasseHash,
+            Permissoes,
+            Nif:             dados.Nif,
+            Morada:          dados.Morada,
+            NumeroTelemovel: dados.NumeroTelemovel,
+            EstaAtivo:       true,
+            CodigoPostal_Utilizador_CodigoPostalToCodigoPostal: {
+                connect: { CodigoPostal: dados.CodigoPostal }
+            },
+
+            ...(Permissoes === 1 && {
+                Aluno: {
+                    create: {
+                        DataNascimento: dados.DataNascimento,
+                        Informacao:     dados.Informacao ?? null
+                    }
                 }
-            }
-        });
-    }
+            }),
+            ...(Permissoes === 2 && {
+                Professor: {
+                    create: {
+                        Iban: dados.Iban ?? null
+                    }
+                }
+            }),
+            ...(Permissoes === 4 && {
+                Encarregado: {
+                    create: {}
+                }
+            })
+        },
+        include: {
+            Aluno:      true,
+            Professor:  true,
+            Encarregado: true
+        }
+    });
+}
 };
 
 module.exports = userRepository;

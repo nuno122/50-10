@@ -1,48 +1,48 @@
 const bookingRepo = require('../repositories/bookingRepository');
 
+const criarErro = (mensagem, statusCode) => {
+    const erro = new Error(mensagem);
+    erro.statusCode = statusCode;
+    return erro;
+};
+
+// ─── Criar ────────────────────────────────────────────────────────────────────
+
 const criarMarcacao = async (idAluno, idAula) => {
     if (!idAluno || !idAula) {
-        const erro = new Error('IdAluno e IdAula sao obrigatorios.');
-        erro.statusCode = 400;
-        throw erro;
+        throw criarErro('IdAluno e IdAula são obrigatórios.', 400);
     }
 
     const aluno = await bookingRepo.findAlunoById(idAluno);
-    if (!aluno) {
-        const erro = new Error('Aluno nao encontrado.');
-        erro.statusCode = 404;
-        throw erro;
-    }
+    if (!aluno) throw criarErro('Aluno não encontrado.', 404);
 
     const aula = await bookingRepo.findAulaWithMarcacoes(idAula);
-    if (!aula) {
-        const erro = new Error('Aula nao encontrada.');
-        erro.statusCode = 404;
-        throw erro;
-    }
+    if (!aula) throw criarErro('Aula não encontrada.', 404);
+
+    if (!aula.EstaAtivo) throw criarErro('Esta aula foi cancelada.', 400);
 
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     if (new Date(aula.Data) < hoje) {
-        const erro = new Error('Nao podes marcar aulas passadas.');
-        erro.statusCode = 400;
-        throw erro;
+        throw criarErro('Não podes marcar aulas passadas.', 400);
     }
 
-    if (aula.Marcacao.length >= aula.CapacidadeMaxima) {
-        const erro = new Error('Aula lotada.');
-        erro.statusCode = 400;
-        throw erro;
+    // Só conta marcações ativas para a capacidade
+    const inscritosAtivos = aula.Marcacao.filter(m => m.EstaAtivo).length;
+    if (inscritosAtivos >= aula.CapacidadeMaxima) {
+        throw criarErro('Aula lotada.', 400);
     }
 
     const jaInscrito = await bookingRepo.findExisting(idAluno, idAula);
-    if (jaInscrito) {
-        const erro = new Error('Ja estas inscrito nesta aula.');
-        erro.statusCode = 400;
-        throw erro;
-    }
+    if (jaInscrito) throw criarErro('Já estás inscrito nesta aula.', 400);
 
     const novaMarcacao = await bookingRepo.create(idAluno, idAula);
+
+    // Criar pagamento associado à marcação
+    const prazoPagamento = new Date(aula.Data);
+    prazoPagamento.setDate(prazoPagamento.getDate() - 2); // 2 dias antes da aula
+
+    await bookingRepo.criarPagamento(novaMarcacao.IdMarcacao, aula.Preco, prazoPagamento);
 
     return {
         mensagem: 'Lugar reservado!',
@@ -50,8 +50,42 @@ const criarMarcacao = async (idAluno, idAula) => {
     };
 };
 
+// ─── Cancelar ─────────────────────────────────────────────────────────────────
+
+const cancelarMarcacao = async (idMarcacao, idAluno, motivo) => {
+    if (!idMarcacao || !idAluno) {
+        throw criarErro('IdMarcacao e IdAluno são obrigatórios.', 400);
+    }
+
+    const marcacao = await bookingRepo.findById(idMarcacao);
+    if (!marcacao) throw criarErro('Marcação não encontrada.', 404);
+
+    // Garante que o aluno só cancela as suas próprias marcações
+    if (marcacao.IdAluno !== idAluno) {
+        throw criarErro('Não tens permissão para cancelar esta marcação.', 403);
+    }
+
+    if (!marcacao.EstaAtivo) {
+        throw criarErro('Esta marcação já está cancelada.', 400);
+    }
+
+    return await bookingRepo.cancelar(idMarcacao, motivo);
+};
+
+// ─── Listar ───────────────────────────────────────────────────────────────────
+
 const listarMarcacoes = async () => {
     return await bookingRepo.findAll();
 };
 
-module.exports = { criarMarcacao, listarMarcacoes };
+const listarMarcacoesDoAluno = async (idAluno) => {
+    if (!idAluno) throw criarErro('IdAluno é obrigatório.', 400);
+    return await bookingRepo.findByAluno(idAluno);
+};
+
+module.exports = {
+    criarMarcacao,
+    cancelarMarcacao,
+    listarMarcacoes,
+    listarMarcacoesDoAluno
+};
