@@ -15,15 +15,16 @@ const criarMarcacao = async (req, res) => {
 
 const cancelarMarcacao = async (req, res) => {
     try {
-        const { idMarcacao } = req.params;
+        // Uni as duas lógicas: usa o ID da rota e o ID do aluno do token para segurança
+        const idMarcacao = req.params.idMarcacao || req.params.id;
         const { Motivo } = req.body;
-        const idAluno = req.utilizador.IdUtilizador; // vem do token JWT
+        const idAluno = req.utilizador ? req.utilizador.IdUtilizador : null; 
 
         const resultado = await bookingService.cancelarMarcacao(idMarcacao, idAluno, Motivo);
-        res.json({ mensagem: 'Marcação cancelada com sucesso.', marcacao: resultado });
+        res.status(200).json({ mensagem: 'Marcação cancelada com sucesso.', marcacao: resultado });
     } catch (erro) {
         console.error(erro);
-        res.status(erro.statusCode || 500).json({
+        res.status(erro.statusCode || 400).json({
             erro: erro.message || 'Erro ao cancelar a marcação.'
         });
     }
@@ -41,9 +42,7 @@ const getMarcacoes = async (req, res) => {
 
 const getMarcacoesDoAluno = async (req, res) => {
     try {
-        // Pode vir da rota (/aluno/:idAluno) ou do próprio token (aluno a ver as suas)
-        const idAluno = req.params.idAluno || req.utilizador.IdUtilizador;
-
+        const idAluno = req.params.idAluno || (req.utilizador ? req.utilizador.IdUtilizador : null);
         const marcacoes = await bookingService.listarMarcacoesDoAluno(idAluno);
         res.json(marcacoes);
     } catch (erro) {
@@ -54,4 +53,9 @@ const getMarcacoesDoAluno = async (req, res) => {
     }
 };
 
-module.exports = { criarMarcacao, cancelarMarcacao, getMarcacoes, getMarcacoesDoAluno };
+module.exports = { 
+    criarMarcacao, 
+    cancelarMarcacao, 
+    getMarcacoes, 
+    getMarcacoesDoAluno 
+};

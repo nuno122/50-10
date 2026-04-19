@@ -11,9 +11,13 @@ const handleResponse = async (response) => {
 };
 
 const request = async (path, options = {}) => {
+    // Get token from localStorage for auth
+    const token = localStorage.getItem('authToken');
+    
     const response = await fetch(`${API_BASE_URL}${path}`, {
         headers: {
             'Content-Type': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` }),
             ...(options.headers || {})
         },
         ...options
@@ -52,6 +56,18 @@ export const criarAula = async (dados) =>
         body: JSON.stringify(dados)
     });
 
+export const confirmarAulaProfessor = async (idAula) =>
+    request(`/aulas/${idAula}/confirmar-professor`, { method: 'PATCH' });
+
+export const validarAulaDirecao = async (idAula) =>
+    request(`/aulas/${idAula}/validar-direcao`, { method: 'PATCH' });
+
+export const getPagamentos = async () => request('/pagamentos');
+
+
+export const cancelarMarcacao = async (idMarcacao) =>
+    request(`/marcacoes/${idMarcacao}/cancelar`, { method: 'PATCH' });
+
 export const getMarcacoes = async () => request('/marcacoes');
 
 export const criarMarcacao = async ({ IdAluno, IdAula }) =>
@@ -66,6 +82,18 @@ export const criarAluguer = async (dados) =>
     request('/alugueres', {
         method: 'POST',
         body: JSON.stringify(dados)
+    });
+
+export const solicitarExtensaoAluguer = async (idAluguer, novaDataProposta) =>
+    request(`/alugueres/${idAluguer}/extensao`, {
+        method: 'POST',
+        body: JSON.stringify({ NovaDataProposta: novaDataProposta })
+    });
+
+export const avaliarPedidoExtensao = async (idPedido, aprovado, valorAdicional = 0) =>
+    request(`/alugueres/pedidos-extensao/${idPedido}/avaliar`, {
+        method: 'PATCH',
+        body: JSON.stringify({ Aprovado: aprovado, ValorAdicional: valorAdicional })
     });
 
 export const getEstudios = async () => request('/master/estudios');

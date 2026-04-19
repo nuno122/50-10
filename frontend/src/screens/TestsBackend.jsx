@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import {
     criarAluguer,
     criarArtigo,
@@ -9,12 +10,46 @@ import {
     getInventario,
     getMarcacoes,
     getUtilizadores,
-    loginAutenticacao,
-    loginUtilizador,
     getEstudios,
     getEstilos,
-    getGeografia
+    getGeografia,
+    confirmarAulaProfessor,
+    validarAulaDirecao,
+    getPagamentos,
+    cancelarMarcacao
 } from '../services/api';
+
+const solicitarExtensaoAluguer = async (idAluguer, novaDataProposta) => {
+    return await fetch(`http://localhost:3000/api/alugueres/${idAluguer}/extensao`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({ NovaDataProposta: novaDataProposta })
+    }).then(handleResponse);
+};
+
+const avaliarPedidoExtensao = async (idPedido, aprovado, valorAdicional = 0) => {
+    return await fetch(`http://localhost:3000/api/alugueres/pedidos-extensao/${idPedido}/avaliar`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({ Aprovado: aprovado, ValorAdicional: valorAdicional })
+    }).then(handleResponse);
+};
+
+const handleResponse = async (response) => {
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+        throw new Error(data?.erro || `Erro: ${response.status}`);
+    }
+    return data;
+};
+
+
 
 const panelStyle = {
     border: '1px solid #e6d6bf',
@@ -61,14 +96,16 @@ const secondaryButtonStyle = {
 
 const initialData = {
     utilizadores: null,
-    login: null,
-    autenticacao: null,
     inventario: null,
     criarArtigo: null,
     aulas: null,
     criarAula: null,
+    confirmarProfessor: null,
+    validarDirecao: null,
+    pagamentos: null,
     marcacoes: null,
     criarMarcacao: null,
+    cancelarMarcacao: null,
     alugueres: null,
     criarAluguer: null,
     estudios: null,
@@ -76,16 +113,19 @@ const initialData = {
     geografia: null
 };
 
+
 const initialLoading = {
     utilizadores: false,
-    login: false,
-    autenticacao: false,
     inventario: false,
     criarArtigo: false,
     aulas: false,
     criarAula: false,
+    confirmarProfessor: false,
+    validarDirecao: false,
+    pagamentos: false,
     marcacoes: false,
     criarMarcacao: false,
+    cancelarMarcacao: false,
     alugueres: false,
     criarAluguer: false,
     estudios: false,
@@ -93,22 +133,19 @@ const initialLoading = {
     geografia: false
 };
 
+
 const TestesBackend = () => {
     const [results, setResults] = useState(initialData);
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(initialLoading);
-    const [loginForm, setLoginForm] = useState({
-        Email: 'geral@entartes.pt',
-        PalavraPasseHash: '12345'
-    });
-    const [authForm, setAuthForm] = useState({
-        Email: 'geral@entartes.pt',
-        Password: '12345'
+    const [validacaoForm, setValidacaoForm] = useState({
+        idAula: 'f116e3e6-4e31-f111-9a32-010101010000'
     });
     const [artigoForm, setArtigoForm] = useState({
         Nome: 'Saia de teste',
         CustoPorDia: '12.50'
     });
+
     const [aulaForm, setAulaForm] = useState({
         Data: '2026-12-31',
         HoraInicio: '2026-12-31T18:00:00.000Z',
@@ -123,11 +160,14 @@ const TestesBackend = () => {
         IdAluno: '48bd28c1-6030-f111-9a32-010101010000',
         IdAula: 'f116e3e6-4e31-f111-9a32-010101010000'
     });
+    const [cancelForm, setCancelForm] = useState({
+        idMarcacao: '282c7868-b33a-f111-9a35-010101010000'
+    });
     const [aluguerForm, setAluguerForm] = useState({
         IdUtilizador: '48bd28c1-6030-f111-9a32-010101010000',
         DataLevantamento: '2026-12-20',
         DataEntrega: '2026-12-22',
-        ListaArtigosJson: '[\n  {\n    "IdTamanhoArtigo": "",\n    "Quantidade": 1\n  }\n]'
+        ListaArtigosJson: '[{"IdTamanhoArtigo": "COLA_ID_AQUI", "Quantidade": 1}]',
     });
 
     const runAction = async (key, action) => {
@@ -208,8 +248,89 @@ const TestesBackend = () => {
                         lineHeight: 1.6,
                         color: '#5f5447'
                     }}>
-                        O backend ficou separado em route, controller, service e repository. Aqui podes testar os principais endpoints de utilizadores, inventario, aulas e marcacoes.
+                        ✅ Autenticado! Backend separado em MVC. Testa endpoints protegidos + CANCELAMENTO!
                     </p>
+                    <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: '#e8f5e8', borderRadius: '8px', borderLeft: '4px solid #4caf50' }}>
+                        <strong>Token ativo:</strong> {localStorage.getItem('authToken')?.substring(0, 40)}...
+                    </div>
+                    <button
+                        onClick={() => {
+                            localStorage.removeItem('authToken');
+                            localStorage.removeItem('authUser');
+                            window.location.reload();
+                        }}
+                        style={{
+                            ...secondaryButtonStyle,
+                            background: '#fee',
+                            color: '#9f2d2d',
+                            border: '1px solid #fcc',
+                            padding: '8px 16px',
+                            fontSize: '14px',
+                            marginBottom: '16px'
+                        }}
+                    >
+                        🚪 Logout
+                    </button>
+                    <form
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            runAction('confirmarProfessor', () => confirmarAulaProfessor(validacaoForm.idAula));
+                        }}
+                        style={panelStyle}
+                    >
+                        <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>👨‍🏫 Confirmar Professor</h2>
+                        <label style={{ display: 'block', marginBottom: '12px' }}>
+                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>IdAula</span>
+                            <input
+                                type="text"
+                                value={validacaoForm.idAula}
+                                onChange={(event) => setValidacaoForm({ ...validacaoForm, idAula: event.target.value })}
+                                style={inputStyle}
+                                placeholder="f116e3e6-4e31-f111-9a32-010101010000"
+                            />
+                        </label>
+                        <button type="submit" disabled={loading.confirmarProfessor} style={{ ...buttonStyle, marginBottom: '16px' }}>
+                            {loading.confirmarProfessor ? 'Confirmando...' : 'PATCH /aulas/:id/confirmar-professor'}
+                        </button>
+                        {renderResult('confirmarProfessor', '1. GET aulas → ID 2. Clica aqui')}
+                    </form>
+
+                    <form
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            runAction('validarDirecao', () => validarAulaDirecao(validacaoForm.idAula));
+                        }}
+                        style={panelStyle}
+                    >
+                        <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>👩‍💼 Validar Direção (💰 Pagamentos!)</h2>
+                        <label style={{ display: 'block', marginBottom: '12px' }}>
+                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>IdAula</span>
+                            <input
+                                type="text"
+                                value={validacaoForm.idAula}
+                                onChange={(event) => setValidacaoForm({ ...validacaoForm, idAula: event.target.value })}
+                                style={inputStyle}
+                                placeholder="f116e3e6-4e31-f111-9a32-010101010000"
+                            />
+                        </label>
+                        <button type="submit" disabled={loading.validarDirecao} style={{ ...buttonStyle, marginBottom: '16px' }}>
+                            {loading.validarDirecao ? 'Validando...' : 'PATCH /aulas/:id/validar-direcao'}
+                        </button>
+                        {renderResult('validarDirecao', 'Gera pagamentos automáticos para alunos ativos!')}
+                    </form>
+
+                    <div style={panelStyle}>
+                        <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>💳 Pagamentos</h2>
+                        <button
+                            onClick={() => runAction('pagamentos', getPagamentos)}
+                            disabled={loading.pagamentos}
+                            style={{ ...secondaryButtonStyle, marginBottom: '16px' }}
+                        >
+                            {loading.pagamentos ? 'Carregando...' : 'GET /api/pagamentos'}
+                        </button>
+                        {renderResult('pagamentos', 'Vê pagamentos gerados após validar direção!')}
+                    </div>
+
                 </div>
 
                 <div style={{
@@ -217,6 +338,7 @@ const TestesBackend = () => {
                     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
                     gap: '20px'
                 }}>
+
                     <div style={panelStyle}>
                         <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>Utilizadores</h2>
                         <button
@@ -228,70 +350,6 @@ const TestesBackend = () => {
                         </button>
                         {renderResult('utilizadores', 'Ainda nao carregaste a lista de utilizadores.')}
                     </div>
-
-                    <form
-                        onSubmit={(event) => {
-                            event.preventDefault();
-                            runAction('login', () => loginUtilizador(loginForm));
-                        }}
-                        style={panelStyle}
-                    >
-                        <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>Login</h2>
-                        <label style={{ display: 'block', marginBottom: '12px' }}>
-                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Email</span>
-                            <input
-                                type="text"
-                                value={loginForm.Email}
-                                onChange={(event) => setLoginForm({ ...loginForm, Email: event.target.value })}
-                                style={inputStyle}
-                            />
-                        </label>
-                        <label style={{ display: 'block', marginBottom: '16px' }}>
-                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>PalavraPasseHash</span>
-                            <input
-                                type="text"
-                                value={loginForm.PalavraPasseHash}
-                                onChange={(event) => setLoginForm({ ...loginForm, PalavraPasseHash: event.target.value })}
-                                style={inputStyle}
-                            />
-                        </label>
-                        <button type="submit" disabled={loading.login} style={{ ...buttonStyle, marginBottom: '16px' }}>
-                            {loading.login ? 'A autenticar...' : 'POST /api/utilizadores/login'}
-                        </button>
-                        {renderResult('login', 'Submete o formulario para testar a autenticacao.')}
-                    </form>
-
-                    <form
-                        onSubmit={(event) => {
-                            event.preventDefault();
-                            runAction('autenticacao', () => loginAutenticacao(authForm));
-                        }}
-                        style={panelStyle}
-                    >
-                        <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>Autenticacao JWT</h2>
-                        <label style={{ display: 'block', marginBottom: '12px' }}>
-                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Email</span>
-                            <input
-                                type="text"
-                                value={authForm.Email}
-                                onChange={(event) => setAuthForm({ ...authForm, Email: event.target.value })}
-                                style={inputStyle}
-                            />
-                        </label>
-                        <label style={{ display: 'block', marginBottom: '16px' }}>
-                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Password</span>
-                            <input
-                                type="text"
-                                value={authForm.Password}
-                                onChange={(event) => setAuthForm({ ...authForm, Password: event.target.value })}
-                                style={inputStyle}
-                            />
-                        </label>
-                        <button type="submit" disabled={loading.autenticacao} style={{ ...buttonStyle, marginBottom: '16px' }}>
-                            {loading.autenticacao ? 'A autenticar...' : 'POST /api/autenticacao/login'}
-                        </button>
-                        {renderResult('autenticacao', 'Submete o formulario para testar o novo controller de autenticacao.')}
-                    </form>
 
                     <div style={panelStyle}>
                         <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>Inventario</h2>
@@ -401,7 +459,7 @@ const TestesBackend = () => {
                         {renderResult('criarAula', 'Usa IDs validos para testar o agendamento de aulas.')}
                     </form>
 
-                    <div style={panelStyle}>
+    <div style={panelStyle}>
                         <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>Marcacoes</h2>
                         <button
                             onClick={() => runAction('marcacoes', getMarcacoes)}
@@ -447,28 +505,66 @@ const TestesBackend = () => {
 
                     <div style={panelStyle}>
                         <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>Alugueres</h2>
-                        <button
-                            onClick={() => runAction('alugueres', getAlugueres)}
-                            disabled={loading.alugueres}
-                            style={{ ...secondaryButtonStyle, marginBottom: '16px' }}
-                        >
-                            {loading.alugueres ? 'A carregar...' : 'GET /api/alugueres'}
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                            <button
+                                onClick={() => runAction('alugueres', getAlugueres)}
+                                disabled={loading.alugueres}
+                                style={{ ...secondaryButtonStyle, flex: 1 }}
+                            >
+                                {loading.alugueres ? 'A carregar...' : 'GET /api/alugueres'}
+                            </button>
+                            <button
+                                onClick={() => runAction('inventario', getInventario)}
+                                disabled={loading.inventario}
+                                style={{ ...secondaryButtonStyle, flex: 1 }}
+                            >
+                                {loading.inventario ? 'A carregar...' : 'Inventário (para aluguer)'}
+                            </button>
+                        </div>
                         {renderResult('alugueres', 'Ainda nao carregaste os alugueres.')}
+                        {renderResult('inventario', 'Carrega inventario aqui → copia IdTamanhoArtigo para JSON abaixo!')}
                     </div>
 
                     <form
                         onSubmit={(event) => {
                             event.preventDefault();
-                            runAction('criarAluguer', () => {
+                            runAction('cancelarMarcacao', () => cancelarMarcacao(cancelForm.idMarcacao));
+                        }}
+                        style={panelStyle}
+                    >
+                        <h2 style={{ marginTop: 0, color: '#3c2d1b' }}>🚫 Cancelar Marcação</h2>
+                        <label style={{ display: 'block', marginBottom: '12px' }}>
+                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>IdMarcacao</span>
+                            <input
+                                type="text"
+                                value={cancelForm.idMarcacao}
+                                onChange={(event) => setCancelForm({ ...cancelForm, idMarcacao: event.target.value })}
+                                style={inputStyle}
+                                placeholder="282c7868-b33a-f111-9a35-010101010000"
+                            />
+                        </label>
+                        <button type="submit" disabled={loading.cancelarMarcacao} style={{ ...buttonStyle, background: 'linear-gradient(135deg, #d32f2f 0%, #f44336 100%)', marginBottom: '16px' }}>
+                            {loading.cancelarMarcacao ? 'Cancelando...' : 'PATCH /marcacoes/:id/cancelar'}
+                        </button>
+                        {renderResult('cancelarMarcacao', '1. GET Marcacoes → copia ID 2. Cola aqui 3. Clica CANCELAR 4. GET novamente!')}
+                    </form>
+
+                    <form
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            try {
                                 const ListaArtigos = JSON.parse(aluguerForm.ListaArtigosJson);
-                                return criarAluguer({
-                                    IdUtilizador: aluguerForm.IdUtilizador,
-                                    DataLevantamento: aluguerForm.DataLevantamento,
-                                    DataEntrega: aluguerForm.DataEntrega,
-                                    ListaArtigos
-                                });
-                            });
+                                runAction('criarAluguer', () => 
+                                    criarAluguer({
+                                        IdUtilizador: aluguerForm.IdUtilizador,
+                                        DataLevantamento: aluguerForm.DataLevantamento,
+                                        DataEntrega: aluguerForm.DataEntrega,
+                                        ListaArtigos
+                                    })
+                                );
+                            } catch (error) {
+                                setErrors(prev => ({ ...prev, criarAluguer: `JSON inválido: ${error.message}` }));
+                            }
                         }}
                         style={panelStyle}
                     >
@@ -484,7 +580,7 @@ const TestesBackend = () => {
                         </label>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                             <label>
-                                <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>DataLevantamento</span>
+                                <span style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>DataLevantamento</span>
                                 <input
                                     type="date"
                                     value={aluguerForm.DataLevantamento}
@@ -493,7 +589,7 @@ const TestesBackend = () => {
                                 />
                             </label>
                             <label>
-                                <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>DataEntrega</span>
+                                <span style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>DataEntrega</span>
                                 <input
                                     type="date"
                                     value={aluguerForm.DataEntrega}
@@ -503,17 +599,18 @@ const TestesBackend = () => {
                             </label>
                         </div>
                         <label style={{ display: 'block', marginTop: '12px', marginBottom: '16px' }}>
-                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>ListaArtigos JSON</span>
+                            <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>ListaArtigos JSON (copiar IdTamanhoArtigo acima)</span>
                             <textarea
                                 value={aluguerForm.ListaArtigosJson}
                                 onChange={(event) => setAluguerForm({ ...aluguerForm, ListaArtigosJson: event.target.value })}
                                 style={{ ...inputStyle, minHeight: '140px', resize: 'vertical' }}
+                                placeholder='[{"IdTamanhoArtigo": "COLA_ID_DO_INVENTARIO_AQUI", "Quantidade": 1}]'
                             />
                         </label>
                         <button type="submit" disabled={loading.criarAluguer} style={{ ...buttonStyle, marginBottom: '16px' }}>
                             {loading.criarAluguer ? 'A criar...' : 'POST /api/alugueres'}
                         </button>
-                        {renderResult('criarAluguer', 'Indica um IdTamanhoArtigo valido e a quantidade para testar o aluguer.')}
+1. GET inventário → copia IdTamanhoArtigo VÁLIDO (com stock) 2. JSON + Submit!
                     </form>
 
                     <div style={panelStyle}>

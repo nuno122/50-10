@@ -30,7 +30,7 @@ const bookingRepository = {
             where: {
                 IdAluno: idAluno,
                 IdAula: idAula,
-                EstaAtivo: true  // ← ignorar canceladas
+                EstaAtivo: true  // Mantido: ignora canceladas para permitir nova inscrição
             }
         });
     },
@@ -39,6 +39,16 @@ const bookingRepository = {
     findById: async (idMarcacao) => {
         return await prisma.marcacao.findUnique({
             where: { IdMarcacao: idMarcacao }
+        });
+    },
+
+    // NOVA: Encontrar marcação com aula associada (unificado)
+    findByIdComAula: async (idMarcacao) => {
+        return await prisma.marcacao.findUnique({
+            where: { IdMarcacao: idMarcacao },
+            include: {
+                Aula: true
+            }
         });
     },
 
@@ -71,13 +81,15 @@ const bookingRepository = {
         });
     },
 
-    // Cancelar uma marcação
-    cancelar: async (idMarcacao, motivo) => {
+    // Cancelar uma marcação (Unificado: aceita motivo ou estado)
+    cancelar: async (idMarcacao, motivoOuEstado) => {
         return await prisma.marcacao.update({
             where: { IdMarcacao: idMarcacao },
             data: {
-                EstaAtivo:          false,
-                MotivoCancelamento: motivo ?? 'Cancelado pelo aluno'
+                EstaAtivo: false,
+                MotivoCancelamento: motivoOuEstado === 'Pendente_Cancelamento' 
+                    ? 'Pedido pelo aluno' 
+                    : (motivoOuEstado ?? 'Cancelado pelo aluno')
             }
         });
     },

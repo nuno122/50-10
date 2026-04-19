@@ -27,7 +27,6 @@ const criarMarcacao = async (idAluno, idAula) => {
         throw criarErro('Não podes marcar aulas passadas.', 400);
     }
 
-    // Só conta marcações ativas para a capacidade
     const inscritosAtivos = aula.Marcacao.filter(m => m.EstaAtivo).length;
     if (inscritosAtivos >= aula.CapacidadeMaxima) {
         throw criarErro('Aula lotada.', 400);
@@ -38,9 +37,8 @@ const criarMarcacao = async (idAluno, idAula) => {
 
     const novaMarcacao = await bookingRepo.create(idAluno, idAula);
 
-    // Criar pagamento associado à marcação
     const prazoPagamento = new Date(aula.Data);
-    prazoPagamento.setDate(prazoPagamento.getDate() - 2); // 2 dias antes da aula
+    prazoPagamento.setDate(prazoPagamento.getDate() - 2);
 
     await bookingRepo.criarPagamento(novaMarcacao.IdMarcacao, aula.Preco, prazoPagamento);
 
@@ -50,26 +48,46 @@ const criarMarcacao = async (idAluno, idAula) => {
     };
 };
 
-// ─── Cancelar ─────────────────────────────────────────────────────────────────
+// ─── Cancelar (Unificado com regra de 24h) ────────────────────────────────────
 
 const cancelarMarcacao = async (idMarcacao, idAluno, motivo) => {
     if (!idMarcacao || !idAluno) {
         throw criarErro('IdMarcacao e IdAluno são obrigatórios.', 400);
     }
 
-    const marcacao = await bookingRepo.findById(idMarcacao);
+    // Busca com Aula incluída para verificar o horário
+    const marcacao = await bookingRepo.findByIdComAula(idMarcacao);
+    
     if (!marcacao) throw criarErro('Marcação não encontrada.', 404);
+    if (marcacao.IdAluno !== idAluno) throw criarErro('Não tens permissão para cancelar esta marcação.', 403);
+    if (!marcacao.EstaAtivo) throw criarErro('Esta marcação já está cancelada.', 400);
 
-    // Garante que o aluno só cancela as suas próprias marcações
-    if (marcacao.IdAluno !== idAluno) {
-        throw criarErro('Não tens permissão para cancelar esta marcação.', 403);
+    // Lógica das 24 horas
+    const agora = new Date();
+    const dataAulaCompleta = new Date(marcacao.Aula.Data);
+    
+    // Ajusta a hora da aula (assumindo que HoraInicio é um objeto Date ou similar)
+    dataAulaCompleta.setHours(
+        marcacao.Aula.HoraInicio.getHours(),
+        marcacao.Aula.HoraInicio.getMinutes(),
+        0, 0
+    );
+
+    const diferencaMs = dataAulaCompleta - agora;
+    const diferencaHoras = diferencaMs / (1000 * 60 * 60);
+
+    if (diferencaHoras >= 24) {
+        // Aprovado automaticamente
+        await bookingRepo.cancelar(idMarcacao, motivo || 'Cancelamento antecipado (>= 24h)');
+        return { sucesso: true, mensagem: 'Cancelamento aprovado automaticamente.' };
+    } else {
+        // Pendente aprovação da direção devido ao prazo curto
+        await bookingRepo.cancelar(idMarcacao, 'Pendente_Cancelamento');
+        return { 
+            sucesso: false, 
+            mensagem: 'Prazo de 24h expirou. O pedido foi enviado para aprovação da Direção.' 
+        };
     }
-
-    if (!marcacao.EstaAtivo) {
-        throw criarErro('Esta marcação já está cancelada.', 400);
-    }
-
-    return await bookingRepo.cancelar(idMarcacao, motivo);
 };
 
 // ─── Listar ───────────────────────────────────────────────────────────────────

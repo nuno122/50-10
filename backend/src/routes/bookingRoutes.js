@@ -19,4 +19,7 @@ router.post('/', verificarToken, verificarPermissao(PERMISSOES.ALUNO), bookingCo
 // Cancelar — aluno cancela as suas (a validação de ownership está no service)
 router.patch('/:idMarcacao/cancelar', verificarToken, verificarPermissao(PERMISSOES.ALUNO), bookingController.cancelarMarcacao);
 
+// NOVA: PATCH /:id/cancelar (protegida)
+router.patch('/:id/cancelar', verificarToken, bookingController.cancelarMarcacao);
+
 module.exports = router;

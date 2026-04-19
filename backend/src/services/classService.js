@@ -54,7 +54,34 @@ const criarAula = async (dados) => {
     };
 };
 
+const confirmarPresencaProfessor = async (idAula) => {
+    return await classRepo.atualizarConfirmacaoProfessor(idAula);
+};
+
+const validarAulaDirecao = async (idAula) => {
+    // 1. Validar direção
+    await classRepo.atualizarValidacaoDirecao(idAula);
+    
+    // 2. Buscar aula com alunos ativos
+    const aula = await classRepo.findByIdComAlunos(idAula);
+    if (!aula) {
+        throw new Error('Aula não encontrada.');
+    }
+
+    const paymentService = require('./paymentService');
+    const alunosAtivos = aula.Marcacao.map(m => m.Utilizador);
+    const resultadoPagamentos = await paymentService.gerarPagamentosParaAula(alunosAtivos, aula.Preco, idAula);
+
+    return {
+        mensagem: `Aula validada e ${resultadoPagamentos.pagamentos.length} pagamentos gerados.`,
+        aula,
+        pagamentos: resultadoPagamentos.pagamentos
+    };
+};
+
 module.exports = {
     listarAulas,
-    criarAula
+    criarAula,
+    confirmarPresencaProfessor,
+    validarAulaDirecao
 };

@@ -1,7 +1,12 @@
-import TestesBackend from './screens/TestsBackend';
+import { AuthProvider } from './contexts/AuthContext';
+import Login from './screens/Login';
 
 function App() {
-  return <TestesBackend />;
+  return (
+    <AuthProvider>
+      <Login />
+    </AuthProvider>
+  );
 }
 
 export default App;

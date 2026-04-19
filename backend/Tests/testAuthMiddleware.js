@@ -31,7 +31,7 @@ const tokenExpirado = jwt.sign(
     { expiresIn: '-1s' } // Já expirou
 );
 try {
-    jwt.verify(tokenExpirado, jwt.SECRET);
+    jwt.verify(tokenExpirado, JWT_SECRET);
     console.log("❌ Token deveria estar expirado!\n");
 } catch (erro) {
     console.log("✅ Erro esperado:", erro.message, "\n");
