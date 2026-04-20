@@ -1,7 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { query } = require('../database/sqlServer');
-const PERMISSOES = require('../config/permissoes');
+const PERMISSOES = require('../config/permissions');
 
 
 const userRepository = {

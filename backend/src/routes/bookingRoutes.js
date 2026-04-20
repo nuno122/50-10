@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bookingController = require('../controllers/bookingController');
 const { verificarToken, verificarPermissao } = require('../authMiddleware');
-const PERMISSOES = require('../config/permissoes');
+const PERMISSOES = require('../config/permissions');
 
 // Direção vê todas
 router.get('/', verificarToken, verificarPermissao(PERMISSOES.DIRECAO), bookingController.getMarcacoes);
