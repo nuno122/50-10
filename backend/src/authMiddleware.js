@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const PERMISSOES = require('./config/permissoes');
+const PERMISSOES = require('./config/permissions');
 
 const JWT_SECRET = process.env.JWT_SECRET || "ChaveSuperSecretaDaEntArtes_2026";
 
