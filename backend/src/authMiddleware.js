@@ -29,6 +29,18 @@ const verificarToken = (req, res, next) => {
     }
 };
 
+const verificarPermissao = (permissaoNecessaria) => {
+    return (req, res, next) => {
+        if (!req.utilizador || req.utilizador.permissao < permissaoNecessaria) {
+            return res.status(403).json({ 
+                erro: "Acesso negado. Permissões insuficientes." 
+            });
+        }
+        next();
+    };
+};
+
 module.exports = {
-    verificarToken
+    verificarToken,
+    verificarPermissao
 };
