@@ -2,18 +2,25 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const classRepository = {
-    // Buscar todas as aulas com as relações
     findAll: async () => {
         return await prisma.aula.findMany({
             include: {
-                Professor: true,
+                Professor: {
+                    include: {
+                        Utilizador: true
+                    }
+                },
                 Estudio: true,
-                EstiloDanca: true
+                EstiloDanca: true,
+                Marcacao: {
+                    where: {
+                        EstaAtivo: true
+                    }
+                }
             }
         });
     },
 
-    // Buscar aulas num estúdio e data específica (para validar sobreposição)
     findOverlapping: async (idEstudio, data) => {
         return await prisma.aula.findMany({
             where: {
@@ -23,7 +30,6 @@ const classRepository = {
         });
     },
 
-    // Criar a aula propriamente dita
     create: async (dados) => {
         return await prisma.aula.create({
             data: {
@@ -71,38 +77,6 @@ const classRepository = {
             }
         });
     }
-
-};
-
-
-const atualizarConfirmacaoProfessor = async (idAula) => {
-    return await prisma.aula.update({
-        where: { IdAula: idAula },
-        data: { ConfirmacaoProfessor: true }
-    });
-};
-
-const atualizarValidacaoDirecao = async (idAula) => {
-    return await prisma.aula.update({
-        where: { IdAula: idAula },
-        data: { ValidacaoDirecao: true }
-    });
-};
-
-const findByIdComAlunos = async (idAula) => {
-    return await prisma.aula.findUnique({
-        where: { IdAula: idAula },
-        include: {
-            Marcacao: {
-                where: {
-                    EstaAtivo: true
-                },
-                include: {
-                    Utilizador: true // Aluno
-                }
-            }
-        }
-    });
 };
 
 module.exports = classRepository;

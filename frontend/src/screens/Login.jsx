@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { loginUtilizador, loginAutenticacao } from '../services/api';
-import TestesBackend from './TestsBackend';
+import Portal from './Portal';
 import logo from '../../Images/logo.png';
 
 const Login = () => {
@@ -49,7 +49,7 @@ const Login = () => {
     };
 
     if (isAuthenticated) {
-        return <TestesBackend />;
+        return <Portal />;
     }
 
     return (

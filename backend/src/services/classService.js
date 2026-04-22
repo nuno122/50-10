@@ -69,7 +69,7 @@ const validarAulaDirecao = async (idAula) => {
     }
 
     const paymentService = require('./paymentService');
-    const alunosAtivos = aula.Marcacao.map(m => m.Utilizador);
+    const alunosAtivos = aula.Marcacao.map(m => m.Aluno);
     const resultadoPagamentos = await paymentService.gerarPagamentosParaAula(alunosAtivos, aula.Preco, idAula);
 
     return {
