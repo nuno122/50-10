@@ -1,25 +1,35 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-const classRepository = {
-    findAll: async () => {
-        return await prisma.aula.findMany({
-            include: {
-                Professor: {
-                    include: {
-                        Utilizador: true
-                    }
-                },
-                Estudio: true,
-                EstiloDanca: true,
-                Marcacao: {
-                    where: {
-                        EstaAtivo: true
-                    }
+const GetAulasDisponiveis = async () => {
+    return await prisma.aula.findMany({
+        include: {
+            Professor: {
+                include: {
+                    Utilizador: true
+                }
+            },
+            Estudio: true,
+            EstiloDanca: true,
+            Marcacao: {
+                where: {
+                    EstaAtivo: true
                 }
             }
-        });
-    },
+        }
+    });
+};
+
+const ValidarConclusaoAula = async (idAula, confirmado = true) => {
+    return await prisma.aula.update({
+        where: { IdAula: idAula },
+        data: { ConfirmacaoProfessor: confirmado }
+    });
+};
+
+const classRepository = {
+    GetAulasDisponiveis,
+    findAll: GetAulasDisponiveis,
 
     findOverlapping: async (idEstudio, data) => {
         return await prisma.aula.findMany({
@@ -48,12 +58,8 @@ const classRepository = {
         });
     },
 
-    atualizarConfirmacaoProfessor: async (idAula) => {
-        return await prisma.aula.update({
-            where: { IdAula: idAula },
-            data: { ConfirmacaoProfessor: true }
-        });
-    },
+    ValidarConclusaoAula,
+    atualizarConfirmacaoProfessor: (idAula) => ValidarConclusaoAula(idAula, true),
 
     atualizarValidacaoDirecao: async (idAula) => {
         return await prisma.aula.update({

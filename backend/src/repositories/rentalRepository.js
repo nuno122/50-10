@@ -5,6 +5,33 @@ const buscarTodos = async () => {
     return await prisma.aluguer.findMany({
         include: {
             Utilizador: true,
+            PedidoExtensao: {
+                orderBy: {
+                    DataPedido: 'desc'
+                }
+            },
+            Pagamento: true,
+            ArtigoAluguer: {
+                include: {
+                    TamanhoArtigo: {
+                        include: { Artigo: true }
+                    }
+                }
+            }
+        },
+        orderBy: {
+            DataLevantamento: 'desc'
+        }
+    });
+};
+
+const getAluguerById = async (idAluguer) => {
+    return await prisma.aluguer.findUnique({
+        where: { IdAluguer: idAluguer },
+        include: {
+            Utilizador: true,
+            PedidoExtensao: true,
+            Pagamento: true,
             ArtigoAluguer: {
                 include: {
                     TamanhoArtigo: {
@@ -70,8 +97,8 @@ const criarPedidoExtensao = async (idAluguer, novaDataProposta) => {
 const atualizarPedidoValorAdicional = async (idPedido, valorAdicional) => {
     return await prisma.pedidoExtensao.update({
         where: { IdPedido: idPedido },
-        data: { 
-            ValorAdicional: valorAdicional 
+        data: {
+            ValorAdicional: valorAdicional
         }
     });
 };
@@ -92,23 +119,96 @@ const atualizarEstadoPedido = async (idPedido, estado) => {
     });
 };
 
-const atualizarAluguer = async (idAluguer, novaDataEntrega, custoAdicional) => {
+const atualizarAluguer = async (idAluguer, novaDataEntrega) => {
     return await prisma.aluguer.update({
         where: { IdAluguer: idAluguer },
         data: {
-            DataEntrega: new Date(novaDataEntrega),
-            // Nota: adicionar campo CustoTotal se necessário
+            DataEntrega: new Date(novaDataEntrega)
         }
+    });
+};
+
+const registarDevolucao = async (idAluguer, estadoEntrega, multa = 0) => {
+    return await prisma.$transaction(async (tx) => {
+        const aluguer = await tx.aluguer.findUnique({
+            where: { IdAluguer: idAluguer },
+            include: {
+                ArtigoAluguer: true
+            }
+        });
+
+        if (!aluguer) {
+            return null;
+        }
+
+        for (const item of aluguer.ArtigoAluguer) {
+            await tx.tamanhoArtigo.update({
+                where: { IdTamanhoArtigo: item.IdTamanhoArtigo },
+                data: {
+                    Quantidade: { increment: item.Quantidade }
+                }
+            });
+
+            await tx.artigoAluguer.update({
+                where: {
+                    IdTamanhoArtigo_IdAluguer: {
+                        IdTamanhoArtigo: item.IdTamanhoArtigo,
+                        IdAluguer: item.IdAluguer
+                    }
+                },
+                data: {
+                    EstadoDevolucao: estadoEntrega
+                }
+            });
+        }
+
+        await tx.aluguer.update({
+            where: { IdAluguer: idAluguer },
+            data: {
+                EstadoAluguer: 'Entregue'
+            }
+        });
+
+        if (Number(multa) > 0) {
+            await tx.pagamento.create({
+                data: {
+                    IdAluguer: idAluguer,
+                    DataPagamento: null,
+                    PrazoPagamento: new Date(),
+                    Custo: multa,
+                    EstadoPagamento: 'Pendente'
+                }
+            });
+        }
+
+        return await tx.aluguer.findUnique({
+            where: { IdAluguer: idAluguer },
+            include: {
+                Utilizador: true,
+                PedidoExtensao: true,
+                Pagamento: true,
+                ArtigoAluguer: {
+                    include: {
+                        TamanhoArtigo: {
+                            include: { Artigo: true }
+                        }
+                    }
+                }
+            }
+        });
     });
 };
 
 module.exports = {
     buscarTodos,
+    getAluguerById,
     buscarStockArtigo,
     criarComTransacao,
+    create: criarPedidoExtensao,
     criarPedidoExtensao,
     atualizarPedidoValorAdicional,
     getPedidoExtensaoById,
     atualizarEstadoPedido,
-    atualizarAluguer
+    atualizarAluguer,
+    registarDevolucao
 };

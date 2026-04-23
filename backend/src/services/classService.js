@@ -6,8 +6,8 @@ const criarErro = (mensagem, statusCode) => {
     return erro;
 };
 
-const listarAulas = async () => {
-    return await classRepo.findAll();
+const ConsultarVagas = async () => {
+    return await classRepo.GetAulasDisponiveis();
 };
 
 const criarAula = async (dados) => {
@@ -54,23 +54,21 @@ const criarAula = async (dados) => {
     };
 };
 
-const confirmarPresencaProfessor = async (idAula) => {
-    return await classRepo.atualizarConfirmacaoProfessor(idAula);
+const ConfirmarPresenca = async (idAula) => {
+    return await classRepo.ValidarConclusaoAula(idAula, true);
 };
 
-const validarAulaDirecao = async (idAula) => {
-    // 1. Validar direção
+const validarAula = async (idAula) => {
     await classRepo.atualizarValidacaoDirecao(idAula);
-    
-    // 2. Buscar aula com alunos ativos
+
     const aula = await classRepo.findByIdComAlunos(idAula);
     if (!aula) {
-        throw new Error('Aula não encontrada.');
+        throw new Error('Aula nao encontrada.');
     }
 
     const paymentService = require('./paymentService');
-    const alunosAtivos = aula.Marcacao.map(m => m.Aluno);
-    const resultadoPagamentos = await paymentService.gerarPagamentosParaAula(alunosAtivos, aula.Preco, idAula);
+    const alunosAtivos = aula.Marcacao.map((marcacao) => marcacao.Aluno);
+    const resultadoPagamentos = await paymentService.GerarPagamento(alunosAtivos, aula.Preco, idAula);
 
     return {
         mensagem: `Aula validada e ${resultadoPagamentos.pagamentos.length} pagamentos gerados.`,
@@ -80,8 +78,11 @@ const validarAulaDirecao = async (idAula) => {
 };
 
 module.exports = {
-    listarAulas,
+    ConsultarVagas,
+    listarAulas: ConsultarVagas,
     criarAula,
-    confirmarPresencaProfessor,
-    validarAulaDirecao
+    ConfirmarPresenca,
+    confirmarPresencaProfessor: ConfirmarPresenca,
+    validarAula,
+    validarAulaDirecao: validarAula
 };

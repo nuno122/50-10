@@ -2,7 +2,7 @@ const classService = require('../services/classService');
 
 const getAulas = async (req, res) => {
     try {
-        const aulas = await classService.listarAulas();
+        const aulas = await classService.ConsultarVagas();
         res.json(aulas);
     } catch (erro) {
         console.error(erro);
@@ -27,7 +27,7 @@ const criarAula = async (req, res) => {
 const confirmarAula = async (req, res) => {
     try {
         const idAula = req.params.id;
-        const resultado = await classService.confirmarPresencaProfessor(idAula);
+        const resultado = await classService.ConfirmarPresenca(idAula);
         res.json({ mensagem: 'Aula confirmada pelo professor.', aula: resultado });
     } catch (erro) {
         console.error(erro);
@@ -38,7 +38,7 @@ const confirmarAula = async (req, res) => {
 const validarAula = async (req, res) => {
     try {
         const idAula = req.params.id;
-        const resultado = await classService.validarAulaDirecao(idAula);
+        const resultado = await classService.validarAula(idAula);
         res.json(resultado);
     } catch (erro) {
         console.error(erro);
@@ -46,4 +46,10 @@ const validarAula = async (req, res) => {
     }
 };
 
-module.exports = { getAulas, criarAula, confirmarAula, validarAula };
+module.exports = {
+    exibirAulas: getAulas,
+    getAulas,
+    criarAula,
+    confirmarAula,
+    validarAula
+};

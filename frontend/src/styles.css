@@ -651,6 +651,24 @@ button {
   color: #60758f;
 }
 
+.dashboard-note {
+  margin: 12px 0 0;
+  color: #8a5a17;
+  line-height: 1.6;
+}
+
+.dashboard-banner {
+  padding: 14px 16px;
+  border-radius: 18px;
+  font-weight: 600;
+}
+
+.dashboard-banner--error {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #b42318;
+}
+
 .dashboard-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -670,6 +688,15 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+
+.dashboard-loading {
+  padding: 28px;
+}
+
+.dashboard-loading p {
+  margin: 0;
+  color: #475569;
 }
 
 .dashboard-stat-title {
@@ -792,6 +819,450 @@ button {
   background: #f59e0b;
 }
 
+.inventory-page {
+  display: grid;
+  gap: 20px;
+}
+
+.inventory-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.inventory-eyebrow {
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.72rem;
+  color: #60758f;
+}
+
+.inventory-header h1,
+.inventory-modal-header h2 {
+  margin: 0;
+}
+
+.inventory-subtitle {
+  margin: 10px 0 0;
+  color: #60758f;
+}
+
+.inventory-banner {
+  padding: 14px 16px;
+  border-radius: 18px;
+  font-weight: 600;
+}
+
+.inventory-banner--error {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #b42318;
+}
+
+.inventory-banner--info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4f91;
+}
+
+.inventory-banner--success {
+  background: #ecfdf3;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.inventory-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.inventory-card {
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(206, 218, 232, 0.95);
+  box-shadow: 0 24px 60px rgba(37, 58, 90, 0.08);
+}
+
+.inventory-stat-card {
+  padding: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.inventory-stat-card p,
+.inventory-item-top p,
+.inventory-size-empty {
+  margin: 0;
+  color: #60758f;
+}
+
+.inventory-stat-card strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 2rem;
+  color: #1c2e44;
+}
+
+.inventory-stat-card span {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: #dbeafe;
+  color: #1d4f91;
+  font-weight: 800;
+}
+
+.inventory-toolbar {
+  padding: 18px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.inventory-search {
+  flex: 1;
+}
+
+.inventory-search input,
+.inventory-form input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid #d2ddea;
+  background: #f9fbfe;
+  color: #102238;
+}
+
+.inventory-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.inventory-filter,
+.inventory-primary-button,
+.inventory-secondary-button,
+.inventory-close {
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.inventory-filter {
+  background: #edf3fb;
+  color: #27496d;
+}
+
+.inventory-filter--active,
+.inventory-primary-button {
+  background: linear-gradient(135deg, #1d5ca3 0%, #14355f 100%);
+  color: #fff;
+}
+
+.inventory-secondary-button,
+.inventory-close {
+  background: #edf3fb;
+  color: #27496d;
+}
+
+.inventory-primary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.inventory-item {
+  padding: 22px;
+  display: grid;
+  gap: 18px;
+}
+
+.inventory-item--inactive {
+  opacity: 0.72;
+}
+
+.inventory-item-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.inventory-item-top h3,
+.inventory-sizes-title {
+  margin: 0;
+}
+
+.inventory-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.inventory-badge {
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.inventory-badge--available {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.inventory-badge--empty {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.inventory-badge--inactive {
+  background: #fee2e2;
+  color: #b42318;
+}
+
+.inventory-meta {
+  display: grid;
+  gap: 10px;
+}
+
+.inventory-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.inventory-meta-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.inventory-meta-row span {
+  color: #60758f;
+}
+
+.inventory-meta-row strong {
+  color: #1c2e44;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.inventory-sizes {
+  display: grid;
+  gap: 10px;
+}
+
+.inventory-size-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.inventory-size-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.inventory-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.inventory-modal {
+  width: min(720px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  background: #fff;
+  border-radius: 28px;
+  padding: 28px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.3);
+}
+
+.inventory-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.inventory-form {
+  display: grid;
+  gap: 16px;
+}
+
+.inventory-form label {
+  display: grid;
+  gap: 8px;
+  color: #334155;
+  font-weight: 600;
+}
+
+.inventory-switch {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.inventory-form-note {
+  padding: 16px;
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.inventory-form-note p {
+  margin: 0 0 12px;
+  color: #60758f;
+}
+
+.inventory-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+.inventory-empty {
+  padding: 28px;
+}
+
+.inventory-empty p {
+  margin: 0;
+  color: #475569;
+}
+
+.inventory-role-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 18px;
+}
+
+.inventory-role-sidebar,
+.inventory-role-main {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.inventory-role-panel {
+  padding: 22px;
+  display: grid;
+  gap: 18px;
+}
+
+.inventory-role-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.inventory-role-panel-header h2,
+.inventory-role-rental h3 {
+  margin: 0;
+}
+
+.inventory-role-panel-header p,
+.inventory-role-rental-top p,
+.inventory-role-rental-items p {
+  margin: 6px 0 0;
+  color: #60758f;
+}
+
+.inventory-role-panel-header strong {
+  min-width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: #dbeafe;
+  color: #1d4f91;
+  font-size: 1.1rem;
+}
+
+.inventory-role-rentals {
+  display: grid;
+  gap: 14px;
+}
+
+.inventory-role-rental {
+  padding: 18px;
+  border-radius: 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: grid;
+  gap: 14px;
+}
+
+.inventory-role-rental--pending {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.inventory-role-rental-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.inventory-role-rental-top span {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.inventory-role-rental-items {
+  display: grid;
+  gap: 8px;
+}
+
+.inventory-role-rental .inventory-primary-button,
+.inventory-role-rental .inventory-secondary-button {
+  width: 100%;
+}
+
+.inventory-role-detail-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.inventory-modal--narrow {
+  width: min(560px, 100%);
+}
+
 .request-modal {
   width: min(820px, 100%);
   max-height: calc(100vh - 48px);
@@ -842,6 +1313,419 @@ button {
   flex-wrap: wrap;
 }
 
+.rental-page {
+  min-height: 100vh;
+  padding: 0;
+}
+
+.rental-page--embedded {
+  min-height: auto;
+}
+
+.rental-shell {
+  width: 100%;
+  display: grid;
+  gap: 24px;
+}
+
+.rental-shell--embedded {
+  width: 100%;
+}
+
+.rental-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.rental-eyebrow {
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.72rem;
+  color: #60758f;
+}
+
+.rental-header h1,
+.rental-form-header h2,
+.rental-modal-header h2,
+.rental-detail-items h3 {
+  margin: 0;
+}
+
+.rental-subtitle,
+.rental-form-header p,
+.rental-empty-copy,
+.rental-summary-row span,
+.rental-label {
+  color: #60758f;
+}
+
+.rental-subtitle,
+.rental-form-header p,
+.rental-empty-copy {
+  margin: 10px 0 0;
+  line-height: 1.6;
+}
+
+.rental-banner {
+  padding: 14px 16px;
+  border-radius: 18px;
+  font-weight: 600;
+}
+
+.rental-banner--error {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #b42318;
+}
+
+.rental-banner--success {
+  background: #ecfdf3;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.rental-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+}
+
+.rental-main,
+.rental-side {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.rental-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.rental-card {
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(206, 218, 232, 0.95);
+  box-shadow: 0 24px 60px rgba(37, 58, 90, 0.08);
+}
+
+.rental-stat-card {
+  padding: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.rental-stat-card p,
+.rental-detail-item small {
+  margin: 0;
+}
+
+.rental-stat-card strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 2rem;
+  color: #2563eb;
+}
+
+.rental-stat-card span {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: #dbeafe;
+  color: #1d4f91;
+  font-weight: 800;
+}
+
+.rental-toolbar,
+.rental-form-card {
+  padding: 18px;
+}
+
+.rental-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.rental-filter-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.rental-button {
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rental-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.rental-button--primary {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #fff;
+}
+
+.rental-button--warning {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  color: #fff;
+}
+
+.rental-button--dark {
+  background: linear-gradient(135deg, #1f2937 0%, #0f172a 100%);
+  color: #fff;
+}
+
+.rental-button--ghost {
+  background: #edf3fb;
+  color: #27496d;
+}
+
+.rental-logout {
+  min-height: 52px;
+}
+
+.rental-list-card {
+  overflow: hidden;
+}
+
+.rental-list {
+  display: grid;
+}
+
+.rental-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px;
+  border-top: 1px solid #edf2f7;
+}
+
+.rental-item:first-child {
+  border-top: 0;
+}
+
+.rental-item-main {
+  flex: 1;
+  display: grid;
+  gap: 16px;
+}
+
+.rental-badges {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.rental-badge {
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.rental-badge--active {
+  background: #dbeafe;
+  color: #1d4f91;
+}
+
+.rental-badge--completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.rental-badge--muted {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.rental-badge--danger {
+  background: #fee2e2;
+  color: #b42318;
+}
+
+.rental-grid,
+.rental-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.rental-grid p,
+.rental-detail-grid p,
+.rental-detail-item p,
+.rental-summary-row strong {
+  margin: 6px 0 0;
+  color: #1c2e44;
+  font-weight: 600;
+}
+
+.rental-chip-list {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.rental-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+.rental-extension {
+  padding: 16px;
+  border-radius: 20px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.rental-extension-title {
+  margin: 0 0 8px;
+  color: #9a3412;
+  font-weight: 700;
+}
+
+.rental-extension p {
+  margin: 6px 0 0;
+  color: #9a3412;
+}
+
+.rental-extension-actions,
+.rental-actions,
+.rental-modal-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.rental-actions {
+  min-width: 180px;
+  flex-direction: column;
+}
+
+.rental-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.rental-form label {
+  display: grid;
+  gap: 8px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.rental-form select,
+.rental-form input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid #d2ddea;
+  background: #f9fbfe;
+  color: #102238;
+}
+
+.rental-empty {
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.rental-empty-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #16324f;
+}
+
+.rental-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.rental-modal {
+  width: min(860px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  background: #fff;
+  border-radius: 28px;
+  padding: 28px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.3);
+}
+
+.rental-modal--small {
+  width: min(560px, 100%);
+}
+
+.rental-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.rental-summary {
+  padding: 16px;
+  border-radius: 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: grid;
+  gap: 12px;
+}
+
+.rental-summary-row,
+.rental-detail-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.rental-detail-items {
+  margin-top: 24px;
+  display: grid;
+  gap: 12px;
+}
+
+.rental-detail-item {
+  padding: 16px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+}
+
+.rental-detail-item strong {
+  color: #475569;
+}
+
 @media (max-width: 900px) {
   .portal-shell {
     grid-template-columns: 1fr;
@@ -858,6 +1742,17 @@ button {
   .request-header,
   .request-item,
   .request-modal-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .rental-header,
+  .rental-toolbar,
+  .rental-item,
+  .rental-extension,
+  .rental-modal-header,
+  .rental-summary-row,
+  .rental-detail-item {
     flex-direction: column;
     align-items: stretch;
   }
@@ -883,8 +1778,31 @@ button {
   }
 
   .dashboard-stats,
-  .dashboard-grid {
+  .dashboard-grid,
+  .inventory-stats,
+  .inventory-grid,
+  .inventory-role-layout {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .rental-layout,
+  .rental-grid,
+  .rental-detail-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .inventory-role-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-header,
+  .inventory-toolbar,
+  .inventory-item-top,
+  .inventory-modal-header,
+  .inventory-role-panel-header,
+  .inventory-role-rental-top {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 
@@ -901,6 +1819,13 @@ button {
     grid-template-columns: 1fr;
   }
 
+  .rental-stats,
+  .rental-layout,
+  .rental-grid,
+  .rental-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
   .request-card-header,
   .request-item,
   .request-modal {
@@ -912,7 +1837,22 @@ button {
   }
 
   .dashboard-stats,
-  .dashboard-grid {
+  .dashboard-grid,
+  .inventory-stats,
+  .inventory-grid,
+  .inventory-role-layout {
     grid-template-columns: 1fr;
+  }
+
+  .inventory-modal-backdrop {
+    padding: 10px;
+  }
+
+  .inventory-modal {
+    padding: 20px;
+  }
+
+  .rental-modal {
+    padding: 20px;
   }
 }

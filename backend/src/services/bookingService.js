@@ -1,4 +1,5 @@
 const bookingRepo = require('../repositories/bookingRepository');
+const classRepo = require('../repositories/classRepository');
 
 const criarErro = (mensagem, statusCode) => {
     const erro = new Error(mensagem);
@@ -6,41 +7,49 @@ const criarErro = (mensagem, statusCode) => {
     return erro;
 };
 
-// ─── Criar ────────────────────────────────────────────────────────────────────
+const ConsultarVagas = async () => {
+    return await classRepo.GetAulasDisponiveis();
+};
 
-const criarMarcacao = async (idAluno, idAula) => {
+const GetPreco = async (idAula) => {
+    const aula = await bookingRepo.findAulaWithMarcacoes(idAula);
+    if (!aula) throw criarErro('Aula nao encontrada.', 404);
+    return aula.Preco;
+};
+
+const FazerMarcacao = async (idAula, idAluno) => {
     if (!idAluno || !idAula) {
-        throw criarErro('IdAluno e IdAula são obrigatórios.', 400);
+        throw criarErro('IdAluno e IdAula sao obrigatorios.', 400);
     }
 
     const aluno = await bookingRepo.findAlunoById(idAluno);
-    if (!aluno) throw criarErro('Aluno não encontrado.', 404);
+    if (!aluno) throw criarErro('Aluno nao encontrado.', 404);
 
     const aula = await bookingRepo.findAulaWithMarcacoes(idAula);
-    if (!aula) throw criarErro('Aula não encontrada.', 404);
+    if (!aula) throw criarErro('Aula nao encontrada.', 404);
 
     if (!aula.EstaAtivo) throw criarErro('Esta aula foi cancelada.', 400);
 
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     if (new Date(aula.Data) < hoje) {
-        throw criarErro('Não podes marcar aulas passadas.', 400);
+        throw criarErro('Nao podes marcar aulas passadas.', 400);
     }
 
-    const inscritosAtivos = aula.Marcacao.filter(m => m.EstaAtivo).length;
+    const inscritosAtivos = aula.Marcacao.filter((marcacao) => marcacao.EstaAtivo).length;
     if (inscritosAtivos >= aula.CapacidadeMaxima) {
         throw criarErro('Aula lotada.', 400);
     }
 
     const jaInscrito = await bookingRepo.findExisting(idAluno, idAula);
-    if (jaInscrito) throw criarErro('Já estás inscrito nesta aula.', 400);
+    if (jaInscrito) throw criarErro('Ja estas inscrito nesta aula.', 400);
 
     const novaMarcacao = await bookingRepo.create(idAluno, idAula);
-
+    const preco = await GetPreco(idAula);
     const prazoPagamento = new Date(aula.Data);
     prazoPagamento.setDate(prazoPagamento.getDate() - 2);
 
-    await bookingRepo.criarPagamento(novaMarcacao.IdMarcacao, aula.Preco, prazoPagamento);
+    await bookingRepo.criarPagamento(novaMarcacao.IdMarcacao, preco, prazoPagamento);
 
     return {
         mensagem: 'Lugar reservado!',
@@ -48,62 +57,66 @@ const criarMarcacao = async (idAluno, idAula) => {
     };
 };
 
-// ─── Cancelar (Unificado com regra de 24h) ────────────────────────────────────
+const isPrazoValido = (dataAulaCompleta) => {
+    const agora = new Date();
+    const diferencaMs = dataAulaCompleta - agora;
+    const diferencaHoras = diferencaMs / (1000 * 60 * 60);
+    return diferencaHoras >= 24;
+};
 
-const cancelarMarcacao = async (idMarcacao, idAluno, motivo) => {
-    if (!idMarcacao || !idAluno) {
-        throw criarErro('IdMarcacao e IdAluno são obrigatórios.', 400);
+const ProcessarCancelamento = async (idMarcacao, aprovado, motivo) => {
+    if (aprovado) {
+        await bookingRepo.cancelar(idMarcacao, motivo || 'Cancelamento antecipado (>= 24h)');
+        return { sucesso: true, mensagem: 'Cancelamento aprovado automaticamente.' };
     }
 
-    // Busca com Aula incluída para verificar o horário
-    const marcacao = await bookingRepo.findByIdComAula(idMarcacao);
-    
-    if (!marcacao) throw criarErro('Marcação não encontrada.', 404);
-    if (marcacao.IdAluno !== idAluno) throw criarErro('Não tens permissão para cancelar esta marcação.', 403);
-    if (!marcacao.EstaAtivo) throw criarErro('Esta marcação já está cancelada.', 400);
+    await bookingRepo.RegistarPedidoCancelamento(idMarcacao, false);
+    return {
+        sucesso: false,
+        mensagem: 'Prazo de 24h expirou. O pedido foi enviado para aprovacao da Direcao.'
+    };
+};
 
-    // Lógica das 24 horas
-    const agora = new Date();
+const CancelarMarcacao = async (idMarcacao, idAluno, motivo) => {
+    if (!idMarcacao || !idAluno) {
+        throw criarErro('IdMarcacao e IdAluno sao obrigatorios.', 400);
+    }
+
+    const marcacao = await bookingRepo.findByIdComAula(idMarcacao);
+
+    if (!marcacao) throw criarErro('Marcacao nao encontrada.', 404);
+    if (marcacao.IdAluno !== idAluno) throw criarErro('Nao tens permissao para cancelar esta marcacao.', 403);
+    if (!marcacao.EstaAtivo) throw criarErro('Esta marcacao ja esta cancelada.', 400);
+
     const dataAulaCompleta = new Date(marcacao.Aula.Data);
-    
-    // Ajusta a hora da aula (assumindo que HoraInicio é um objeto Date ou similar)
     dataAulaCompleta.setHours(
         marcacao.Aula.HoraInicio.getHours(),
         marcacao.Aula.HoraInicio.getMinutes(),
-        0, 0
+        0,
+        0
     );
 
-    const diferencaMs = dataAulaCompleta - agora;
-    const diferencaHoras = diferencaMs / (1000 * 60 * 60);
-
-    if (diferencaHoras >= 24) {
-        // Aprovado automaticamente
-        await bookingRepo.cancelar(idMarcacao, motivo || 'Cancelamento antecipado (>= 24h)');
-        return { sucesso: true, mensagem: 'Cancelamento aprovado automaticamente.' };
-    } else {
-        // Pendente aprovação da direção devido ao prazo curto
-        await bookingRepo.cancelar(idMarcacao, 'Pendente_Cancelamento');
-        return { 
-            sucesso: false, 
-            mensagem: 'Prazo de 24h expirou. O pedido foi enviado para aprovação da Direção.' 
-        };
-    }
+    return await ProcessarCancelamento(idMarcacao, isPrazoValido(dataAulaCompleta), motivo);
 };
-
-// ─── Listar ───────────────────────────────────────────────────────────────────
 
 const listarMarcacoes = async () => {
     return await bookingRepo.findAll();
 };
 
 const listarMarcacoesDoAluno = async (idAluno) => {
-    if (!idAluno) throw criarErro('IdAluno é obrigatório.', 400);
+    if (!idAluno) throw criarErro('IdAluno e obrigatorio.', 400);
     return await bookingRepo.findByAluno(idAluno);
 };
 
 module.exports = {
-    criarMarcacao,
-    cancelarMarcacao,
+    ConsultarVagas,
+    GetPreco,
+    FazerMarcacao,
+    isPrazoValido,
+    ProcessarCancelamento,
+    CancelarMarcacao,
+    criarMarcacao: FazerMarcacao,
+    cancelarMarcacao: CancelarMarcacao,
     listarMarcacoes,
     listarMarcacoesDoAluno
 };

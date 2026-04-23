@@ -1,21 +1,24 @@
 const paymentRepo = require('../repositories/paymentRepository');
 
-const gerarPagamentosParaAula = async (listaAlunos, preco, idAula) => {
+const create = async (Valor, DataLimite, IdAluno, IdAula, IdMarcacao = null) => {
+    return await paymentRepo.create({
+        Valor,
+        DataLimite,
+        IdAluno,
+        IdAula,
+        IdMarcacao,
+        estado: 'Pendente'
+    });
+};
+
+const GerarPagamento = async (listaAlunos, preco, idAula) => {
     const pagamentos = [];
 
     for (const aluno of listaAlunos) {
         const dataLimite = new Date();
-        dataLimite.setDate(dataLimite.getDate() + 5); // 5 dias
+        dataLimite.setDate(dataLimite.getDate() + 5);
 
-        const dadosPagamento = {
-            Valor: preco,
-            DataLimite: dataLimite,
-            IdAluno: aluno.IdUtilizador,
-            IdAula: idAula,
-            estado: 'Pendente'
-        };
-
-        const pagamento = await paymentRepo.criarPagamento(dadosPagamento);
+        const pagamento = await create(preco, dataLimite, aluno.IdUtilizador, idAula);
         pagamentos.push(pagamento);
     }
 
@@ -25,4 +28,8 @@ const gerarPagamentosParaAula = async (listaAlunos, preco, idAula) => {
     };
 };
 
-module.exports = { gerarPagamentosParaAula };
+module.exports = {
+    create,
+    GerarPagamento,
+    gerarPagamentosParaAula: GerarPagamento
+};

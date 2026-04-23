@@ -1,415 +1,661 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getAulas, validarAulaDirecao } from '../services/api';
+import {
+    avaliarPedidoExtensao,
+    criarAluguer,
+    getAlugueres,
+    getInventario,
+    getUtilizadores,
+    registarDevolucaoAluguer
+} from '../services/api';
 
-const badgeClassForType = (type) => (
-    type === 'lesson'
-        ? 'request-badge request-badge--primary'
-        : 'request-badge request-badge--muted'
-);
+const PERMISSOES = {
+    ALUNO: 1,
+    PROFESSOR: 2,
+    DIRECAO: 3,
+    ENCARREGADO: 4
+};
 
-const statusLabel = {
-    pending: 'Pendente',
-    approved: 'Aprovado',
-    rejected: 'Rejeitado'
+const roleLabel = (permission) => {
+    switch (permission) {
+        case PERMISSOES.ALUNO:
+            return 'Aluno';
+        case PERMISSOES.PROFESSOR:
+            return 'Professor';
+        case PERMISSOES.DIRECAO:
+            return 'Direcao';
+        case PERMISSOES.ENCARREGADO:
+            return 'Encarregado';
+        default:
+            return 'Utilizador';
+    }
 };
 
 const formatDate = (value) => {
     if (!value) return '-';
-
     const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
     return new Intl.DateTimeFormat('pt-PT').format(date);
 };
 
-const formatTime = (value) => {
-    if (!value) return '-';
+const formatCurrency = (value) => new Intl.NumberFormat('pt-PT', {
+    style: 'currency',
+    currency: 'EUR'
+}).format(Number(value || 0));
 
-    const text = String(value);
-    const match = text.match(/(\d{2}:\d{2})/);
-    if (match) return match[1];
+const normalizeStatus = (status) => String(status || '').trim().toLowerCase();
 
+const isCompletedRental = (rental) => {
+    const status = normalizeStatus(rental.EstadoAluguer);
+    return ['entregue', 'concluido', 'concluído', 'cancelado', 'devolvido'].some((value) => status.includes(value));
+};
+
+const toFilterStatus = (rental) => (isCompletedRental(rental) ? 'completed' : 'active');
+
+const parseSortableDate = (value) => {
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return text;
-
-    return new Intl.DateTimeFormat('pt-PT', {
-        hour: '2-digit',
-        minute: '2-digit'
-    }).format(date);
+    return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 };
 
-const toMinutes = (timeValue) => {
-    const text = String(timeValue || '');
-    const match = text.match(/(\d{2}):(\d{2})/);
+const getRentalItems = (rental) => (
+    (rental.ArtigoAluguer || []).map((entry) => ({
+        id: `${rental.IdAluguer}-${entry.IdTamanhoArtigo}`,
+        name: entry.TamanhoArtigo?.Artigo?.Nome || 'Artigo sem nome',
+        size: entry.TamanhoArtigo?.Tamanho || '-',
+        category: entry.TamanhoArtigo?.Artigo?.Nome || 'Geral',
+        quantity: Number(entry.Quantidade || 0)
+    }))
+);
 
-    if (!match) return 0;
+const getPendingExtension = (rental) => (
+    (rental.PedidoExtensao || []).find((request) => normalizeStatus(request.EstadoAprovacao) === 'pendente')
+);
 
-    return Number(match[1]) * 60 + Number(match[2]);
-};
+const getPendingFine = (rental) => (
+    (rental.Pagamento || []).find((payment) => payment.IdAluguer && normalizeStatus(payment.EstadoPagamento) !== 'pago')
+);
 
-const buildRequestsFromAulas = (aulas) => {
-    const pendentes = aulas.filter((aula) => !aula.ValidacaoDirecao && aula.EstaAtivo);
+const buildUserLabel = (user) => `${user.NomeCompleto} (${roleLabel(user.Permissoes)})`;
 
-    return pendentes.map((aula) => {
-        const startMinutes = toMinutes(aula.HoraInicio);
-        const endMinutes = toMinutes(aula.HoraFim);
-
-        const conflicts = aulas
-            .filter((candidate) => (
-                candidate.IdAula !== aula.IdAula &&
-                candidate.IdEstudio === aula.IdEstudio &&
-                candidate.Data === aula.Data &&
-                candidate.EstaAtivo
-            ))
-            .filter((candidate) => {
-                const candidateStart = toMinutes(candidate.HoraInicio);
-                const candidateEnd = toMinutes(candidate.HoraFim);
-                return startMinutes < candidateEnd && endMinutes > candidateStart;
-            })
-            .map((candidate) => ({
-                id: candidate.IdAula,
-                time: `${formatTime(candidate.HoraInicio)} - ${formatTime(candidate.HoraFim)}`,
-                teacher: candidate.Professor?.Utilizador?.NomeCompleto || candidate.Professor?.IdUtilizador || 'Professor',
-                style: candidate.EstiloDanca?.Nome || 'Sem estilo',
-                enrolled: candidate.Marcacao?.length || 0
-            }));
-
-        return {
-            id: aula.IdAula,
-            type: 'lesson',
-            requestedBy: aula.Professor?.Utilizador?.NomeCompleto || aula.Professor?.IdUtilizador || 'Professor',
-            requestedDate: formatDate(aula.Data),
-            requestedTime: formatTime(aula.HoraInicio),
-            requestedEndTime: formatTime(aula.HoraFim),
-            studio: aula.Estudio?.Numero ? `Estudio ${aula.Estudio.Numero}` : aula.IdEstudio,
-            duration: Math.max(endMinutes - startMinutes, 0),
-            style: aula.EstiloDanca?.Nome || 'Sem estilo',
-            conflicts,
-            status: aula.ValidacaoDirecao ? 'approved' : 'pending',
-            confirmacaoProfessor: Boolean(aula.ConfirmacaoProfessor),
-            enrolled: aula.Marcacao?.length || 0
-        };
-    });
+const buildItemLabel = (size) => {
+    const articleName = size.Artigo?.Nome || 'Artigo';
+    return `${articleName} (${size.Tamanho})`;
 };
 
 const RequestValidation = ({ embedded = false }) => {
     const { logout } = useAuth();
-    const [requests, setRequests] = useState([]);
-    const [selectedRequest, setSelectedRequest] = useState(null);
+    const [rentals, setRentals] = useState([]);
+    const [users, setUsers] = useState([]);
+    const [inventory, setInventory] = useState([]);
+    const [selectedRental, setSelectedRental] = useState(null);
+    const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+    const [returnRental, setReturnRental] = useState(null);
+    const [returnState, setReturnState] = useState('good');
+    const [fineAmount, setFineAmount] = useState('');
+    const [newUser, setNewUser] = useState('');
+    const [newItem, setNewItem] = useState('');
+    const [newReturnDate, setNewReturnDate] = useState('');
+    const [filterStatus, setFilterStatus] = useState('all');
+    const [sortField, setSortField] = useState('requestDate');
+    const [sortOrder, setSortOrder] = useState('desc');
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
-    const [submittingId, setSubmittingId] = useState(null);
+    const [feedback, setFeedback] = useState('');
 
-    const pendingRequests = useMemo(
-        () => requests.filter((request) => request.status === 'pending'),
-        [requests]
-    );
-
-    const closeModal = () => setSelectedRequest(null);
-
-    const updateStatus = (id, status) => {
-        setRequests((current) => current.map((request) => (
-            request.id === id ? { ...request, status } : request
-        )));
-
-        if (selectedRequest?.id === id) {
-            setSelectedRequest((current) => current ? { ...current, status } : null);
-        }
-    };
-
-    const loadRequests = async () => {
+    const loadData = async () => {
         setLoading(true);
         setError('');
 
         try {
-            const aulas = await getAulas();
-            setRequests(buildRequestsFromAulas(aulas));
+            const [rentalsData, usersData, inventoryData] = await Promise.all([
+                getAlugueres(),
+                getUtilizadores(),
+                getInventario()
+            ]);
+
+            setRentals(rentalsData);
+            setUsers(usersData.filter((user) => user.EstaAtivo !== false));
+            setInventory(inventoryData);
         } catch (err) {
-            setError(err.message || 'Nao foi possivel carregar os pedidos.');
+            setError(err.message || 'Nao foi possivel carregar os dados dos alugueres.');
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        loadRequests();
+        loadData();
     }, []);
 
-    const handleApprove = async (id) => {
-        setSubmittingId(id);
+    const selectableSizes = useMemo(() => (
+        inventory
+            .filter((item) => item.EstadoArtigo !== false)
+            .flatMap((item) => (item.TamanhoArtigo || [])
+                .filter((size) => Number(size.Quantidade || 0) > 0)
+                .map((size) => ({
+                    ...size,
+                    Artigo: item
+                })))
+    ), [inventory]);
+
+    const sortedRentals = useMemo(() => (
+        [...rentals].sort((a, b) => {
+            const leftValue = sortField === 'requestDate' ? a.DataLevantamento : a.DataEntrega;
+            const rightValue = sortField === 'requestDate' ? b.DataLevantamento : b.DataEntrega;
+            const diff = parseSortableDate(leftValue) - parseSortableDate(rightValue);
+            return sortOrder === 'asc' ? diff : -diff;
+        })
+    ), [rentals, sortField, sortOrder]);
+
+    const filteredRentals = useMemo(() => (
+        filterStatus === 'all'
+            ? sortedRentals
+            : sortedRentals.filter((rental) => toFilterStatus(rental) === filterStatus)
+    ), [filterStatus, sortedRentals]);
+
+    const activeCount = useMemo(() => rentals.filter((rental) => toFilterStatus(rental) === 'active').length, [rentals]);
+    const completedCount = useMemo(() => rentals.filter((rental) => toFilterStatus(rental) === 'completed').length, [rentals]);
+
+    const handleSort = (field) => {
+        if (sortField === field) {
+            setSortOrder((current) => (current === 'asc' ? 'desc' : 'asc'));
+            return;
+        }
+
+        setSortField(field);
+        setSortOrder('desc');
+    };
+
+    const openReturnModal = (rental) => {
+        setReturnRental(rental);
+        setReturnState('good');
+        setFineAmount('');
+        setIsReturnModalOpen(true);
+        setFeedback('');
+    };
+
+    const handleApproveExtension = async (rental) => {
+        const request = getPendingExtension(rental);
+        if (!request) return;
+
+        setSaving(true);
         setError('');
 
         try {
-            await validarAulaDirecao(id);
-            await loadRequests();
-            closeModal();
+            await avaliarPedidoExtensao(request.IdPedido, true, Number(request.ValorAdicional || 0));
+            setFeedback('Extensao de prazo aprovada com sucesso.');
+            await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel aprovar o pedido.');
+            setError(err.message || 'Nao foi possivel aprovar o pedido de extensao.');
         } finally {
-            setSubmittingId(null);
+            setSaving(false);
         }
     };
 
-    const handleReject = (id) => {
-        updateStatus(id, 'rejected');
-        closeModal();
+    const handleRejectExtension = async (rental) => {
+        const request = getPendingExtension(rental);
+        if (!request) return;
+
+        setSaving(true);
+        setError('');
+
+        try {
+            await avaliarPedidoExtensao(request.IdPedido, false, 0);
+            setFeedback('Pedido de extensao rejeitado.');
+            await loadData();
+        } catch (err) {
+            setError(err.message || 'Nao foi possivel rejeitar o pedido de extensao.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleFinalizeReturn = async () => {
+        if (!returnRental) return;
+
+        if (returnState === 'bad' && (!fineAmount || Number.isNaN(Number(fineAmount)) || Number(fineAmount) <= 0)) {
+            setError('Introduz um valor de multa valido para registar uma devolucao danificada.');
+            return;
+        }
+
+        setSaving(true);
+        setError('');
+
+        try {
+            await registarDevolucaoAluguer(
+                returnRental.IdAluguer,
+                returnState === 'bad' ? 'Danificado' : 'Em boas condicoes',
+                returnState === 'bad' ? Number(fineAmount) : 0
+            );
+
+            setFeedback(returnState === 'bad'
+                ? `Devolucao registada com multa pendente de ${formatCurrency(fineAmount)}.`
+                : 'Devolucao registada com sucesso.');
+            setIsReturnModalOpen(false);
+            setSelectedRental(null);
+            await loadData();
+        } catch (err) {
+            setError(err.message || 'Nao foi possivel registar a devolucao.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleCreateRental = async () => {
+        if (!newUser || !newItem || !newReturnDate) {
+            setError('Preenche utilizador, artigo e data prevista de entrega.');
+            return;
+        }
+
+        setSaving(true);
+        setError('');
+
+        try {
+            await criarAluguer({
+                IdUtilizador: newUser,
+                DataLevantamento: new Date().toISOString().split('T')[0],
+                DataEntrega: newReturnDate,
+                ListaArtigos: [{ IdTamanhoArtigo: newItem, Quantidade: 1 }]
+            });
+
+            setNewUser('');
+            setNewItem('');
+            setNewReturnDate('');
+            setFeedback('Aluguer presencial registado com sucesso.');
+            await loadData();
+        } catch (err) {
+            setError(err.message || 'Nao foi possivel registar o aluguer presencial.');
+        } finally {
+            setSaving(false);
+        }
     };
 
     return (
-        <main className={embedded ? 'request-page request-page--embedded' : 'request-page'}>
-            <section className={embedded ? 'request-shell request-shell--embedded' : 'request-shell'}>
-                <header className="request-header">
+        <main className={embedded ? 'rental-page rental-page--embedded' : 'rental-page'}>
+            <section className={embedded ? 'rental-shell rental-shell--embedded' : 'rental-shell'}>
+                <header className="rental-header">
                     <div>
-                        <p className="request-eyebrow">Direcao</p>
-                        <h1>Validacao de Pedidos</h1>
-                        <p className="request-subtitle">
-                            Dados reais da base de dados para aulas pendentes de validacao da direcao.
+                        <p className="rental-eyebrow">Direcao</p>
+                        <h1>Gestao de Requisicoes / Alugueres</h1>
+                        <p className="rental-subtitle">
+                            Gira entregas, devolucoes e pedidos de extensao usando os dados reais da base de dados.
                         </p>
                     </div>
 
-                    <div className="request-header-actions">
-                        <div className="request-counter">
-                            <span>{pendingRequests.length}</span>
-                            <small>Pendentes</small>
-                        </div>
-
-                        {!embedded && (
-                            <button
-                                type="button"
-                                className="request-button request-button--ghost request-logout"
-                                onClick={logout}
-                            >
-                                Logout
-                            </button>
-                        )}
-                    </div>
+                    {!embedded && (
+                        <button
+                            type="button"
+                            className="rental-button rental-button--ghost rental-logout"
+                            onClick={logout}
+                        >
+                            Logout
+                        </button>
+                    )}
                 </header>
 
-                <section className="request-card">
-                    <div className="request-card-header">
-                        <h2>Lista de pedidos pendentes</h2>
-                        <p>As aulas abaixo sao carregadas de `/api/aulas` e filtradas por validacao pendente.</p>
+                {feedback && <div className="rental-banner rental-banner--success">{feedback}</div>}
+                {error && <div className="rental-banner rental-banner--error">{error}</div>}
+
+                <div className="rental-layout">
+                    <div className="rental-main">
+                        <div className="rental-stats">
+                            <article className="rental-card rental-stat-card">
+                                <div>
+                                    <p>Ativos</p>
+                                    <strong>{activeCount}</strong>
+                                </div>
+                                <span>AT</span>
+                            </article>
+
+                            <article className="rental-card rental-stat-card">
+                                <div>
+                                    <p>Concluidos</p>
+                                    <strong>{completedCount}</strong>
+                                </div>
+                                <span>OK</span>
+                            </article>
+                        </div>
+
+                        <section className="rental-card rental-toolbar">
+                            <div className="rental-filter-group">
+                                {[
+                                    ['all', 'Todos'],
+                                    ['active', 'Ativos'],
+                                    ['completed', 'Concluidos']
+                                ].map(([value, label]) => (
+                                    <button
+                                        key={value}
+                                        type="button"
+                                        className={`rental-button ${filterStatus === value ? 'rental-button--primary' : 'rental-button--ghost'}`}
+                                        onClick={() => setFilterStatus(value)}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="rental-filter-group">
+                                <button
+                                    type="button"
+                                    className="rental-button rental-button--ghost"
+                                    onClick={() => handleSort('requestDate')}
+                                >
+                                    Data de Requisicao
+                                </button>
+                                <button
+                                    type="button"
+                                    className="rental-button rental-button--ghost"
+                                    onClick={() => handleSort('returnDate')}
+                                >
+                                    Data de Entrega
+                                </button>
+                            </div>
+                        </section>
+
+                        <section className="rental-card rental-list-card">
+                            {loading ? (
+                                <div className="rental-empty">
+                                    <p className="rental-empty-title">A carregar alugueres...</p>
+                                    <p className="rental-empty-copy">Estamos a ler os registos da base de dados.</p>
+                                </div>
+                            ) : filteredRentals.length === 0 ? (
+                                <div className="rental-empty">
+                                    <p className="rental-empty-title">Nenhum registo encontrado</p>
+                                    <p className="rental-empty-copy">Nao existem alugueres para os filtros atuais.</p>
+                                </div>
+                            ) : (
+                                <div className="rental-list">
+                                    {filteredRentals.map((rental) => {
+                                        const pendingExtension = getPendingExtension(rental);
+                                        const pendingFine = getPendingFine(rental);
+                                        const isActive = toFilterStatus(rental) === 'active';
+
+                                        return (
+                                            <article key={rental.IdAluguer} className="rental-item">
+                                                <div className="rental-item-main">
+                                                    <div className="rental-item-top">
+                                                        <div className="rental-badges">
+                                                            <span className={`rental-badge ${isActive ? 'rental-badge--active' : 'rental-badge--completed'}`}>
+                                                                {isActive ? 'Ativo' : 'Concluido'}
+                                                            </span>
+                                                            <span className="rental-badge rental-badge--muted">
+                                                                {getRentalItems(rental).length} artigo(s)
+                                                            </span>
+                                                            {pendingFine && (
+                                                                <span className="rental-badge rental-badge--danger">
+                                                                    Multa: {formatCurrency(pendingFine.Custo)}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="rental-grid">
+                                                        <div>
+                                                            <span className="rental-label">Solicitado por</span>
+                                                            <p>{rental.Utilizador?.NomeCompleto || rental.IdUtilizador}</p>
+                                                        </div>
+                                                        <div>
+                                                            <span className="rental-label">Data de requisicao</span>
+                                                            <p>{formatDate(rental.DataLevantamento)}</p>
+                                                        </div>
+                                                        <div>
+                                                            <span className="rental-label">Data de entrega atual</span>
+                                                            <p>{formatDate(rental.DataEntrega)}</p>
+                                                        </div>
+                                                        <div>
+                                                            <span className="rental-label">Estado real</span>
+                                                            <p>{rental.EstadoAluguer || '-'}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="rental-chip-list">
+                                                        {getRentalItems(rental).map((item) => (
+                                                            <span key={item.id} className="rental-chip">
+                                                                {item.name} ({item.size}) · Qtd. {item.quantity}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+
+                                                    {pendingExtension && (
+                                                        <div className="rental-extension">
+                                                            <div>
+                                                                <p className="rental-extension-title">Pedido de Extensao de Prazo</p>
+                                                                <p>Nova data pedida: {formatDate(pendingExtension.NovaDataProposta)}</p>
+                                                                <p>Data do pedido: {formatDate(pendingExtension.DataPedido)}</p>
+                                                            </div>
+                                                            <div className="rental-extension-actions">
+                                                                <button
+                                                                    type="button"
+                                                                    className="rental-button rental-button--ghost"
+                                                                    onClick={() => handleRejectExtension(rental)}
+                                                                    disabled={saving}
+                                                                >
+                                                                    Rejeitar
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="rental-button rental-button--warning"
+                                                                    onClick={() => handleApproveExtension(rental)}
+                                                                    disabled={saving}
+                                                                >
+                                                                    Aprovar nova data
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="rental-actions">
+                                                    {isActive && (
+                                                        <button
+                                                            type="button"
+                                                            className="rental-button rental-button--primary"
+                                                            onClick={() => openReturnModal(rental)}
+                                                        >
+                                                            Registar Devolucao
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        className="rental-button rental-button--ghost"
+                                                        onClick={() => setSelectedRental(rental)}
+                                                    >
+                                                        Ver detalhes
+                                                    </button>
+                                                </div>
+                                            </article>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </section>
                     </div>
 
-                    {error && (
-                        <div className="request-banner request-banner--error">
-                            {error}
-                        </div>
-                    )}
+                    <aside className="rental-side">
+                        <section className="rental-card rental-form-card">
+                            <div className="rental-form-header">
+                                <h2>Novo Aluguer Presencial</h2>
+                                <p>Registo criado diretamente com utilizador e tamanho reais da BD.</p>
+                            </div>
 
-                    {loading ? (
-                        <div className="request-empty">
-                            <div className="request-empty-icon">...</div>
-                            <p className="request-empty-title">A carregar pedidos</p>
-                            <p className="request-empty-copy">Estamos a ler os dados da base de dados.</p>
-                        </div>
-                    ) : pendingRequests.length === 0 ? (
-                        <div className="request-empty">
-                            <div className="request-empty-icon">OK</div>
-                            <p className="request-empty-title">Sem pedidos pendentes</p>
-                            <p className="request-empty-copy">Nao existem aulas pendentes de validacao da direcao.</p>
-                        </div>
-                    ) : (
-                        <div className="request-list">
-                            {pendingRequests.map((request) => (
-                                <article key={request.id} className="request-item">
-                                    <div className="request-item-main">
-                                        <div className="request-item-top">
-                                            <span className={badgeClassForType(request.type)}>
-                                                {request.type === 'lesson' ? 'Aula' : 'Espaco'}
-                                            </span>
+                            <div className="rental-form">
+                                <label>
+                                    <span>Utilizador</span>
+                                    <select value={newUser} onChange={(event) => setNewUser(event.target.value)}>
+                                        <option value="">Selecione o utilizador</option>
+                                        {users.map((user) => (
+                                            <option key={user.IdUtilizador} value={user.IdUtilizador}>
+                                                {buildUserLabel(user)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
 
-                                            {request.conflicts.length > 0 && (
-                                                <span className="request-badge request-badge--danger">
-                                                    {request.conflicts.length} conflito{request.conflicts.length > 1 ? 's' : ''}
-                                                </span>
-                                            )}
-                                        </div>
+                                <label>
+                                    <span>Artigo/Figurino e Tamanho</span>
+                                    <select value={newItem} onChange={(event) => setNewItem(event.target.value)}>
+                                        <option value="">Selecione o artigo</option>
+                                        {selectableSizes.map((size) => (
+                                            <option key={size.IdTamanhoArtigo} value={size.IdTamanhoArtigo}>
+                                                {buildItemLabel(size)} · Stock {size.Quantidade}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
 
-                                        <div className="request-grid">
-                                            <div>
-                                                <span className="request-label">Solicitado por</span>
-                                                <p>{request.requestedBy}</p>
-                                            </div>
-                                            <div>
-                                                <span className="request-label">Data</span>
-                                                <p>{request.requestedDate}</p>
-                                            </div>
-                                            <div>
-                                                <span className="request-label">Horario</span>
-                                                <p>{request.requestedTime} - {request.requestedEndTime} ({request.duration} min)</p>
-                                            </div>
-                                            <div>
-                                                <span className="request-label">Local</span>
-                                                <p>{request.studio}</p>
-                                            </div>
-                                            <div>
-                                                <span className="request-label">Estilo</span>
-                                                <p>{request.style}</p>
-                                            </div>
-                                            <div>
-                                                <span className="request-label">Estado</span>
-                                                <p>{statusLabel[request.status]}</p>
-                                            </div>
-                                            <div>
-                                                <span className="request-label">Professor confirmou</span>
-                                                <p>{request.confirmacaoProfessor ? 'Sim' : 'Nao'}</p>
-                                            </div>
-                                            <div>
-                                                <span className="request-label">Inscritos</span>
-                                                <p>{request.enrolled}</p>
-                                            </div>
-                                        </div>
+                                <label>
+                                    <span>Data prevista de entrega</span>
+                                    <input
+                                        type="date"
+                                        value={newReturnDate}
+                                        onChange={(event) => setNewReturnDate(event.target.value)}
+                                        min={new Date().toISOString().split('T')[0]}
+                                    />
+                                </label>
 
-                                        {request.conflicts.length > 0 && (
-                                            <div className="request-conflicts">
-                                                <p className="request-conflicts-title">Sobreposicoes detetadas</p>
-                                                {request.conflicts.map((conflict) => (
-                                                    <div key={conflict.id} className="request-conflict-row">
-                                                        <span>{conflict.time}</span>
-                                                        <span>{conflict.teacher}</span>
-                                                        <span>{conflict.style}</span>
-                                                        <span>{conflict.enrolled} alunos</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="request-actions">
-                                        <button
-                                            type="button"
-                                            className="request-button request-button--ghost"
-                                            onClick={() => setSelectedRequest(request)}
-                                        >
-                                            Ver detalhes
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="request-button request-button--primary"
-                                            onClick={() => handleApprove(request.id)}
-                                            disabled={request.conflicts.length > 0 || submittingId === request.id}
-                                        >
-                                            {submittingId === request.id ? 'A aprovar...' : 'Aprovar'}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="request-button request-button--danger"
-                                            onClick={() => handleReject(request.id)}
-                                        >
-                                            Rejeitar
-                                        </button>
-                                    </div>
-                                </article>
-                            ))}
-                        </div>
-                    )}
-                </section>
+                                <button
+                                    type="button"
+                                    className="rental-button rental-button--dark"
+                                    onClick={handleCreateRental}
+                                    disabled={saving}
+                                >
+                                    {saving ? 'A guardar...' : 'Registar Aluguer Presencial'}
+                                </button>
+                            </div>
+                        </section>
+                    </aside>
+                </div>
             </section>
 
-            {selectedRequest && (
-                <div className="request-modal-backdrop" onClick={closeModal}>
-                    <section
-                        className="request-modal"
-                        onClick={(event) => event.stopPropagation()}
-                        aria-modal="true"
-                        role="dialog"
-                    >
-                        <div className="request-modal-header">
+            {isReturnModalOpen && returnRental && (
+                <div className="rental-modal-backdrop" onClick={() => setIsReturnModalOpen(false)}>
+                    <section className="rental-modal rental-modal--small" onClick={(event) => event.stopPropagation()}>
+                        <div className="rental-modal-header">
                             <div>
-                                <p className="request-eyebrow">Detalhes do pedido</p>
-                                <h2>{selectedRequest.type === 'lesson' ? 'Aula' : 'Espaco'}</h2>
+                                <p className="rental-eyebrow">Registar devolucao</p>
+                                <h2>Confirmar estado da entrega</h2>
                             </div>
-                            <button type="button" className="request-close" onClick={closeModal}>
+                            <button type="button" className="rental-button rental-button--ghost" onClick={() => setIsReturnModalOpen(false)}>
                                 Fechar
                             </button>
                         </div>
 
-                        <div className="request-modal-grid">
-                            <div>
-                                <span className="request-label">Solicitado por</span>
-                                <p>{selectedRequest.requestedBy}</p>
+                        <div className="rental-summary">
+                            <div className="rental-summary-row">
+                                <span>Utilizador</span>
+                                <strong>{returnRental.Utilizador?.NomeCompleto || returnRental.IdUtilizador}</strong>
                             </div>
-                            <div>
-                                <span className="request-label">Data</span>
-                                <p>{selectedRequest.requestedDate}</p>
-                            </div>
-                            <div>
-                                <span className="request-label">Horario</span>
-                                <p>{selectedRequest.requestedTime} - {selectedRequest.requestedEndTime}</p>
-                            </div>
-                            <div>
-                                <span className="request-label">Duracao</span>
-                                <p>{selectedRequest.duration} minutos</p>
-                            </div>
-                            <div>
-                                <span className="request-label">Estudio</span>
-                                <p>{selectedRequest.studio}</p>
-                            </div>
-                            <div>
-                                <span className="request-label">Estilo</span>
-                                <p>{selectedRequest.style}</p>
-                            </div>
-                            <div>
-                                <span className="request-label">Professor confirmou</span>
-                                <p>{selectedRequest.confirmacaoProfessor ? 'Sim' : 'Nao'}</p>
-                            </div>
-                            <div>
-                                <span className="request-label">Inscritos</span>
-                                <p>{selectedRequest.enrolled}</p>
+                            <div className="rental-summary-row">
+                                <span>Artigo(s)</span>
+                                <strong>{getRentalItems(returnRental).map((item) => `${item.name} (${item.size})`).join(', ')}</strong>
                             </div>
                         </div>
 
-                        {selectedRequest.conflicts.length > 0 && (
-                            <div className="request-modal-conflicts">
-                                <h3>Conflitos de horario</h3>
-                                {selectedRequest.conflicts.map((conflict) => (
-                                    <div key={conflict.id} className="request-modal-conflict-card">
-                                        <div>
-                                            <span className="request-label">Horario</span>
-                                            <p>{conflict.time}</p>
-                                        </div>
-                                        <div>
-                                            <span className="request-label">Professor</span>
-                                            <p>{conflict.teacher}</p>
-                                        </div>
-                                        <div>
-                                            <span className="request-label">Estilo</span>
-                                            <p>{conflict.style}</p>
-                                        </div>
-                                        <div>
-                                            <span className="request-label">Alunos</span>
-                                            <p>{conflict.enrolled}</p>
-                                        </div>
+                        <div className="rental-form">
+                            <label>
+                                <span>Estado de entrega</span>
+                                <select value={returnState} onChange={(event) => setReturnState(event.target.value)}>
+                                    <option value="good">Em boas condicoes</option>
+                                    <option value="bad">Mas condicoes / Danificado</option>
+                                </select>
+                            </label>
+
+                            {returnState === 'bad' && (
+                                <label>
+                                    <span>Aplicar multa (EUR)</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={fineAmount}
+                                        onChange={(event) => setFineAmount(event.target.value)}
+                                        placeholder="0.00"
+                                    />
+                                </label>
+                            )}
+                        </div>
+
+                        <div className="rental-modal-actions">
+                            <button type="button" className="rental-button rental-button--ghost" onClick={() => setIsReturnModalOpen(false)}>
+                                Cancelar
+                            </button>
+                            <button type="button" className="rental-button rental-button--primary" onClick={handleFinalizeReturn} disabled={saving}>
+                                {saving ? 'A guardar...' : 'Confirmar Devolucao'}
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            )}
+
+            {selectedRental && (
+                <div className="rental-modal-backdrop" onClick={() => setSelectedRental(null)}>
+                    <section className="rental-modal" onClick={(event) => event.stopPropagation()}>
+                        <div className="rental-modal-header">
+                            <div>
+                                <p className="rental-eyebrow">Detalhes da requisicao</p>
+                                <h2>Aluguer</h2>
+                            </div>
+                            <button type="button" className="rental-button rental-button--ghost" onClick={() => setSelectedRental(null)}>
+                                Fechar
+                            </button>
+                        </div>
+
+                        <div className="rental-detail-grid">
+                            <div>
+                                <span className="rental-label">Status</span>
+                                <p>{toFilterStatus(selectedRental) === 'active' ? 'Ativo' : 'Concluido'}</p>
+                            </div>
+                            <div>
+                                <span className="rental-label">Solicitado por</span>
+                                <p>{selectedRental.Utilizador?.NomeCompleto || selectedRental.IdUtilizador}</p>
+                            </div>
+                            <div>
+                                <span className="rental-label">Data de requisicao</span>
+                                <p>{formatDate(selectedRental.DataLevantamento)}</p>
+                            </div>
+                            <div>
+                                <span className="rental-label">Data de entrega</span>
+                                <p>{formatDate(selectedRental.DataEntrega)}</p>
+                            </div>
+                            <div>
+                                <span className="rental-label">Estado real</span>
+                                <p>{selectedRental.EstadoAluguer || '-'}</p>
+                            </div>
+                            <div>
+                                <span className="rental-label">Multa pendente</span>
+                                <p>{getPendingFine(selectedRental) ? formatCurrency(getPendingFine(selectedRental).Custo) : 'Sem multa'}</p>
+                            </div>
+                        </div>
+
+                        <div className="rental-detail-items">
+                            <h3>Artigos requisitados</h3>
+                            {getRentalItems(selectedRental).map((item) => (
+                                <div key={item.id} className="rental-detail-item">
+                                    <div>
+                                        <p>{item.name} ({item.size})</p>
+                                        <small>Quantidade: {item.quantity}</small>
                                     </div>
-                                ))}
-                                <p className="request-modal-note">
-                                    Este pedido nao pode ser aprovado enquanto existirem conflitos de horario.
-                                </p>
-                            </div>
-                        )}
+                                    <strong>{item.category}</strong>
+                                </div>
+                            ))}
+                        </div>
 
-                        <div className="request-modal-actions">
-                            <button type="button" className="request-button request-button--ghost" onClick={closeModal}>
+                        <div className="rental-modal-actions">
+                            <button type="button" className="rental-button rental-button--ghost" onClick={() => setSelectedRental(null)}>
                                 Fechar
                             </button>
-                            {selectedRequest.conflicts.length === 0 && (
-                                <>
-                                    <button
-                                        type="button"
-                                        className="request-button request-button--danger"
-                                        onClick={() => handleReject(selectedRequest.id)}
-                                    >
-                                        Rejeitar
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="request-button request-button--primary"
-                                        onClick={() => handleApprove(selectedRequest.id)}
-                                        disabled={submittingId === selectedRequest.id}
-                                    >
-                                        {submittingId === selectedRequest.id ? 'A aprovar...' : 'Aprovar pedido'}
-                                    </button>
-                                </>
+                            {toFilterStatus(selectedRental) === 'active' && (
+                                <button
+                                    type="button"
+                                    className="rental-button rental-button--primary"
+                                    onClick={() => {
+                                        setSelectedRental(null);
+                                        openReturnModal(selectedRental);
+                                    }}
+                                >
+                                    Registar Devolucao
+                                </button>
                             )}
                         </div>
                     </section>

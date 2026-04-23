@@ -1,6 +1,17 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+const create = async (idAluno, idAula) => {
+    return await prisma.marcacao.create({
+        data: {
+            Aluno: { connect: { IdUtilizador: idAluno } },
+            Aula: { connect: { IdAula: idAula } },
+            EstaAtivo: true,
+            PresencaConfirmada: false
+        }
+    });
+};
+
 const bookingRepository = {
     // Procurar todas as marcações com detalhes
     findAll: async () => {
@@ -70,16 +81,7 @@ const bookingRepository = {
     },
 
     // Criar a marcação
-    create: async (idAluno, idAula) => {
-        return await prisma.marcacao.create({
-            data: {
-                Aluno: { connect: { IdUtilizador: idAluno } },
-                Aula:  { connect: { IdAula: idAula } },
-                EstaAtivo:          true,
-                PresencaConfirmada: false
-            }
-        });
-    },
+    create,
 
     // Cancelar uma marcação (Unificado: aceita motivo ou estado)
     cancelar: async (idMarcacao, motivoOuEstado) => {
@@ -102,6 +104,16 @@ const bookingRepository = {
                 Custo:           custo,
                 PrazoPagamento:  prazoPagamento,
                 EstadoPagamento: 'Pendente'
+            }
+        });
+    },
+
+    RegistarPedidoCancelamento: async (idMarcacao, aprovado = false) => {
+        return await prisma.marcacao.update({
+            where: { IdMarcacao: idMarcacao },
+            data: {
+                EstaAtivo: aprovado,
+                MotivoCancelamento: aprovado ? null : 'Pedido pelo aluno'
             }
         });
     }

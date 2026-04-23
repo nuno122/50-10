@@ -3,7 +3,7 @@ const bookingService = require('../services/bookingService');
 const criarMarcacao = async (req, res) => {
     try {
         const { IdAluno, IdAula } = req.body;
-        const resultado = await bookingService.criarMarcacao(IdAluno, IdAula);
+        const resultado = await bookingService.FazerMarcacao(IdAula, IdAluno);
         res.status(201).json(resultado);
     } catch (erro) {
         console.error(erro);
@@ -20,7 +20,7 @@ const cancelarMarcacao = async (req, res) => {
         const { Motivo } = req.body;
         const idAluno = req.utilizador ? req.utilizador.IdUtilizador : null; 
 
-        const resultado = await bookingService.cancelarMarcacao(idMarcacao, idAluno, Motivo);
+        const resultado = await bookingService.CancelarMarcacao(idMarcacao, idAluno, Motivo);
         res.status(200).json({ mensagem: 'Marcação cancelada com sucesso.', marcacao: resultado });
     } catch (erro) {
         console.error(erro);

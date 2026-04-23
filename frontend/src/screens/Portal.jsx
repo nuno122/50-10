@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Dashboard from './Dashboard';
+import InventoryManagement from './InventoryManagement';
+import RoleInventory from './RoleInventory';
 import RequestValidation from './RequestValidation';
 import TestsBackend from './TestsBackend';
 
@@ -35,10 +37,12 @@ const Portal = () => {
         isDirecao
             ? [
                 { id: 'dashboard', label: 'Dashboard' },
-                { id: 'requests', label: 'Request Validation' }
+                { id: 'requests', label: 'Request Validation' },
+                { id: 'inventory', label: 'Gestao de Inventario' }
             ]
             : [
                 { id: 'dashboard', label: 'Dashboard' },
+                { id: 'inventory', label: 'Inventario e Aluguer' },
                 { id: 'tests', label: 'Tests Backend' }
             ]
     ), [isDirecao]);
@@ -46,6 +50,14 @@ const Portal = () => {
     const renderContent = () => {
         if (activeView === 'requests' && isDirecao) {
             return <RequestValidation embedded />;
+        }
+
+        if (activeView === 'inventory' && isDirecao) {
+            return <InventoryManagement />;
+        }
+
+        if (activeView === 'inventory' && !isDirecao) {
+            return <RoleInventory />;
         }
 
         if (activeView === 'tests' && !isDirecao) {

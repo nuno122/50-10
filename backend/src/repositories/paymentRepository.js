@@ -2,8 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const paymentRepository = {
-    // Criar pagamento
-    criarPagamento: async (dadosPagamento) => {
+    create: async (dadosPagamento) => {
         return await prisma.pagamento.create({
             data: {
                 DataPagamento: null, // A definir após confirmação
@@ -18,6 +17,8 @@ const paymentRepository = {
         });
     }
 };
+
+paymentRepository.criarPagamento = paymentRepository.create;
 
 const buscarTodosPagamentos = async () => {
     try {
