@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Dashboard from './Dashboard';
+import FinanceManagement from './FinanceManagement';
 import InventoryManagement from './InventoryManagement';
 import RoleInventory from './RoleInventory';
 import RequestValidation from './RequestValidation';
+import ScheduleManagement from './ScheduleManagement';
 import TestsBackend from './TestsBackend';
 
 const PERMISSOES = {
@@ -37,7 +39,9 @@ const Portal = () => {
         isDirecao
             ? [
                 { id: 'dashboard', label: 'Dashboard' },
+                { id: 'schedule', label: 'Gestao de Horarios' },
                 { id: 'requests', label: 'Request Validation' },
+                { id: 'finance', label: 'Financeiro' },
                 { id: 'inventory', label: 'Gestao de Inventario' }
             ]
             : [
@@ -52,8 +56,16 @@ const Portal = () => {
             return <RequestValidation embedded />;
         }
 
+        if (activeView === 'schedule' && isDirecao) {
+            return <ScheduleManagement />;
+        }
+
         if (activeView === 'inventory' && isDirecao) {
             return <InventoryManagement />;
+        }
+
+        if (activeView === 'finance' && isDirecao) {
+            return <FinanceManagement />;
         }
 
         if (activeView === 'inventory' && !isDirecao) {

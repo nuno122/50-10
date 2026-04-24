@@ -31,6 +31,24 @@ const criarAula = async (dados) => {
         throw criarErro(`Campos obrigatorios em falta: ${emFalta.join(', ')}`, 400);
     }
 
+    const [professor, estudio, estilo] = await Promise.all([
+        classRepo.findProfessorById(dados.IdProfessor),
+        classRepo.findEstudioById(dados.IdEstudio),
+        classRepo.findEstiloById(dados.IdEstiloDanca)
+    ]);
+
+    if (!professor) {
+        throw criarErro('O professor selecionado nao existe na tabela Professor.', 400);
+    }
+
+    if (!estudio) {
+        throw criarErro('O estudio selecionado nao existe.', 400);
+    }
+
+    if (!estilo) {
+        throw criarErro('O estilo de danca selecionado nao existe.', 400);
+    }
+
     const aulasNoDia = await classRepo.findOverlapping(dados.IdEstudio, dados.Data);
 
     const novaHoraInicio = new Date(dados.HoraInicio).getTime();
@@ -67,8 +85,8 @@ const validarAula = async (idAula) => {
     }
 
     const paymentService = require('./paymentService');
-    const alunosAtivos = aula.Marcacao.map((marcacao) => marcacao.Aluno);
-    const resultadoPagamentos = await paymentService.GerarPagamento(alunosAtivos, aula.Preco, idAula);
+    const marcacoesAtivas = aula.Marcacao;
+    const resultadoPagamentos = await paymentService.GerarPagamento(marcacoesAtivas, aula.Preco);
 
     return {
         mensagem: `Aula validada e ${resultadoPagamentos.pagamentos.length} pagamentos gerados.`,
