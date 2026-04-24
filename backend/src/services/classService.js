@@ -76,6 +76,28 @@ const ConfirmarPresenca = async (idAula) => {
     return await classRepo.ValidarConclusaoAula(idAula, true);
 };
 
+const cancelarAula = async (idAula, utilizador) => {
+    const aula = await classRepo.findById(idAula);
+    if (!aula) {
+        throw criarErro('Aula nao encontrada.', 404);
+    }
+
+    if (aula.EstaAtivo === false) {
+        throw criarErro('A aula ja se encontra cancelada.', 400);
+    }
+
+    if (utilizador?.Permissoes === 2 && aula.IdProfessor !== utilizador.IdUtilizador) {
+        throw criarErro('Apenas o professor responsavel pode cancelar esta aula.', 403);
+    }
+
+    const aulaCancelada = await classRepo.cancelarAula(idAula);
+
+    return {
+        mensagem: 'Aula cancelada com sucesso.',
+        aula: aulaCancelada
+    };
+};
+
 const validarAula = async (idAula) => {
     await classRepo.atualizarValidacaoDirecao(idAula);
 
@@ -101,6 +123,7 @@ module.exports = {
     criarAula,
     ConfirmarPresenca,
     confirmarPresencaProfessor: ConfirmarPresenca,
+    cancelarAula,
     validarAula,
     validarAulaDirecao: validarAula
 };

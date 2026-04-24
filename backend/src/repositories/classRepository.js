@@ -14,6 +14,13 @@ const GetAulasDisponiveis = async () => {
             Marcacao: {
                 where: {
                     EstaAtivo: true
+                },
+                include: {
+                    Aluno: {
+                        include: {
+                            Utilizador: true
+                        }
+                    }
                 }
             }
         }
@@ -68,6 +75,34 @@ const classRepository = {
         });
     },
 
+    cancelarAula: async (idAula) => {
+        return await prisma.aula.update({
+            where: { IdAula: idAula },
+            data: { EstaAtivo: false },
+            include: {
+                Professor: {
+                    include: {
+                        Utilizador: true
+                    }
+                },
+                Estudio: true,
+                EstiloDanca: true,
+                Marcacao: {
+                    where: {
+                        EstaAtivo: true
+                    },
+                    include: {
+                        Aluno: {
+                            include: {
+                                Utilizador: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    },
+
     findByIdComAlunos: async (idAula) => {
         return await prisma.aula.findUnique({
             where: { IdAula: idAula },
@@ -99,6 +134,12 @@ const classRepository = {
     findEstiloById: async (idEstiloDanca) => {
         return await prisma.estiloDanca.findUnique({
             where: { IdEstiloDanca: idEstiloDanca }
+        });
+    },
+
+    findById: async (idAula) => {
+        return await prisma.aula.findUnique({
+            where: { IdAula: idAula }
         });
     }
 };

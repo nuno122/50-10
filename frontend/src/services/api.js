@@ -65,6 +65,9 @@ export const criarAula = async (dados) =>
 export const confirmarAulaProfessor = async (idAula) =>
     request(`/aulas/${idAula}/confirmar-professor`, { method: 'PATCH' });
 
+export const cancelarAulaProfessor = async (idAula) =>
+    request(`/aulas/${idAula}/cancelar`, { method: 'PATCH' });
+
 export const validarAulaDirecao = async (idAula) =>
     request(`/aulas/${idAula}/validar-direcao`, { method: 'PATCH' });
 

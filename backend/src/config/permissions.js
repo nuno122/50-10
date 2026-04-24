@@ -4,5 +4,4 @@ const PERMISSOES = {
     DIRECAO:     3,
     ENCARREGADO: 4
 };
-
 module.exports = PERMISSOES;

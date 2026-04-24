@@ -35,6 +35,17 @@ const confirmarAula = async (req, res) => {
     }
 };
 
+const cancelarAula = async (req, res) => {
+    try {
+        const idAula = req.params.id;
+        const resultado = await classService.cancelarAula(idAula, req.utilizador);
+        res.json(resultado);
+    } catch (erro) {
+        console.error(erro);
+        res.status(erro.statusCode || 500).json({ erro: erro.message || 'Erro ao cancelar a aula.' });
+    }
+};
+
 const validarAula = async (req, res) => {
     try {
         const idAula = req.params.id;
@@ -51,5 +62,6 @@ module.exports = {
     getAulas,
     criarAula,
     confirmarAula,
+    cancelarAula,
     validarAula
 };

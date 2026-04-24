@@ -6,6 +6,7 @@ import InventoryManagement from './InventoryManagement';
 import RoleInventory from './RoleInventory';
 import RequestValidation from './RequestValidation';
 import ScheduleManagement from './ScheduleManagement';
+import TeacherSchedule from './TeacherSchedule';
 import TestsBackend from './TestsBackend';
 
 const PERMISSOES = {
@@ -33,6 +34,7 @@ const getRoleLabel = (permission) => {
 const Portal = () => {
     const { user, logout } = useAuth();
     const isDirecao = user?.Permissoes === PERMISSOES.DIRECAO;
+    const isProfessor = user?.Permissoes === PERMISSOES.PROFESSOR;
     const [activeView, setActiveView] = useState('dashboard');
 
     const menuItems = useMemo(() => (
@@ -44,12 +46,19 @@ const Portal = () => {
                 { id: 'finance', label: 'Financeiro' },
                 { id: 'inventory', label: 'Gestao de Inventario' }
             ]
+            : isProfessor
+                ? [
+                    { id: 'dashboard', label: 'Dashboard' },
+                    { id: 'teacher-schedule', label: 'Aulas e Disponibilidade' },
+                    { id: 'inventory', label: 'Inventario e Aluguer' },
+                    { id: 'tests', label: 'Tests Backend' }
+                ]
             : [
                 { id: 'dashboard', label: 'Dashboard' },
                 { id: 'inventory', label: 'Inventario e Aluguer' },
                 { id: 'tests', label: 'Tests Backend' }
             ]
-    ), [isDirecao]);
+    ), [isDirecao, isProfessor]);
 
     const renderContent = () => {
         if (activeView === 'requests' && isDirecao) {
@@ -70,6 +79,10 @@ const Portal = () => {
 
         if (activeView === 'inventory' && !isDirecao) {
             return <RoleInventory />;
+        }
+
+        if (activeView === 'teacher-schedule' && isProfessor) {
+            return <TeacherSchedule />;
         }
 
         if (activeView === 'tests' && !isDirecao) {
