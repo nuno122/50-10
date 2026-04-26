@@ -10,17 +10,23 @@ const listarArtigos = async () => {
     return await inventoryRepo.findAll();
 };
 
-const criarArtigo = async ({ Nome, CustoPorDia }) => {
-    if (!Nome || CustoPorDia === undefined || CustoPorDia === null || CustoPorDia === '') {
-        throw criarErro('O Nome e o CustoPorDia sao obrigatorios.', 400);
+const criarArtigo = async (dados) => {
+    const { Nome, CustoPorDia } = dados || {};
+
+    if (!Nome) {
+        throw criarErro('Nome do artigo \u00e9 obrigat\u00f3rio.', 400);
     }
 
-    return await inventoryRepo.create({ Nome, CustoPorDia });
+    if (CustoPorDia === undefined || CustoPorDia === null || CustoPorDia === '' || Number(CustoPorDia) <= 0) {
+        throw criarErro('Custo por dia deve ser um valor positivo.', 400);
+    }
+
+    return await inventoryRepo.create(dados);
 };
 
 const editarArtigo = async (id, dados) => {
     if (!id) {
-        throw criarErro('O id do artigo e obrigatorio.', 400);
+        throw criarErro('ID do artigo \u00e9 obrigat\u00f3rio para edi\u00e7\u00e3o.', 400);
     }
 
     return await inventoryRepo.update(id, dados);
@@ -28,12 +34,10 @@ const editarArtigo = async (id, dados) => {
 
 const removerArtigo = async (id) => {
     if (!id) {
-        throw criarErro('O id do artigo e obrigatorio.', 400);
+        throw criarErro('ID do artigo \u00e9 obrigat\u00f3rio para remo\u00e7\u00e3o.', 400);
     }
 
-    await inventoryRepo.delete(id);
-
-    return { mensagem: 'Artigo removido com sucesso do catalogo!' };
+    return await inventoryRepo.delete(id);
 };
 
 module.exports = {

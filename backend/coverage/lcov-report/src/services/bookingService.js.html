@@ -170,8 +170,7 @@
 <a name='L105'></a><a href='#L105'>105</a>
 <a name='L106'></a><a href='#L106'>106</a>
 <a name='L107'></a><a href='#L107'>107</a>
-<a name='L108'></a><a href='#L108'>108</a>
-<a name='L109'></a><a href='#L109'>109</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
+<a name='L108'></a><a href='#L108'>108</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">4x</span>
@@ -239,7 +238,6 @@
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -287,25 +285,25 @@ const criarErro = (mensagem, statusCode) =&gt; {
     return erro;
 };
 &nbsp;
-// ─── Criar ────────────────────────────────────────────────────────────────────
+// ─── Criar ───────────────────────────────────────────────────────────────────
 &nbsp;
 const criarMarcacao = async (idAluno, idAula) =&gt; {
     if (!idAluno || !idAula) {
-        throw criarErro('IdAluno e IdAula são obrigatórios.', 400);
+        throw criarErro('IdAluno e IdAula sao obrigatorios.', 400);
     }
 &nbsp;
     const aluno = await bookingRepo.findAlunoById(idAluno);
-    if (!aluno) throw criarErro('Aluno não encontrado.', 404);
+    if (!aluno) throw criarErro('Aluno nao encontrado.', 404);
 &nbsp;
     const aula = await bookingRepo.findAulaWithMarcacoes(idAula);
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (!aula) <span class="cstat-no" title="statement not covered" >throw criarErro('Aula não encontrada.', 404);</span>
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!aula) <span class="cstat-no" title="statement not covered" >throw criarErro('Aula nao encontrada.', 404);</span>
 &nbsp;
     <span class="missing-if-branch" title="if path not taken" >I</span>if (!aula.EstaAtivo) <span class="cstat-no" title="statement not covered" >throw criarErro('Esta aula foi cancelada.', 400);</span>
 &nbsp;
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     <span class="missing-if-branch" title="if path not taken" >I</span>if (new Date(aula.Data) &lt; hoje) {
-<span class="cstat-no" title="statement not covered" >        throw criarErro('Não podes marcar aulas passadas.', 400);</span>
+<span class="cstat-no" title="statement not covered" >        throw criarErro('Nao podes marcar aulas passadas.', 400);</span>
     }
 &nbsp;
     const inscritosAtivos = aula.Marcacao.filter(m =&gt; m.EstaAtivo).length;
@@ -314,7 +312,7 @@ const criarMarcacao = async (idAluno, idAula) =&gt; {
     }
 &nbsp;
     const jaInscrito = await bookingRepo.findExisting(idAluno, idAula);
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (jaInscrito) <span class="cstat-no" title="statement not covered" >throw criarErro('Já estás inscrito nesta aula.', 400);</span>
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (jaInscrito) <span class="cstat-no" title="statement not covered" >throw criarErro('Ja estas inscrito nesta aula.', 400);</span>
 &nbsp;
     const novaMarcacao = await bookingRepo.create(idAluno, idAula);
 &nbsp;
@@ -329,25 +327,24 @@ const criarMarcacao = async (idAluno, idAula) =&gt; {
     };
 };
 &nbsp;
-// ─── Cancelar (Unificado com regra de 24h) ────────────────────────────────────
+// ─── Cancelar (Unificado com regra de 24h) ───────────────────────────────────
 &nbsp;
 const cancelarMarcacao = async (idMarcacao, idAluno, motivo) =&gt; {
     <span class="missing-if-branch" title="if path not taken" >I</span>if (!idMarcacao || !idAluno) {
-<span class="cstat-no" title="statement not covered" >        throw criarErro('IdMarcacao e IdAluno são obrigatórios.', 400);</span>
+<span class="cstat-no" title="statement not covered" >        throw criarErro('IdMarcacao e IdAluno sao obrigatorios.', 400);</span>
     }
 &nbsp;
-    // Busca com Aula incluída para verificar o horário
+    // Busca com Aula incluida para verificar o horario
     const marcacao = await bookingRepo.findByIdComAula(idMarcacao);
-    
-    if (!marcacao) throw criarErro('Marcação não encontrada.', 404);
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (marcacao.IdAluno !== idAluno) <span class="cstat-no" title="statement not covered" >throw criarErro('Não tens permissão para cancelar esta marcação.', 403);</span>
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (!marcacao.EstaAtivo) <span class="cstat-no" title="statement not covered" >throw criarErro('Esta marcação já está cancelada.', 400);</span>
 &nbsp;
-    // Lógica das 24 horas
+    if (!marcacao) throw criarErro('Marcacao nao encontrada.', 404);
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (marcacao.IdAluno !== idAluno) <span class="cstat-no" title="statement not covered" >throw criarErro('Nao tens permissao para cancelar esta marcacao.', 403);</span>
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!marcacao.EstaAtivo) <span class="cstat-no" title="statement not covered" >throw criarErro('Esta marcacao ja esta cancelada.', 400);</span>
+&nbsp;
+    // Logica das 24 horas
     const agora = new Date();
     const dataAulaCompleta = new Date(marcacao.Aula.Data);
-    
-    // Ajusta a hora da aula (assumindo que HoraInicio é um objeto Date ou similar)
+&nbsp;
     dataAulaCompleta.setHours(
         marcacao.Aula.HoraInicio.getHours(),
         marcacao.Aula.HoraInicio.getMinutes(),
@@ -362,23 +359,23 @@ const cancelarMarcacao = async (idMarcacao, idAluno, motivo) =&gt; {
         await bookingRepo.cancelar(idMarcacao, motivo || <span class="branch-1 cbranch-no" title="branch not covered" >'Cancelamento antecipado (&gt;= 24h)')</span>;
         return { sucesso: true, mensagem: 'Cancelamento aprovado automaticamente.' };
     } else {
-        // Pendente aprovação da direção devido ao prazo curto
-        await bookingRepo.cancelar(idMarcacao, 'Pendente_Cancelamento');
-        return { 
-            sucesso: false, 
-            mensagem: 'Prazo de 24h expirou. O pedido foi enviado para aprovação da Direção.' 
+        // Pendente aprovacao da direcao devido ao prazo curto
+        await bookingRepo.RegistarPedidoCancelamento(idMarcacao, false);
+        return {
+            sucesso: false,
+            mensagem: 'Prazo de 24h expirou. O pedido foi enviado para aprovacao da Direcao.'
         };
     }
 };
 &nbsp;
-// ─── Listar ───────────────────────────────────────────────────────────────────
+// ─── Listar ──────────────────────────────────────────────────────────────────
 &nbsp;
 const listarMarcacoes = <span class="fstat-no" title="function not covered" >as</span>ync () =&gt; {
 <span class="cstat-no" title="statement not covered" >    return await bookingRepo.findAll();</span>
 };
 &nbsp;
 const listarMarcacoesDoAluno = <span class="fstat-no" title="function not covered" >as</span>ync (idAluno) =&gt; {
-<span class="cstat-no" title="statement not covered" >    if (!idAluno) <span class="cstat-no" title="statement not covered" >throw criarErro('IdAluno é obrigatório.', 400);</span></span>
+<span class="cstat-no" title="statement not covered" >    if (!idAluno) <span class="cstat-no" title="statement not covered" >throw criarErro('IdAluno e obrigatorio.', 400);</span></span>
 <span class="cstat-no" title="statement not covered" >    return await bookingRepo.findByAluno(idAluno);</span>
 };
 &nbsp;
@@ -394,7 +391,7 @@ module.exports = {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-04-19T22:37:31.185Z
+                at 2026-04-26T15:58:36.725Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

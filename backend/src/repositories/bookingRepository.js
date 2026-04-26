@@ -104,6 +104,16 @@ const bookingRepository = {
                 EstadoPagamento: 'Pendente'
             }
         });
+    },
+
+    // Registar pedido de cancelamento tardio (< 24h) para aprovacao da Direcao
+    RegistarPedidoCancelamento: async (idMarcacao, aprovadoAutomaticamente) => {
+        return await prisma.marcacao.update({
+            where: { IdMarcacao: idMarcacao },
+            data: {
+                MotivoCancelamento: 'Pedido de cancelamento pendente aprovacao da Direcao'
+            }
+        });
     }
 };
 

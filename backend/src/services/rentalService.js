@@ -95,8 +95,7 @@ const avaliarPedidoExtensao = async ({ IdPedido, Aprovado, ValorAdicional = 0 })
     if (Aprovado) {
         const aluguerAtualizado = await rentalRepository.atualizarAluguer(
             pedido.IdAluguer, 
-            pedido.NovaDataProposta,
-            ValorAdicional
+            pedido.NovaDataProposta
         );
     const pedidoAtualizado = await rentalRepository.getPedidoExtensaoById(IdPedido);
     return {

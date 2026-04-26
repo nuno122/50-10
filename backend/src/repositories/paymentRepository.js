@@ -16,6 +16,20 @@ const paymentRepository = {
                 IdAula: dadosPagamento.IdAula
             }
         });
+    },
+
+    // Alias usado pelo paymentService.GerarPagamento
+    create: async (dadosPagamento) => {
+        return await prisma.pagamento.create({
+            data: {
+                DataPagamento: null,
+                PrazoPagamento: dadosPagamento.DataLimite,
+                Custo: dadosPagamento.Valor,
+                EstadoPagamento: dadosPagamento.estado || 'Pendente',
+                IdAluguer: null,
+                IdAluno: dadosPagamento.IdAluno,
+            }
+        });
     }
 };
 

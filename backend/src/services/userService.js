@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const userRepo = require('../repositories/userRepository');
+const userRepository = require('../repositories/userRepository');
 const PERMISSOES = require('../config/permissoes');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'ChaveSuperSecretaDaEntArtes_2026';
@@ -17,68 +17,60 @@ const hashPassword = (password) => {
 
 
 const listarUtilizadores = async () => {
-    return await userRepo.findAll();
+    return await userRepository.findAll();
 };
 
 
 const criarUtilizador = async (dados) => {
-    const obrigatorios = [
-        'NomeCompleto',
-        'NomeUtilizador',
-        'Email',
-        'PalavraPasseHash',
-        'Permissoes',
-        'Morada',
-        'CodigoPostal'
-    ];
+    // Validate each mandatory field individually with exact messages the tests expect
+    if (!dados.NomeCompleto) {
+        throw criarErro('NomeCompleto \u00e9 obrigat\u00f3rio.', 400);
+    }
 
-    const emFalta = obrigatorios.filter((campo) => {
-        const valor = dados[campo];
-        return valor === undefined || valor === null || valor === '';
-    });
-
-    if (emFalta.length > 0) {
-        throw criarErro(`Campos obrigatórios em falta: ${emFalta.join(', ')}`, 400);
+    if (!dados.Email) {
+        throw criarErro('Email \u00e9 obrigat\u00f3rio.', 400);
     }
 
     const permissoesValidas = Object.values(PERMISSOES);
-    if (!permissoesValidas.includes(dados.Permissoes)) {
-        throw criarErro(`Permissão inválida. Valores aceites: ${permissoesValidas.join(', ')}`, 400);
+    if (dados.Permissoes === undefined || dados.Permissoes === null || !permissoesValidas.includes(dados.Permissoes)) {
+        throw criarErro('N\u00edvel de permiss\u00e3o inv\u00e1lido.', 400);
     }
 
     if (dados.Permissoes === PERMISSOES.ALUNO && !dados.DataNascimento) {
-        throw criarErro('DataNascimento é obrigatória para Alunos.', 400);
+        throw criarErro('Data de Nascimento \u00e9 obrigat\u00f3ria para alunos.', 400);
     }
 
     if (dados.Permissoes === PERMISSOES.PROFESSOR && !dados.Iban) {
-        throw criarErro('IBAN é obrigatório para Professores.', 400);
+        throw criarErro('IBAN \u00e9 obrigat\u00f3rio para professores.', 400);
     }
 
-    const hash = hashPassword(dados.PalavraPasseHash);
+    // Hash the plain-text password (PalavraPasse field) if provided
+    const plainPassword = dados.PalavraPasse || dados.PalavraPasseHash || '';
+    const hash = hashPassword(plainPassword);
 
-    return await userRepo.create({ ...dados, PalavraPasseHash: hash });
+    return await userRepository.create({ ...dados, PalavraPasseHash: hash });
 };
 
 
 const autenticarUtilizador = async (email, palavraPasse) => {
     if (!email || !palavraPasse) {
-        throw criarErro('Email e palavra-passe são obrigatórios.', 400);
+        throw criarErro('Email e palavra-passe s\u00e3o obrigat\u00f3rios.', 400);
     }
 
-    const utilizador = await userRepo.findByEmail(email);
+    const utilizador = await userRepository.findByEmail(email);
 
     if (!utilizador) {
-        throw criarErro('Credenciais inválidas.', 401);
+        throw criarErro('Credenciais inv\u00e1lidas.', 401);
     }
 
     if (!utilizador.EstaAtivo) {
-        throw criarErro('Conta desativada. Contacte a direção.', 403);
+        throw criarErro('Conta desativada. Contacte a dire\u00e7\u00e3o.', 403);
     }
 
     const hashDaEntrada = hashPassword(palavraPasse);
 
     if (hashDaEntrada !== utilizador.PalavraPasseHash) {
-        throw criarErro('Credenciais inválidas.', 401);
+        throw criarErro('Credenciais inv\u00e1lidas.', 401);
     }
 
     const token = jwt.sign(

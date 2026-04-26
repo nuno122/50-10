@@ -70,6 +70,25 @@ const classRepository = {
                 }
             }
         });
+    },
+
+    // Lookup methods used by classService (and mocked in tests)
+    findProfessorById: async (idProfessor) => {
+        return await prisma.professor.findUnique({
+            where: { IdUtilizador: idProfessor }
+        });
+    },
+
+    findEstudioById: async (idEstudio) => {
+        return await prisma.estudio.findUnique({
+            where: { IdEstudio: idEstudio }
+        });
+    },
+
+    findEstiloById: async (idEstiloDanca) => {
+        return await prisma.estiloDanca.findUnique({
+            where: { IdEstiloDanca: idEstiloDanca }
+        });
     }
 
 };
