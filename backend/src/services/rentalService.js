@@ -59,7 +59,7 @@ const criarAluguer = async ({ IdUtilizador, DataLevantamento, DataEntrega, Lista
     };
 };
 
-const solicitarExtensao = async ({ IdAluguer, NovaDataProposta }) => {
+const SolicitarExtensaoPrazo = async ({ IdAluguer, NovaDataProposta }) => {
     if (!IdAluguer || !NovaDataProposta) {
         throw criarErro('IdAluguer e NovaDataProposta sao obrigatorios.', 400);
     }
@@ -76,8 +76,7 @@ const solicitarExtensao = async ({ IdAluguer, NovaDataProposta }) => {
     };
 };
 
-const avaliarPedidoExtensao = async ({ IdPedido, Aprovado, ValorAdicional = 0 }) => {
-    console.log('Service input ValorAdicional:', ValorAdicional, typeof ValorAdicional); // Debug
+const AvaliarPedidoExtensao = async ({ IdPedido, Aprovado, ValorAdicional = 0 }) => {
     const pedido = await rentalRepository.getPedidoExtensaoById(IdPedido);
     if (!pedido) {
         throw criarErro('Pedido de extensao nao encontrado.', 404);
@@ -87,22 +86,21 @@ const avaliarPedidoExtensao = async ({ IdPedido, Aprovado, ValorAdicional = 0 })
         throw criarErro('Pedido ja foi avaliado.', 400);
     }
 
-    // Update ValorAdicional first
     await rentalRepository.atualizarPedidoValorAdicional(IdPedido, ValorAdicional);
-
     await rentalRepository.atualizarEstadoPedido(IdPedido, Aprovado ? 'Aprovado' : 'Rejeitado');
 
     if (Aprovado) {
         const aluguerAtualizado = await rentalRepository.atualizarAluguer(
-            pedido.IdAluguer, 
+            pedido.IdAluguer,
             pedido.NovaDataProposta
         );
-    const pedidoAtualizado = await rentalRepository.getPedidoExtensaoById(IdPedido);
-    return {
-        mensagem: 'Extensao aprovada e aluguer atualizado!',
-        pedido: pedidoAtualizado,
-        aluguerAtualizado
-    };
+
+        const pedidoAtualizado = await rentalRepository.getPedidoExtensaoById(IdPedido);
+        return {
+            mensagem: 'Extensao aprovada e aluguer atualizado!',
+            pedido: pedidoAtualizado,
+            aluguerAtualizado
+        };
     }
 
     const pedidoAtualizado = await rentalRepository.getPedidoExtensaoById(IdPedido);
@@ -112,9 +110,50 @@ const avaliarPedidoExtensao = async ({ IdPedido, Aprovado, ValorAdicional = 0 })
     };
 };
 
+const RegistarDevolucao = async ({ IdAluguer, EstadoEntrega, Multa = 0 }) => {
+    if (!IdAluguer || !EstadoEntrega) {
+        throw criarErro('IdAluguer e EstadoEntrega sao obrigatorios.', 400);
+    }
+
+    if (!['Em boas condicoes', 'Danificado'].includes(EstadoEntrega)) {
+        throw criarErro('EstadoEntrega invalido.', 400);
+    }
+
+    const aluguer = await rentalRepository.getAluguerById(IdAluguer);
+    if (!aluguer) {
+        throw criarErro('Aluguer nao encontrado.', 404);
+    }
+
+    if (String(aluguer.EstadoAluguer || '').toLowerCase() === 'entregue') {
+        throw criarErro('A devolucao deste aluguer ja foi registada.', 400);
+    }
+
+    const multaNormalizada = Number(Multa || 0);
+    if (Number.isNaN(multaNormalizada) || multaNormalizada < 0) {
+        throw criarErro('Multa invalida.', 400);
+    }
+
+    const aluguerAtualizado = await rentalRepository.registarDevolucao(
+        IdAluguer,
+        EstadoEntrega,
+        multaNormalizada
+    );
+
+    return {
+        mensagem: multaNormalizada > 0
+            ? 'Devolucao registada com multa pendente.'
+            : 'Devolucao registada com sucesso.',
+        aluguer: aluguerAtualizado
+    };
+};
+
 module.exports = {
     listarAlugueres,
     criarAluguer,
-    solicitarExtensao,
-    avaliarPedidoExtensao
+    SolicitarExtensaoPrazo,
+    AvaliarPedidoExtensao,
+    RegistarDevolucao,
+    solicitarExtensao: SolicitarExtensaoPrazo,
+    avaliarPedidoExtensao: AvaliarPedidoExtensao,
+    registarDevolucao: RegistarDevolucao
 };

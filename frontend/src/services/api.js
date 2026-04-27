@@ -48,6 +48,12 @@ export const criarArtigo = async ({ Nome, CustoPorDia }) =>
         body: JSON.stringify({ Nome, CustoPorDia })
     });
 
+export const editarArtigo = async (id, dados) =>
+    request(`/inventario/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(dados)
+    });
+
 export const getAulas = async () => request('/aulas');
 
 export const criarAula = async (dados) =>
@@ -59,6 +65,9 @@ export const criarAula = async (dados) =>
 export const confirmarAulaProfessor = async (idAula) =>
     request(`/aulas/${idAula}/confirmar-professor`, { method: 'PATCH' });
 
+export const cancelarAulaProfessor = async (idAula) =>
+    request(`/aulas/${idAula}/cancelar`, { method: 'PATCH' });
+
 export const validarAulaDirecao = async (idAula) =>
     request(`/aulas/${idAula}/validar-direcao`, { method: 'PATCH' });
 
@@ -69,6 +78,8 @@ export const cancelarMarcacao = async (idMarcacao) =>
     request(`/marcacoes/${idMarcacao}/cancelar`, { method: 'PATCH' });
 
 export const getMarcacoes = async () => request('/marcacoes');
+
+export const getMinhasMarcacoes = async () => request('/marcacoes/minhas');
 
 export const criarMarcacao = async ({ IdAluno, IdAula }) =>
     request('/marcacoes', {
@@ -94,6 +105,12 @@ export const avaliarPedidoExtensao = async (idPedido, aprovado, valorAdicional =
     request(`/alugueres/pedidos-extensao/${idPedido}/avaliar`, {
         method: 'PATCH',
         body: JSON.stringify({ Aprovado: aprovado, ValorAdicional: valorAdicional })
+    });
+
+export const registarDevolucaoAluguer = async (idAluguer, EstadoEntrega, Multa = 0) =>
+    request(`/alugueres/${idAluguer}/devolucao`, {
+        method: 'PATCH',
+        body: JSON.stringify({ EstadoEntrega, Multa })
     });
 
 export const getEstudios = async () => request('/master/estudios');

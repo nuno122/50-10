@@ -1,14 +1,20 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { query } = require('../database/sqlServer');
-const PERMISSOES = require('../config/permissoes');
+const PERMISSOES = require('../config/permissions');
 
 
 const userRepository = {
     // Buscar todos
     findAll: async () => {
         try {
-            return await prisma.utilizador.findMany();
+            return await prisma.utilizador.findMany({
+                include: {
+                    Aluno: true,
+                    Professor: true,
+                    Encarregado: true
+                }
+            });
         } catch (error) {
             return await query(`
                 SELECT
@@ -23,7 +29,8 @@ const userRepository = {
                     Nif,
                     EstaAtivo,
                     NumeroCartaoCidadao,
-                    ValidadeCartaoCidadao
+                    ValidadeCartaoCidadao,
+                    CASE WHEN Permissoes = ${PERMISSOES.PROFESSOR} THEN 1 ELSE 0 END AS ProfessorValido
                 FROM Utilizador
                 ORDER BY NomeCompleto
             `);

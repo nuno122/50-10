@@ -87,6 +87,8 @@ model Disponibilidade {
   IdDisponibilidade String    @id @default(dbgenerated("newsequentialid()")) @db.UniqueIdentifier
   IdProfessor       String    @db.UniqueIdentifier
   Data              DateTime  @db.Date
+  Professor         Professor @relation(fields: [IdProfessor], references: [IdUtilizador], onUpdate: NoAction)
+}
 
 model Distrito {
   IdDistrito String   @id(map: "PK__Distrito__DE8EED590ECF81B6") @default(dbgenerated("newsequentialid()"), map: "DF__Distrito__IdDist__4CA06362") @db.UniqueIdentifier

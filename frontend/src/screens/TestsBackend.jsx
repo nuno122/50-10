@@ -118,7 +118,8 @@ const initialLoading = {
 };
 
 
-const TestesBackend = () => {
+const TestesBackend = ({ embedded = false }) => {
+    const { logout } = useAuth();
     const [results, setResults] = useState(initialData);
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(initialLoading);
@@ -198,17 +199,17 @@ const TestesBackend = () => {
     return (
         <main
             style={{
-                minHeight: '100vh',
-                padding: '40px 24px',
+                minHeight: embedded ? 'auto' : '100vh',
+                padding: embedded ? '0' : '40px 24px',
                 display: 'flex',
-                alignItems: 'center',
+                alignItems: embedded ? 'stretch' : 'center',
                 justifyContent: 'center'
             }}
         >
             <section
                 style={{
                     width: '100%',
-                    maxWidth: '1280px',
+                    maxWidth: embedded ? '100%' : '1280px',
                     backgroundColor: 'rgba(255, 252, 246, 0.92)',
                     border: '1px solid rgba(123, 92, 48, 0.16)',
                     borderRadius: '28px',
@@ -248,24 +249,22 @@ const TestesBackend = () => {
                     <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: '#e8f5e8', borderRadius: '8px', borderLeft: '4px solid #4caf50' }}>
                         <strong>Token ativo:</strong> {localStorage.getItem('authToken')?.substring(0, 40)}...
                     </div>
-                    <button
-                        onClick={() => {
-                            localStorage.removeItem('authToken');
-                            localStorage.removeItem('authUser');
-                            window.location.reload();
-                        }}
-                        style={{
-                            ...secondaryButtonStyle,
-                            background: '#fee',
-                            color: '#9f2d2d',
-                            border: '1px solid #fcc',
-                            padding: '8px 16px',
-                            fontSize: '14px',
-                            marginBottom: '16px'
-                        }}
-                    >
-                        🚪 Logout
-                    </button>
+                    {!embedded && (
+                        <button
+                            onClick={logout}
+                            style={{
+                                ...secondaryButtonStyle,
+                                background: '#fee',
+                                color: '#9f2d2d',
+                                border: '1px solid #fcc',
+                                padding: '8px 16px',
+                                fontSize: '14px',
+                                marginBottom: '16px'
+                            }}
+                        >
+                            Logout
+                        </button>
+                    )}
                     <form
                         onSubmit={(event) => {
                             event.preventDefault();

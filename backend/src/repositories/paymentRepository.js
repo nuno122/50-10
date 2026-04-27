@@ -2,18 +2,15 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const paymentRepository = {
-    // Criar pagamento
-    criarPagamento: async (dadosPagamento) => {
+    create: async (dadosPagamento) => {
         return await prisma.pagamento.create({
             data: {
-                DataPagamento: null, // A definir após confirmação
+                DataPagamento: null,
                 PrazoPagamento: dadosPagamento.DataLimite,
                 Custo: dadosPagamento.Valor,
                 EstadoPagamento: dadosPagamento.estado || 'Pendente',
-                IdAluguer: null, // Para marcações será null
-                IdMarcacao: dadosPagamento.IdMarcacao || dadosPagamento.IdMarcacao, // Para aulas
-                IdAluno: dadosPagamento.IdAluno,
-                IdAula: dadosPagamento.IdAula
+                IdAluguer: null,
+                IdMarcacao: dadosPagamento.IdMarcacao || null
             }
         });
     },
@@ -33,6 +30,8 @@ const paymentRepository = {
     }
 };
 
+paymentRepository.criarPagamento = paymentRepository.create;
+
 const buscarTodosPagamentos = async () => {
     try {
         return await prisma.pagamento.findMany({
@@ -45,7 +44,10 @@ const buscarTodosPagamentos = async () => {
                     }
                 }
             },
-            orderBy: { DataPagamento: 'desc' }
+            orderBy: [
+                { DataPagamento: 'desc' },
+                { PrazoPagamento: 'desc' }
+            ]
         });
     } catch (error) {
         console.error('Erro buscarTodosPagamentos:', error);
@@ -53,7 +55,34 @@ const buscarTodosPagamentos = async () => {
     }
 };
 
+const buscarPagamentoPorId = async (idPagamento) => {
+    return await prisma.pagamento.findUnique({
+        where: { IdPagamento: idPagamento },
+        include: {
+            Aluguer: true,
+            Marcacao: {
+                include: {
+                    Aluno: true,
+                    Aula: true
+                }
+            }
+        }
+    });
+};
+
+const registarRecebimento = async (idPagamento) => {
+    return await prisma.pagamento.update({
+        where: { IdPagamento: idPagamento },
+        data: {
+            EstadoPagamento: 'Pago',
+            DataPagamento: new Date()
+        }
+    });
+};
+
 module.exports = {
     ...paymentRepository,
-    buscarTodosPagamentos
+    buscarTodosPagamentos,
+    buscarPagamentoPorId,
+    registarRecebimento
 };

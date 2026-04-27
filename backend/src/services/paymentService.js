@@ -1,35 +1,34 @@
 const paymentRepo = require('../repositories/paymentRepository');
 
-// ─── Usado pela classService (validacao de aula) ──────────────────────────────
+const create = async (Valor, DataLimite, IdMarcacao) => {
+    return await paymentRepo.create({
+        Valor,
+        DataLimite,
+        IdMarcacao,
+        estado: 'Pendente'
+    });
+};
 
-const gerarPagamentosParaAula = async (listaAlunos, preco, idAula) => {
+const GerarPagamento = async (listaMarcacoes, preco) => {
     const pagamentos = [];
 
-    for (const aluno of listaAlunos) {
+    for (const marcacao of listaMarcacoes) {
         const dataLimite = new Date();
-        dataLimite.setDate(dataLimite.getDate() + 5); // 5 dias
+        dataLimite.setDate(dataLimite.getDate() + 5);
 
-        const dadosPagamento = {
-            Valor: preco,
-            DataLimite: dataLimite,
-            IdAluno: aluno.IdUtilizador,
-            IdAula: idAula,
-            estado: 'Pendente'
-        };
-
-        const pagamento = await paymentRepo.criarPagamento(dadosPagamento);
+        const pagamento = await create(preco, dataLimite, marcacao.IdMarcacao);
         pagamentos.push(pagamento);
     }
 
     return {
-        mensagem: `${pagamentos.length} pagamentos gerados para os alunos presentes.`,
+        mensagem: `${pagamentos.length} pagamentos gerados para as marcacoes ativas.`,
         pagamentos
     };
 };
 
 // ─── GerarPagamento: cria um pagamento individual ────────────────────────────
 
-const GerarPagamento = async (idAluno, valor, descricao) => {
+const GerarPagamentoIndividual = async (idAluno, valor, descricao) => {
     const dataLimite = new Date();
     dataLimite.setDate(dataLimite.getDate() + 5); // 5 dias de prazo
 
@@ -50,7 +49,7 @@ const GerarPagamentosMassa = async (alunosIds, valor, descricao) => {
     let gerados = 0;
 
     for (const idAluno of alunosIds) {
-        await GerarPagamento(idAluno, valor, descricao);
+        await GerarPagamentoIndividual(idAluno, valor, descricao);
         gerados++;
     }
 
@@ -58,7 +57,9 @@ const GerarPagamentosMassa = async (alunosIds, valor, descricao) => {
 };
 
 module.exports = {
-    gerarPagamentosParaAula,
+    create,
     GerarPagamento,
-    GerarPagamentosMassa
+    GerarPagamentoIndividual,
+    GerarPagamentosMassa,
+    gerarPagamentosParaAula: GerarPagamento
 };

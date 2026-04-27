@@ -8,7 +8,7 @@ const classRoutes = require('./src/routes/classRoutes');
 const bookingRoutes = require('./src/routes/bookingRoutes');
 const authenticationRoutes = require('./src/routes/authenticationRoutes');
 const rentalRoutes = require('./src/routes/rentalRoutes');
-const disponibilidadeRoutes = require('./src/routes/disponibilidadeRoutes');
+// const disponibilidadeRoutes = require('./src/routes/disponibilidadeRoutes'); // disabled
 const masterRoutes = require('./src/routes/masterRoutes');
 
 const app = express();
@@ -30,7 +30,7 @@ app.use('/api/pagamentos', require('./src/routes/paymentRoutes'));
 app.use('/api/marcacoes', bookingRoutes);
 app.use('/api/autenticacao', authenticationRoutes);
 app.use('/api/alugueres', rentalRoutes);
-app.use('/api/disponibilidade', disponibilidadeRoutes);
+// app.use('/api/disponibilidade', disponibilidadeRoutes); // disabled
 
 app.use('/api/master', masterRoutes);
 

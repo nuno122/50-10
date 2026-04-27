@@ -26,7 +26,7 @@ const criarAluguer = async (req, res) => {
 
 const solicitarExtensaoController = async (req, res) => {
     try {
-        const resultado = await rentalService.solicitarExtensao({ 
+        const resultado = await rentalService.SolicitarExtensaoPrazo({
             IdAluguer: req.params.id,
             NovaDataProposta: req.body.NovaDataProposta
         });
@@ -41,25 +41,40 @@ const solicitarExtensaoController = async (req, res) => {
 
 const avaliarPedidoController = async (req, res) => {
     try {
-        console.log('Controller input:', req.body); // Debug
-        const resultado = await rentalService.avaliarPedidoExtensao({
+        const resultado = await rentalService.AvaliarPedidoExtensao({
             IdPedido: req.params.id,
             Aprovado: req.body.Aprovado === 'true' || req.body.Aprovado === true,
             ValorAdicional: Number(req.body.ValorAdicional) || 0
         });
-        console.log('Service result:', resultado); // Debug
         res.json(resultado);
     } catch (erro) {
-        console.error('Controller error:', erro);
+        console.error(erro);
         res.status(erro.statusCode || 500).json({
             erro: erro.message || 'Erro ao avaliar pedido.'
         });
     }
 };
 
-module.exports = { 
-    getAlugueres, 
+const registarDevolucaoController = async (req, res) => {
+    try {
+        const resultado = await rentalService.RegistarDevolucao({
+            IdAluguer: req.params.id,
+            EstadoEntrega: req.body.EstadoEntrega,
+            Multa: req.body.Multa
+        });
+        res.json(resultado);
+    } catch (erro) {
+        console.error(erro);
+        res.status(erro.statusCode || 500).json({
+            erro: erro.message || 'Erro ao registar devolucao.'
+        });
+    }
+};
+
+module.exports = {
+    getAlugueres,
     criarAluguer,
     solicitarExtensao: solicitarExtensaoController,
-    avaliarPedidoExtensao: avaliarPedidoController 
+    avaliarPedidoExtensao: avaliarPedidoController,
+    registarDevolucao: registarDevolucaoController
 };

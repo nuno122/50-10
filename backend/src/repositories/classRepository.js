@@ -1,19 +1,43 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-const classRepository = {
-    // Buscar todas as aulas com as relações
-    findAll: async () => {
-        return await prisma.aula.findMany({
-            include: {
-                Professor: true,
-                Estudio: true,
-                EstiloDanca: true
+const GetAulasDisponiveis = async () => {
+    return await prisma.aula.findMany({
+        include: {
+            Professor: {
+                include: {
+                    Utilizador: true
+                }
+            },
+            Estudio: true,
+            EstiloDanca: true,
+            Marcacao: {
+                where: {
+                    EstaAtivo: true
+                },
+                include: {
+                    Aluno: {
+                        include: {
+                            Utilizador: true
+                        }
+                    }
+                }
             }
-        });
-    },
+        }
+    });
+};
 
-    // Buscar aulas num estúdio e data específica (para validar sobreposição)
+const ValidarConclusaoAula = async (idAula, confirmado = true) => {
+    return await prisma.aula.update({
+        where: { IdAula: idAula },
+        data: { ConfirmacaoProfessor: confirmado }
+    });
+};
+
+const classRepository = {
+    GetAulasDisponiveis,
+    findAll: GetAulasDisponiveis,
+
     findOverlapping: async (idEstudio, data) => {
         return await prisma.aula.findMany({
             where: {
@@ -23,7 +47,6 @@ const classRepository = {
         });
     },
 
-    // Criar a aula propriamente dita
     create: async (dados) => {
         return await prisma.aula.create({
             data: {
@@ -42,17 +65,41 @@ const classRepository = {
         });
     },
 
-    atualizarConfirmacaoProfessor: async (idAula) => {
-        return await prisma.aula.update({
-            where: { IdAula: idAula },
-            data: { ConfirmacaoProfessor: true }
-        });
-    },
+    ValidarConclusaoAula,
+    atualizarConfirmacaoProfessor: (idAula) => ValidarConclusaoAula(idAula, true),
 
     atualizarValidacaoDirecao: async (idAula) => {
         return await prisma.aula.update({
             where: { IdAula: idAula },
             data: { ValidacaoDirecao: true }
+        });
+    },
+
+    cancelarAula: async (idAula) => {
+        return await prisma.aula.update({
+            where: { IdAula: idAula },
+            data: { EstaAtivo: false },
+            include: {
+                Professor: {
+                    include: {
+                        Utilizador: true
+                    }
+                },
+                Estudio: true,
+                EstiloDanca: true,
+                Marcacao: {
+                    where: {
+                        EstaAtivo: true
+                    },
+                    include: {
+                        Aluno: {
+                            include: {
+                                Utilizador: true
+                            }
+                        }
+                    }
+                }
+            }
         });
     },
 
@@ -89,39 +136,13 @@ const classRepository = {
         return await prisma.estiloDanca.findUnique({
             where: { IdEstiloDanca: idEstiloDanca }
         });
+    },
+
+    findById: async (idAula) => {
+        return await prisma.aula.findUnique({
+            where: { IdAula: idAula }
+        });
     }
-
-};
-
-
-const atualizarConfirmacaoProfessor = async (idAula) => {
-    return await prisma.aula.update({
-        where: { IdAula: idAula },
-        data: { ConfirmacaoProfessor: true }
-    });
-};
-
-const atualizarValidacaoDirecao = async (idAula) => {
-    return await prisma.aula.update({
-        where: { IdAula: idAula },
-        data: { ValidacaoDirecao: true }
-    });
-};
-
-const findByIdComAlunos = async (idAula) => {
-    return await prisma.aula.findUnique({
-        where: { IdAula: idAula },
-        include: {
-            Marcacao: {
-                where: {
-                    EstaAtivo: true
-                },
-                include: {
-                    Utilizador: true // Aluno
-                }
-            }
-        }
-    });
 };
 
 module.exports = classRepository;

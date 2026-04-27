@@ -6,8 +6,8 @@ const criarErro = (mensagem, statusCode) => {
     return erro;
 };
 
-const listarAulas = async () => {
-    return await classRepo.findAll();
+const ConsultarVagas = async () => {
+    return await classRepo.GetAulasDisponiveis();
 };
 
 const criarAula = async (dados) => {
@@ -29,6 +29,24 @@ const criarAula = async (dados) => {
 
     if (emFalta.length > 0) {
         throw criarErro(`Campos obrigatorios em falta: ${emFalta.join(', ')}`, 400);
+    }
+
+    const [professor, estudio, estilo] = await Promise.all([
+        classRepo.findProfessorById(dados.IdProfessor),
+        classRepo.findEstudioById(dados.IdEstudio),
+        classRepo.findEstiloById(dados.IdEstiloDanca)
+    ]);
+
+    if (!professor) {
+        throw criarErro('O professor selecionado nao existe na tabela Professor.', 400);
+    }
+
+    if (!estudio) {
+        throw criarErro('O estudio selecionado nao existe.', 400);
+    }
+
+    if (!estilo) {
+        throw criarErro('O estilo de danca selecionado nao existe.', 400);
     }
 
     const aulasNoDia = await classRepo.findOverlapping(dados.IdEstudio, dados.Data);
@@ -54,23 +72,43 @@ const criarAula = async (dados) => {
     };
 };
 
-const confirmarPresencaProfessor = async (idAula) => {
-    return await classRepo.atualizarConfirmacaoProfessor(idAula);
+const ConfirmarPresenca = async (idAula) => {
+    return await classRepo.ValidarConclusaoAula(idAula, true);
 };
 
-const validarAulaDirecao = async (idAula) => {
-    // 1. Validar direção
+const cancelarAula = async (idAula, utilizador) => {
+    const aula = await classRepo.findById(idAula);
+    if (!aula) {
+        throw criarErro('Aula nao encontrada.', 404);
+    }
+
+    if (aula.EstaAtivo === false) {
+        throw criarErro('A aula ja se encontra cancelada.', 400);
+    }
+
+    if (utilizador?.Permissoes === 2 && aula.IdProfessor !== utilizador.IdUtilizador) {
+        throw criarErro('Apenas o professor responsavel pode cancelar esta aula.', 403);
+    }
+
+    const aulaCancelada = await classRepo.cancelarAula(idAula);
+
+    return {
+        mensagem: 'Aula cancelada com sucesso.',
+        aula: aulaCancelada
+    };
+};
+
+const validarAula = async (idAula) => {
     await classRepo.atualizarValidacaoDirecao(idAula);
-    
-    // 2. Buscar aula com alunos ativos
+
     const aula = await classRepo.findByIdComAlunos(idAula);
     if (!aula) {
-        throw new Error('Aula não encontrada.');
+        throw new Error('Aula nao encontrada.');
     }
 
     const paymentService = require('./paymentService');
-    const alunosAtivos = aula.Marcacao.map(m => m.Utilizador);
-    const resultadoPagamentos = await paymentService.gerarPagamentosParaAula(alunosAtivos, aula.Preco, idAula);
+    const marcacoesAtivas = aula.Marcacao;
+    const resultadoPagamentos = await paymentService.GerarPagamento(marcacoesAtivas, aula.Preco);
 
     return {
         mensagem: `Aula validada e ${resultadoPagamentos.pagamentos.length} pagamentos gerados.`,
@@ -80,8 +118,12 @@ const validarAulaDirecao = async (idAula) => {
 };
 
 module.exports = {
-    listarAulas,
+    ConsultarVagas,
+    listarAulas: ConsultarVagas,
     criarAula,
-    confirmarPresencaProfessor,
-    validarAulaDirecao
+    ConfirmarPresenca,
+    confirmarPresencaProfessor: ConfirmarPresenca,
+    cancelarAula,
+    validarAula,
+    validarAulaDirecao: validarAula
 };
