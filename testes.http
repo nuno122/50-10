@@ -1,0 +1,330 @@
+@tokenDirecao = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJZFV0aWxpemFkb3IiOiI1ZGQ2NWRlYy1hNzNlLWYxMTEtYTU0Mi0wMGU5M2FkNDE4NTQiLCJQZXJtaXNzb2VzIjozLCJpYXQiOjE3NzY5MDM1NjUsImV4cCI6MTc3NjkzMjM2NX0.JIIqDJa468DW3idZbzbr7YgfMyVDWlOxvjjofRVMnZA
+
+### ─── STATUS ────────────────────────────────────────────────────────────────
+
+### Status do servidor
+GET http://localhost:3000/api/status
+
+### ─── AUTENTICAÇÃO ───────────────────────────────────────────────────────────
+
+### Registar Direção
+POST http://localhost:3000/api/utilizadores/registar
+Content-Type: application/json
+
+{
+    "NomeCompleto": "Diretor Teste",
+    "NomeUtilizador": "diretor",
+    "Email": "diretor@teste.com",
+    "PalavraPasseHash": "password123",
+    "Permissoes": 3,
+    "Morada": "Rua Teste 1",
+    "CodigoPostal": "4700-000"
+}
+
+### Registar Professor
+POST http://localhost:3000/api/utilizadores/registar
+Content-Type: application/json
+
+{
+    "NomeCompleto": "Maria Santos",
+    "NomeUtilizador": "mariasantos",
+    "Email": "maria@teste.com",
+    "PalavraPasseHash": "password123",
+    "Permissoes": 2,
+    "Morada": "Rua do Porto 5",
+    "CodigoPostal": "4700-000",
+    "Iban": "PT50000201231234567890154"
+}
+
+### Registar Aluno
+POST http://localhost:3000/api/utilizadores/registar
+Content-Type: application/json
+
+{
+    "NomeCompleto": "João Silva",
+    "NomeUtilizador": "joaosilva",
+    "Email": "joao@teste.com",
+    "PalavraPasseHash": "password123",
+    "Permissoes": 1,
+    "Morada": "Rua das Flores 10",
+    "CodigoPostal": "4700-000",
+    "DataNascimento": "2000-05-15"
+}
+
+### Registar Encarregado
+POST http://localhost:3000/api/utilizadores/registar
+Content-Type: application/json
+
+{
+    "NomeCompleto": "António Silva",
+    "NomeUtilizador": "antoniosilva",
+    "Email": "antonio@teste.com",
+    "PalavraPasseHash": "password123",
+    "Permissoes": 4,
+    "Morada": "Rua das Flores 10",
+    "CodigoPostal": "4700-000"
+}
+
+### Login Direção
+POST http://localhost:3000/api/autenticacao/login
+Content-Type: application/json
+
+{
+    "Email": "diretor@teste.com",
+    "PalavraPasseHash": "password123"
+}
+
+### Login Professor
+POST http://localhost:3000/api/autenticacao/login
+Content-Type: application/json
+
+{
+    "Email": "maria@teste.com",
+    "PalavraPasseHash": "password123"
+}
+
+### Login Aluno
+POST http://localhost:3000/api/autenticacao/login
+Content-Type: application/json
+
+{
+    "Email": "joao@teste.com",
+    "PalavraPasseHash": "password123"
+}
+
+### ─── UTILIZADORES ───────────────────────────────────────────────────────────
+
+### Listar todos os utilizadores (token Direção)
+GET http://localhost:3000/api/utilizadores
+Authorization: Bearer <TOKEN_DIRECAO>
+
+### ─── MASTER (estudios, estilos, geografia) ──────────────────────────────────
+
+### Listar estúdios
+GET http://localhost:3000/api/master/estudios
+Authorization: Bearer <TOKEN_DIRECAO>
+
+### Listar estilos de dança
+GET http://localhost:3000/api/master/estilos
+Authorization: Bearer <TOKEN_DIRECAO>
+
+### Listar geografia (sem token - usado no registo)
+GET http://localhost:3000/api/master/geografia
+
+### Exportar financeiro por datas (token Direção)
+GET http://localhost:3000/api/master/exportar?DataInicio=2026-01-01&DataFim=2026-12-31
+Authorization: Bearer <TOKEN_DIRECAO>
+
+### Exportar financeiro mensal (token Direção)
+GET http://localhost:3000/api/master/exportar/mensal
+Authorization: Bearer <TOKEN_DIRECAO>
+
+### ─── AULAS ───────────────────────────────────────────────────────────────────
+
+### Listar todas as aulas
+GET http://localhost:3000/api/aulas
+Authorization: Bearer <TOKEN_DIRECAO>
+
+### Listar aulas disponíveis (com vagas)
+GET http://localhost:3000/api/aulas/disponiveis
+Authorization: Bearer <TOKEN_ALUNO>
+
+### Consultar vagas de uma aula
+GET http://localhost:3000/api/aulas/<UUID_AULA>/vagas
+Authorization: Bearer <TOKEN_ALUNO>
+
+### Criar aula (token Direção)
+POST http://localhost:3000/api/aulas
+Content-Type: application/json
+Authorization: Bearer <TOKEN_DIRECAO>
+
+{
+    "Data": "2026-05-15",
+    "HoraInicio": "2026-05-15T10:00:00",
+    "HoraFim": "2026-05-15T11:00:00",
+    "CapacidadeMaxima": 10,
+    "Preco": 15.00,
+    "IdProfessor": "<UUID_PROFESSOR>",
+    "IdEstudio": "<UUID_ESTUDIO>",
+    "IdEstiloDanca": "<UUID_ESTILO>"
+}
+
+### Confirmar aula - Professor
+PATCH http://localhost:3000/api/aulas/<UUID_AULA>/confirmar-professor
+Authorization: Bearer <TOKEN_PROFESSOR>
+
+### Validar aula - Direção
+PATCH http://localhost:3000/api/aulas/<UUID_AULA>/validar-direcao
+Authorization: Bearer <TOKEN_DIRECAO>
+
+### Concluir aula - Direção
+PATCH http://localhost:3000/api/aulas/<UUID_AULA>/concluir
+Authorization: Bearer <TOKEN_DIRECAO>
+
+### ─── MARCAÇÕES ──────────────────────────────────────────────────────────────
+
+### Listar todas as marcações (token Direção)
+GET http://localhost:3000/api/marcacoes
+Authorization: Bearer <TOKEN_DIRECAO>
+
+### Ver as minhas marcações (token Aluno)
+GET http://localhost:3000/api/marcacoes/minhas
+Authorization: Bearer <TOKEN_ALUNO>
+
+### Ver marcações de um aluno específico (token Direção)
+GET http://localhost:3000/api/marcacoes/aluno/<UUID_ALUNO>
+Authorization: Bearer <TOKEN_DIRECAO>
+
+### Ver preço de uma aula
+GET http://localhost:3000/api/marcacoes/<UUID_AULA>/preco
+Authorization: Bearer <TOKEN_ALUNO>
+
+### Verificar se prazo de cancelamento é válido
+GET http://localhost:3000/api/marcacoes/<UUID_MARCACAO>/prazo-valido
+Authorization: Bearer <TOKEN_ALUNO>
+
+### Criar marcação (token Aluno)
+POST http://localhost:3000/api/marcacoes
+Content-Type: application/json
+Authorization: Bearer <TOKEN_ALUNO>
+
+{
+    "IdAluno": "<UUID_ALUNO>",
+    "IdAula": "<UUID_AULA>"
+}
+
+### Cancelar marcação (token Aluno)
+PATCH http://localhost:3000/api/marcacoes/<UUID_MARCACAO>/cancelar
+Content-Type: application/json
+Authorization: Bearer <TOKEN_ALUNO>
+
+{
+    "Motivo": "Não posso comparecer"
+}
+
+### ─── INVENTÁRIO ──────────────────────────────────────────────────────────────
+
+### Listar artigos
+GET http://localhost:3000/api/inventario
+Authorization: Bearer <TOKEN_DIRECAO>
+
+### Criar artigo (token Direção)
+POST http://localhost:3000/api/inventario
+Content-Type: application/json
+Authorization: Bearer <TOKEN_DIRECAO>
+
+{
+    "Nome": "Sapatos de Dança",
+    "CustoPorDia": 5.00
+}
+
+### Editar artigo (token Direção)
+PUT http://localhost:3000/api/inventario/<UUID_ARTIGO>
+Content-Type: application/json
+Authorization: Bearer <TOKEN_DIRECAO>
+
+{
+    "Nome": "Sapatos de Dança Pro",
+    "CustoPorDia": 7.50
+}
+
+### Ativar artigo (token Direção)
+PATCH http://localhost:3000/api/inventario/<UUID_ARTIGO>/estado
+Content-Type: application/json
+Authorization: Bearer <TOKEN_DIRECAO>
+
+{
+    "estado": true
+}
+
+### Desativar artigo (token Direção)
+PATCH http://localhost:3000/api/inventario/<UUID_ARTIGO>/estado
+Content-Type: application/json
+Authorization: Bearer <TOKEN_DIRECAO>
+
+{
+    "estado": false
+}
+
+### Remover artigo (token Direção)
+DELETE http://localhost:3000/api/inventario/<UUID_ARTIGO>
+Authorization: Bearer <TOKEN_DIRECAO>
+
+### ─── ALUGUERES ──────────────────────────────────────────────────────────────
+
+### Listar alugueres (token Direção)
+GET http://localhost:3000/api/alugueres
+Authorization: Bearer <TOKEN_DIRECAO>
+
+### Criar aluguer
+POST http://localhost:3000/api/alugueres
+Content-Type: application/json
+Authorization: Bearer <TOKEN_ALUNO>
+
+{
+    "IdUtilizador": "<UUID_UTILIZADOR>",
+    "DataLevantamento": "2026-05-01",
+    "DataEntrega": "2026-05-05",
+    "ListaArtigos": [
+        {
+            "IdTamanhoArtigo": "<UUID_TAMANHO>",
+            "Quantidade": 2
+        }
+    ]
+}
+
+### Calcular custo total de um aluguer
+GET http://localhost:3000/api/alugueres/<UUID_ALUGUER>/custo
+Authorization: Bearer <TOKEN_DIRECAO>
+
+### Solicitar extensão de prazo
+POST http://localhost:3000/api/alugueres/<UUID_ALUGUER>/extensao
+Content-Type: application/json
+Authorization: Bearer <TOKEN_ALUNO>
+
+{
+    "NovaDataProposta": "2026-05-10"
+}
+
+### Avaliar pedido de extensão (token Direção)
+PATCH http://localhost:3000/api/alugueres/pedidos-extensao/<UUID_PEDIDO>/avaliar
+Content-Type: application/json
+Authorization: Bearer <TOKEN_DIRECAO>
+
+{
+    "Aprovado": true,
+    "ValorAdicional": 20.00
+}
+
+### Registar devolução (token Direção)
+POST http://localhost:3000/api/alugueres/<UUID_ALUGUER>/devolucao
+Content-Type: application/json
+Authorization: Bearer <TOKEN_DIRECAO>
+
+{
+    "Artigos": [
+        {
+            "IdTamanhoArtigo": "<UUID_TAMANHO>",
+            "EstadoDevolucao": "Bom"
+        },
+        {
+            "IdTamanhoArtigo": "<UUID_TAMANHO2>",
+            "EstadoDevolucao": "Danificado",
+            "Multa": 15.00
+        }
+    ]
+}
+
+### ─── PAGAMENTOS ──────────────────────────────────────────────────────────────
+
+### Listar todos os pagamentos (token Direção)
+GET http://localhost:3000/api/pagamentos
+Authorization: Bearer <TOKEN_DIRECAO>
+
+### Listar pagamentos em atraso (token Direção)
+GET http://localhost:3000/api/pagamentos/atraso
+Authorization: Bearer <TOKEN_DIRECAO>
+
+### Registar pagamento como pago (token Direção)
+PATCH http://localhost:3000/api/pagamentos/<UUID_PAGAMENTO>/pagar
+Authorization: Bearer <TOKEN_DIRECAO>
