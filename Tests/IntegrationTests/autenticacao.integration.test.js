@@ -1,84 +1,89 @@
+const crypto = require('crypto');
+const { PrismaClient } = require('@prisma/client');
 const { makeRequest } = require('./setup');
 
-describe('Integração - Autenticação', () => {
+const prisma = new PrismaClient();
 
-    it('1️⃣ Deve rejeitar login sem email e sem password (400)', async () => {
-        // Arrange: payload vazio
-        const payload = {};
+const hashPassword = (value) => crypto.createHash('sha256').update(value).digest('hex');
 
-        // Act
-        const response = await makeRequest('/autenticacao/login', 'POST', payload);
+describe('Integracao - Autenticacao', () => {
+    afterAll(async () => {
+        await prisma.$disconnect();
+    });
 
-        // Assert
+    it('1 Deve rejeitar login sem email e sem password (400)', async () => {
+        const response = await makeRequest('/autenticacao/login', 'POST', {});
+
         expect(response.status).toBe(400);
         expect(response.data.erro).toBeDefined();
     });
 
-    it('2️⃣ Deve rejeitar login com email inexistente (401)', async () => {
-        // Arrange: utilizador que não existe na BD
-        const payload = {
+    it('2 Deve rejeitar login com email inexistente (401)', async () => {
+        const response = await makeRequest('/autenticacao/login', 'POST', {
             Email: 'naoexiste_int_test@entartes.com',
             Password: 'qualquercoisa123'
-        };
+        });
 
-        // Act
-        const response = await makeRequest('/autenticacao/login', 'POST', payload);
-
-        // Assert
         expect(response.status).toBe(401);
         expect(response.data.erro).toBe('Credenciais invalidas.');
     });
 
-    it('3️⃣ Deve rejeitar login com password errada (401)', async () => {
-        // Arrange: Tenta encontrar qualquer utilizador válido na BD
-        const { PrismaClient } = require('@prisma/client');
-        const prisma = new PrismaClient();
+    it('3 Deve rejeitar login com password errada (401)', async () => {
         const utilizador = await prisma.utilizador.findFirst();
-        await prisma.$disconnect();
 
         if (!utilizador) {
             console.warn('Nenhum utilizador encontrado na BD, a ignorar teste.');
             return;
         }
 
-        const payload = {
+        const response = await makeRequest('/autenticacao/login', 'POST', {
             Email: utilizador.Email,
             Password: 'PasswordErradaQueNaoFuncionaXYZ'
-        };
+        });
 
-        // Act
-        const response = await makeRequest('/autenticacao/login', 'POST', payload);
-
-        // Assert
         expect(response.status).toBe(401);
         expect(response.data.erro).toBe('Credenciais invalidas.');
     });
 
-    it('4️⃣ Deve devolver token JWT com login válido', async () => {
-        // Arrange: Busca um utilizador e usa a sua password real (armazenada em plaintext)
-        const { PrismaClient } = require('@prisma/client');
-        const prisma = new PrismaClient();
-        const utilizador = await prisma.utilizador.findFirst({
-            where: { PalavraPasseHash: { not: undefined } }
-        });
-        await prisma.$disconnect();
+    it('4 Deve devolver token JWT com login valido para password guardada em hash', async () => {
+        const codigoPostal = await prisma.codigoPostal.findFirst();
 
-        if (!utilizador) {
-            console.warn('Nenhum utilizador com password encontrado, a ignorar teste.');
+        if (!codigoPostal) {
+            console.warn('Nenhum codigo postal encontrado na BD, a ignorar teste.');
             return;
         }
 
-        const payload = {
-            Email: utilizador.Email,
-            Password: utilizador.PalavraPasseHash // plaintext na BD
-        };
+        const uniqueSuffix = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+        const plainPassword = 'PasswordHashTeste123';
+        const email = `int-auth-${uniqueSuffix}@entartes.test`;
+        const username = `int_auth_${uniqueSuffix}`;
 
-        // Act
-        const response = await makeRequest('/autenticacao/login', 'POST', payload);
+        const utilizador = await prisma.utilizador.create({
+            data: {
+                CodigoPostal: codigoPostal.CodigoPostal,
+                Morada: 'Morada de teste integracao',
+                Permissoes: 3,
+                NomeCompleto: 'Integracao Autenticacao',
+                NomeUtilizador: username,
+                Email: email,
+                PalavraPasseHash: hashPassword(plainPassword),
+                EstaAtivo: true
+            }
+        });
 
-        // Assert
-        expect(response.status).toBe(200);
-        expect(response.data.token).toBeDefined();
-        expect(response.data.mensagem).toBe('Login efetuado com sucesso!');
+        try {
+            const response = await makeRequest('/autenticacao/login', 'POST', {
+                Email: email,
+                Password: plainPassword
+            });
+
+            expect(response.status).toBe(200);
+            expect(response.data.token).toBeDefined();
+            expect(response.data.mensagem).toBe('Login efetuado com sucesso!');
+        } finally {
+            await prisma.utilizador.delete({
+                where: { IdUtilizador: utilizador.IdUtilizador }
+            });
+        }
     });
 });

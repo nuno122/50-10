@@ -1,84 +1,89 @@
+const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const authenticationService = require('../../backend/src/services/authenticationService');
 const userRepository = require('../../backend/src/repositories/userRepository');
-const jwt = require('jsonwebtoken');
 
 jest.mock('../../backend/src/repositories/userRepository');
 jest.mock('jsonwebtoken');
 
+const hashPassword = (value) => crypto.createHash('sha256').update(value).digest('hex');
+
 describe('Authentication Service', () => {
     beforeEach(() => {
-        // Arrange (Comum)
         jest.clearAllMocks();
     });
 
     describe('Login', () => {
-        it('deve emitir erro 400 quando o email ou senha não são providenciados', async () => {
-            // Arrange
-            const emailInvalido = null;
-            const passwordValida = '123456';
-
-            // Act & Assert
-            await expect(authenticationService.login(emailInvalido, passwordValida))
+        it('deve emitir erro 400 quando o email ou senha nao sao providenciados', async () => {
+            await expect(authenticationService.login(null, '123456'))
                 .rejects
                 .toThrow('Por favor, introduza o email e a palavra-passe.');
         });
 
-        it('deve emitir erro 401 quando o utilizador não é encontrado na base de dados', async () => {
-            // Arrange
-            const emailInexistente = 'naoexiste@teste.com';
+        it('deve emitir erro 401 quando o utilizador nao e encontrado na base de dados', async () => {
             userRepository.findByEmail.mockResolvedValue(null);
 
-            // Act & Assert
-            await expect(authenticationService.login(emailInexistente, 'senha123'))
+            await expect(authenticationService.login('naoexiste@teste.com', 'senha123'))
                 .rejects
                 .toThrow('Credenciais invalidas.');
         });
 
-        it('deve emitir erro 401 quando a palavra-passe introduzida está errada', async () => {
-            // Arrange
-            const emailValido = 'aluno@teste.com';
+        it('deve emitir erro 401 quando a palavra-passe introduzida esta errada', async () => {
             userRepository.findByEmail.mockResolvedValue({
                 IdUtilizador: 1,
-                Email: emailValido,
-                PalavraPasseHash: 'senhaCerta123'
+                Email: 'aluno@teste.com',
+                PalavraPasseHash: hashPassword('senhaCerta123')
             });
 
-            // Act & Assert
-            await expect(authenticationService.login(emailValido, 'senhaErrada'))
+            await expect(authenticationService.login('aluno@teste.com', 'senhaErrada'))
                 .rejects
                 .toThrow('Credenciais invalidas.');
         });
 
         it('deve processar o login e devolver um token de 8h quando as credenciais estiverem corretas', async () => {
-            // Arrange
-            const emailValido = 'aluno@teste.com';
             const passwordCerta = 'senhaCerta123';
-            
+
             userRepository.findByEmail.mockResolvedValue({
                 IdUtilizador: 99,
-                Email: emailValido,
+                Email: 'aluno@teste.com',
                 NomeCompleto: 'Aluno Teste',
-                PalavraPasseHash: passwordCerta,
+                PalavraPasseHash: hashPassword(passwordCerta),
                 Permissoes: 'User'
             });
 
             const fakeToken = 'ey.fake-token-gerado-com-sucesso';
             jwt.sign.mockReturnValue(fakeToken);
 
-            // Act
-            const resultado = await authenticationService.login(emailValido, passwordCerta);
+            const resultado = await authenticationService.login('aluno@teste.com', passwordCerta);
 
-            // Assert
             expect(resultado.mensagem).toBe('Login efetuado com sucesso!');
             expect(resultado.token).toBe(fakeToken);
             expect(resultado.utilizador.Id).toBe(99);
-            
-            // Garantir que a assinatura leva as permissões e o Id
             expect(jwt.sign).toHaveBeenCalledWith(
                 { IdUtilizador: 99, Permissoes: 'User' },
                 expect.any(String),
                 { expiresIn: '8h' }
             );
+        });
+
+        it('deve migrar password antiga em plaintext para hash depois de login valido', async () => {
+            const passwordCerta = 'senhaLegacy123';
+            const expectedHash = hashPassword(passwordCerta);
+
+            userRepository.findByEmail.mockResolvedValue({
+                IdUtilizador: 7,
+                Email: 'legacy@teste.com',
+                NomeCompleto: 'Utilizador Legacy',
+                PalavraPasseHash: passwordCerta,
+                Permissoes: 'User'
+            });
+
+            jwt.sign.mockReturnValue('ey.fake-token-legacy');
+
+            const resultado = await authenticationService.login('legacy@teste.com', passwordCerta);
+
+            expect(resultado.token).toBe('ey.fake-token-legacy');
+            expect(userRepository.updatePasswordHash).toHaveBeenCalledWith(7, expectedHash);
         });
     });
 });
