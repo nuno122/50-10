@@ -21,7 +21,7 @@ model Aluguer {
 
 model Aluno {
   IdUtilizador     String             @id(map: "PK__Aluno__7A170D745479A7D4") @db.UniqueIdentifier
-  DataNascimento   DateTime           @db.DateTime
+  DataNascimento   DateTime?          @db.Date
   Informacao       String?            @db.NVarChar(Max)
   Utilizador       Utilizador         @relation(fields: [IdUtilizador], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Aluno__IdUtiliza__60A75C0F")
   EncarregadoAluno EncarregadoAluno[]
@@ -33,6 +33,7 @@ model Artigo {
   Nome          String          @db.NVarChar(100)
   CustoPorDia   Decimal         @db.Decimal(18, 2)
   EstadoArtigo  Boolean         @default(true, map: "DF__Artigo__EstadoAr__10566F31")
+  ImagemPath    String?         @db.NVarChar(500)
   TamanhoArtigo TamanhoArtigo[]
 }
 
@@ -84,10 +85,12 @@ model CodigoPostal {
 }
 
 model Disponibilidade {
-  IdDisponibilidade String    @id @default(dbgenerated("newsequentialid()")) @db.UniqueIdentifier
+  IdDisponibilidade String    @id(map: "PK__Disponib__BC5612FD31CE530E") @default(dbgenerated("newsequentialid()"), map: "DF__Disponibi__IdDis__7A672E12") @db.UniqueIdentifier
   IdProfessor       String    @db.UniqueIdentifier
   Data              DateTime  @db.Date
-  Professor         Professor @relation(fields: [IdProfessor], references: [IdUtilizador], onUpdate: NoAction)
+  HoraInicio        DateTime  @db.Time
+  HoraFim           DateTime  @db.Time
+  Professor         Professor @relation(fields: [IdProfessor], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Disponibi__IdPro__7B5B524B")
 }
 
 model Distrito {

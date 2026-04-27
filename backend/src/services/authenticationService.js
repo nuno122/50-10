@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const userRepository = require('../repositories/userRepository');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'ChaveSuperSecretaDaEntArtes_2026';
@@ -8,6 +9,10 @@ const criarErro = (mensagem, statusCode) => {
     erro.statusCode = statusCode;
     return erro;
 };
+
+const hashPassword = (password) => (
+    crypto.createHash('sha256').update(String(password || '')).digest('hex')
+);
 
 const login = async (email, password) => {
     if (!email || !password) {
@@ -20,10 +25,17 @@ const login = async (email, password) => {
         throw criarErro('Credenciais invalidas.', 401);
     }
 
-    const passwordValida = utilizador.PalavraPasseHash === password;
+    const passwordHash = hashPassword(password);
+    const storedPassword = String(utilizador.PalavraPasseHash || '');
+    const passwordValida = storedPassword === passwordHash || storedPassword === password;
 
     if (!passwordValida) {
         throw criarErro('Credenciais invalidas.', 401);
+    }
+
+    // Migra automaticamente utilizadores antigos com password em plaintext.
+    if (storedPassword === password && storedPassword !== passwordHash && utilizador.IdUtilizador) {
+        await userRepository.updatePasswordHash(utilizador.IdUtilizador, passwordHash);
     }
 
     const token = jwt.sign(
