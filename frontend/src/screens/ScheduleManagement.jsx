@@ -27,6 +27,16 @@ const getDaysOfWeek = (startDate) => {
     return days;
 };
 
+const getDateKey = (value) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 const formatDate = (value) => {
     if (!value) return '-';
     const date = new Date(value);
@@ -64,6 +74,75 @@ const computeEndTime = (startTime, durationMinutes) => {
     const nextHours = Math.floor(total / 60);
     const nextMinutes = total % 60;
     return `${String(nextHours).padStart(2, '0')}:${String(nextMinutes).padStart(2, '0')}`;
+};
+
+const layoutDayLessons = (lessons) => {
+    const sortedLessons = [...lessons].sort((left, right) => {
+        if (left.startMinutes !== right.startMinutes) {
+            return left.startMinutes - right.startMinutes;
+        }
+
+        if (left.endMinutes !== right.endMinutes) {
+            return left.endMinutes - right.endMinutes;
+        }
+
+        return String(left.id).localeCompare(String(right.id));
+    });
+
+    const positionedLessons = [];
+    let group = [];
+    let active = [];
+    let groupMaxLane = -1;
+    let groupEnd = -1;
+
+    const flushGroup = () => {
+        if (group.length === 0) return;
+
+        const laneCount = Math.max(groupMaxLane + 1, 1);
+        group.forEach((lesson) => {
+            positionedLessons.push({
+                ...lesson,
+                lane: lesson._lane,
+                laneCount
+            });
+        });
+
+        group = [];
+        active = [];
+        groupMaxLane = -1;
+        groupEnd = -1;
+    };
+
+    sortedLessons.forEach((lesson) => {
+        if (group.length > 0 && lesson.startMinutes >= groupEnd) {
+            flushGroup();
+        }
+
+        active = active.filter((item) => item.endMinutes > lesson.startMinutes);
+
+        const usedLanes = new Set(active.map((item) => item.lane));
+        let lane = 0;
+        while (usedLanes.has(lane)) {
+            lane += 1;
+        }
+
+        const lessonWithLane = {
+            ...lesson,
+            _lane: lane
+        };
+
+        active.push({
+            lane,
+            endMinutes: lesson.endMinutes
+        });
+
+        group.push(lessonWithLane);
+        groupMaxLane = Math.max(groupMaxLane, lane);
+        groupEnd = Math.max(groupEnd, lesson.endMinutes);
+    });
+
+    flushGroup();
+    return positionedLessons;
 };
 
 const initialForm = {
@@ -181,9 +260,11 @@ const ScheduleManagement = () => {
 
         return {
             id: aula.IdAula,
-            dayOfWeek: lessonDate.getDay(),
+            dateKey: getDateKey(lessonDate),
             time: formatTime(aula.HoraInicio),
             duration,
+            startMinutes,
+            endMinutes: Math.max(endMinutes, startMinutes + 30),
             teacher: aula.Professor?.Utilizador?.NomeCompleto || aula.IdProfessor,
             style: aula.EstiloDanca?.Nome || 'Sem estilo',
             studio: studioLabel,
@@ -313,7 +394,9 @@ const ScheduleManagement = () => {
 
                             <div className="schedule-columns">
                                 {weekDays.map((day, idx) => {
-                                    const dayClasses = scheduleItems.filter((lesson) => lesson.dayOfWeek === day.getDay());
+                                    const dayClasses = layoutDayLessons(
+                                        scheduleItems.filter((lesson) => lesson.dateKey === getDateKey(day))
+                                    );
 
                                     return (
                                         <div key={idx} className="schedule-day-column">
@@ -327,6 +410,8 @@ const ScheduleManagement = () => {
                                                 const [hours, minutes] = lesson.time.split(':').map(Number);
                                                 const topPercentage = Math.max(0, ((hours - 7 + (minutes / 60)) / 17) * 100);
                                                 const heightPercentage = ((lesson.duration / 60) / 17) * 100;
+                                                const widthPercentage = 100 / lesson.laneCount;
+                                                const leftPercentage = lesson.lane * widthPercentage;
 
                                                 return (
                                                     <div
@@ -334,7 +419,11 @@ const ScheduleManagement = () => {
                                                         className="schedule-lesson-wrap"
                                                         style={{
                                                             top: `${topPercentage}%`,
-                                                            height: `${Math.max(heightPercentage, 7)}%`
+                                                            height: `${Math.max(heightPercentage, 7)}%`,
+                                                            left: `calc(${leftPercentage}% + 4px)`,
+                                                            width: `calc(${widthPercentage}% - 8px)`,
+                                                            right: 'auto',
+                                                            zIndex: lesson.lane + 1
                                                         }}
                                                     >
                                                         <div className="schedule-lesson-card">

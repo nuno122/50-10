@@ -6,6 +6,7 @@ import InventoryManagement from './InventoryManagement';
 import RoleInventory from './RoleInventory';
 import RequestValidation from './RequestValidation';
 import ScheduleManagement from './ScheduleManagement';
+import StudentAgenda from './StudentAgenda';
 import TeacherSchedule from './TeacherSchedule';
 import TestsBackend from './TestsBackend';
 
@@ -35,6 +36,7 @@ const Portal = () => {
     const { user, logout } = useAuth();
     const isDirecao = user?.Permissoes === PERMISSOES.DIRECAO;
     const isProfessor = user?.Permissoes === PERMISSOES.PROFESSOR;
+    const isAluno = user?.Permissoes === PERMISSOES.ALUNO;
     const [activeView, setActiveView] = useState('dashboard');
 
     const menuItems = useMemo(() => (
@@ -42,7 +44,7 @@ const Portal = () => {
             ? [
                 { id: 'dashboard', label: 'Dashboard' },
                 { id: 'schedule', label: 'Gestao de Horarios' },
-                { id: 'requests', label: 'Request Validation' },
+                { id: 'requests', label: 'Validacao de Pedidos' },
                 { id: 'finance', label: 'Financeiro' },
                 { id: 'inventory', label: 'Gestao de Inventario' }
             ]
@@ -53,12 +55,18 @@ const Portal = () => {
                     { id: 'inventory', label: 'Inventario e Aluguer' },
                     { id: 'tests', label: 'Tests Backend' }
                 ]
+            : isAluno
+                ? [
+                    { id: 'dashboard', label: 'Dashboard' },
+                    { id: 'agenda', label: 'A Minha Agenda' },
+                    { id: 'tests', label: 'Tests Backend' }
+                ]
             : [
                 { id: 'dashboard', label: 'Dashboard' },
                 { id: 'inventory', label: 'Inventario e Aluguer' },
                 { id: 'tests', label: 'Tests Backend' }
             ]
-    ), [isDirecao, isProfessor]);
+    ), [isAluno, isDirecao, isProfessor]);
 
     const renderContent = () => {
         if (activeView === 'requests' && isDirecao) {
@@ -77,7 +85,11 @@ const Portal = () => {
             return <FinanceManagement />;
         }
 
-        if (activeView === 'inventory' && !isDirecao) {
+        if (activeView === 'agenda' && isAluno) {
+            return <StudentAgenda />;
+        }
+
+        if (activeView === 'inventory' && !isDirecao && !isAluno) {
             return <RoleInventory />;
         }
 

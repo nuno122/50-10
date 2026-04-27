@@ -14,10 +14,13 @@
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
 }
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 button,
@@ -556,7 +559,10 @@ button {
 }
 
 .portal-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
   height: 100vh;
+  height: 100dvh;
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   background: linear-gradient(180deg, #f4f7fb 0%, #ebf0f7 100%);
@@ -566,7 +572,10 @@ button {
 .portal-sidebar {
   position: sticky;
   top: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
   height: 100vh;
+  height: 100dvh;
   padding: 28px 22px;
   display: flex;
   flex-direction: column;
@@ -630,7 +639,10 @@ button {
 .portal-content {
   padding: 24px;
   min-width: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
   height: 100vh;
+  height: 100dvh;
   overflow: auto;
 }
 
@@ -823,6 +835,273 @@ button {
 
 .dashboard-dot--notification {
   background: #f59e0b;
+}
+
+.student-agenda-page {
+  display: grid;
+  gap: 20px;
+}
+
+.student-agenda-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.student-agenda-eyebrow {
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.72rem;
+  color: #60758f;
+}
+
+.student-agenda-header h1,
+.student-agenda-card-header h2,
+.student-agenda-day-header h3 {
+  margin: 0;
+}
+
+.student-agenda-subtitle,
+.student-agenda-card-header p,
+.student-agenda-day-header p,
+.student-agenda-meta p,
+.student-agenda-empty-copy {
+  margin: 10px 0 0;
+  color: #60758f;
+}
+
+.student-agenda-pill {
+  min-width: 160px;
+  padding: 18px 22px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #123257 0%, #1d5ca3 100%);
+  color: #fff;
+  box-shadow: 0 20px 40px rgba(20, 53, 95, 0.18);
+}
+
+.student-agenda-pill strong,
+.student-agenda-pill span {
+  display: block;
+}
+
+.student-agenda-pill strong {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.student-agenda-pill span {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.student-agenda-banner {
+  padding: 14px 16px;
+  border-radius: 18px;
+  font-weight: 600;
+}
+
+.student-agenda-banner--error {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #b42318;
+}
+
+.student-agenda-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.student-agenda-card {
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(206, 218, 232, 0.95);
+  box-shadow: 0 24px 60px rgba(37, 58, 90, 0.08);
+}
+
+.student-agenda-stat {
+  padding: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.student-agenda-stat p,
+.student-agenda-empty p {
+  margin: 0;
+  color: #60758f;
+}
+
+.student-agenda-stat strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1.5rem;
+  color: #1c2e44;
+}
+
+.student-agenda-stat span {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: #dbeafe;
+  color: #1d4f91;
+  font-weight: 800;
+}
+
+.student-agenda-main-card {
+  overflow: hidden;
+}
+
+.student-agenda-card-header {
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.student-agenda-timeline {
+  display: grid;
+  gap: 24px;
+  padding: 24px;
+}
+
+.student-agenda-day {
+  padding-left: 20px;
+  border-left: 4px solid #3b82f6;
+}
+
+.student-agenda-day-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.student-agenda-day-marker {
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: #dbeafe;
+  color: #1d4f91;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.student-agenda-day-list {
+  display: grid;
+  gap: 14px;
+}
+
+.student-agenda-lesson {
+  padding: 18px;
+  border-radius: 22px;
+  background: #f8fbff;
+  border: 1px solid #dbe7f5;
+}
+
+.student-agenda-lesson-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.student-agenda-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.student-agenda-meta-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.student-agenda-meta-icon--blue {
+  background: #dbeafe;
+  color: #1d4f91;
+}
+
+.student-agenda-meta-icon--green {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.student-agenda-meta-icon--violet {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.student-agenda-meta-icon--amber {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.student-agenda-meta strong {
+  display: block;
+  margin-top: 4px;
+  color: #1c2e44;
+}
+
+.student-agenda-badges {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.student-agenda-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.student-agenda-badge--success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.student-agenda-badge--warning {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.student-agenda-badge--danger {
+  background: #fee2e2;
+  color: #b42318;
+}
+
+.student-agenda-badge--muted {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.student-agenda-empty {
+  padding: 36px 24px;
+  text-align: center;
+}
+
+.student-agenda-empty-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #16324f;
 }
 
 .inventory-page {
@@ -2752,10 +3031,37 @@ button {
 @media (max-width: 900px) {
   .portal-shell {
     grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .portal-sidebar {
+    position: relative;
+    top: auto;
+    min-height: 0;
+    height: auto;
+    padding: 20px 16px;
+    gap: 18px;
+  }
+
+  .portal-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .portal-content {
     padding: 16px;
+    min-height: 0;
+    height: auto;
+    overflow: visible;
+  }
+
+  .finance-sidebar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .teacher-availability-day {
+    width: auto;
   }
 
   .request-page {
@@ -2810,6 +3116,7 @@ button {
   }
 
   .dashboard-stats,
+  .student-agenda-stats,
   .dashboard-grid,
   .inventory-stats,
   .inventory-grid,
@@ -2830,21 +3137,45 @@ button {
     grid-template-columns: 1fr;
   }
 
+  .schedule-shell {
+    overflow: auto;
+  }
+
+  .schedule-calendar {
+    min-width: 760px;
+    min-height: 640px;
+  }
+
   .inventory-header,
+  .student-agenda-header,
   .inventory-toolbar,
   .inventory-item-top,
   .inventory-modal-header,
   .inventory-role-panel-header,
   .inventory-role-rental-top,
-  .finance-header {
+  .finance-header,
+  .student-agenda-day-header {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .student-agenda-lesson-grid {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
 @media (max-width: 640px) {
   .portal-sidebar {
     padding: 20px 16px;
+  }
+
+  .portal-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .portal-nav-item,
+  .portal-logout {
+    padding: 12px 14px;
   }
 
   .request-grid,
@@ -2865,6 +3196,10 @@ button {
     grid-template-columns: 1fr;
   }
 
+  .finance-sidebar {
+    grid-template-columns: 1fr;
+  }
+
   .request-card-header,
   .request-item,
   .request-modal {
@@ -2876,10 +3211,19 @@ button {
   }
 
   .dashboard-stats,
+  .student-agenda-stats,
   .dashboard-grid,
   .inventory-stats,
   .inventory-grid,
   .inventory-role-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .student-agenda-timeline {
+    padding: 20px;
+  }
+
+  .student-agenda-lesson-grid {
     grid-template-columns: 1fr;
   }
 
