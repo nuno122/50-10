@@ -1,19 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { PERMISSOES, ROLE_LABELS } from '../utils/permissions';
 import { getAlugueres, getInventario, solicitarExtensaoAluguer } from '../services/api';
-
-const PERMISSOES = {
-    ALUNO: 1,
-    PROFESSOR: 2,
-    DIRECAO: 3,
-    ENCARREGADO: 4
-};
-
-const ROLE_LABELS = {
-    [PERMISSOES.ALUNO]: 'Aluno',
-    [PERMISSOES.PROFESSOR]: 'Professor',
-    [PERMISSOES.ENCARREGADO]: 'Encarregado'
-};
+import { resolveInventoryImageUrl } from '../utils/imagePaths';
 
 const formatCurrency = (value) => new Intl.NumberFormat('pt-PT', {
     style: 'currency',
@@ -32,6 +21,14 @@ const formatDate = (value) => {
 const getTotalStock = (item) => (
     (item.TamanhoArtigo || []).reduce((sum, size) => sum + Number(size.Quantidade || 0), 0)
 );
+
+const getConditionSummary = (item) => {
+    const conditions = [...new Set((item.TamanhoArtigo || []).map((size) => size.Condicao || 'Bom'))];
+    if (conditions.length === 0) return 'Sem informacao';
+    return conditions.join(', ');
+};
+
+const getFallbackLabel = (name) => String(name || '?').trim().charAt(0).toUpperCase() || '?';
 
 const normalizeStatus = (status) => String(status || '').trim().toLowerCase();
 
@@ -79,6 +76,8 @@ const RoleInventory = () => {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [feedback, setFeedback] = useState('');
+    const [showActiveRentals, setShowActiveRentals] = useState(false);
+    const [showPendingRentals, setShowPendingRentals] = useState(false);
 
     const loadData = async () => {
         setLoading(true);
@@ -210,169 +209,222 @@ const RoleInventory = () => {
                 </article>
             </div>
 
-            <div className="inventory-role-layout">
-                <aside className="inventory-role-sidebar">
-                    <section className="inventory-card inventory-role-panel">
-                        <div className="inventory-role-panel-header">
-                            <div>
-                                <h2>Em Posse</h2>
-                                <p>Alugueres ativos desta conta</p>
-                            </div>
-                            <strong>{activeRentals.length}</strong>
+            <section className="inventory-role-overview">
+                <article className="inventory-card inventory-role-panel">
+                    <div className="inventory-role-panel-header">
+                        <div>
+                            <h2>Em Posse</h2>
+                            <p>Alugueres ativos desta conta</p>
                         </div>
+                        <strong>{activeRentals.length}</strong>
+                    </div>
 
-                        <div className="inventory-role-rentals">
-                            {activeRentals.length === 0 ? (
-                                <p className="inventory-size-empty">Sem alugueres ativos.</p>
-                            ) : (
-                                activeRentals.map((rental) => (
-                                    <article key={rental.IdAluguer} className="inventory-role-rental">
-                                        <div className="inventory-role-rental-top">
-                                            <div>
-                                                <h3>{rental.EstadoAluguer || 'Ativo'}</h3>
-                                                <p>Entrega: {formatDate(rental.DataEntrega)}</p>
-                                            </div>
-                                            <span>{getRentalItems(rental).length} item(ns)</span>
-                                        </div>
+                    <div className="inventory-role-summary">
+                        <p>
+                            {activeRentals.length === 0
+                                ? 'Sem alugueres ativos nesta conta.'
+                                : `${activeRentals.length} aluguer(es) ativo(s) para consultar.`}
+                        </p>
+                        {activeRentals.length > 0 && (
+                            <button
+                                type="button"
+                                className="inventory-secondary-button"
+                                onClick={() => setShowActiveRentals((current) => !current)}
+                            >
+                                {showActiveRentals ? 'Esconder detalhes' : 'Ver detalhes'}
+                            </button>
+                        )}
+                    </div>
+                </article>
 
-                                        <div className="inventory-role-rental-items">
-                                            {getRentalItems(rental).map((item) => (
-                                                <p key={item.id}>
-                                                    {item.name} · Tam. {item.size} · Qtd. {item.quantity}
-                                                </p>
-                                            ))}
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            className="inventory-primary-button"
-                                            onClick={() => openExtensionDialog(rental)}
-                                        >
-                                            Pedir Extensao
-                                        </button>
-                                    </article>
-                                ))
-                            )}
+                <article className="inventory-card inventory-role-panel">
+                    <div className="inventory-role-panel-header">
+                        <div>
+                            <h2>Pedidos Pendentes</h2>
+                            <p>Pedidos ainda por tratar</p>
                         </div>
-                    </section>
+                        <strong>{pendingRentals.length}</strong>
+                    </div>
 
-                    <section className="inventory-card inventory-role-panel">
-                        <div className="inventory-role-panel-header">
-                            <div>
-                                <h2>Pedidos Pendentes</h2>
-                                <p>Pedidos ainda por tratar</p>
-                            </div>
-                            <strong>{pendingRentals.length}</strong>
+                    <div className="inventory-role-summary">
+                        <p>
+                            {pendingRentals.length === 0
+                                ? 'Sem pedidos pendentes nesta conta.'
+                                : `${pendingRentals.length} pedido(s) pendente(s) para consultar.`}
+                        </p>
+                        {pendingRentals.length > 0 && (
+                            <button
+                                type="button"
+                                className="inventory-secondary-button"
+                                onClick={() => setShowPendingRentals((current) => !current)}
+                            >
+                                {showPendingRentals ? 'Esconder detalhes' : 'Ver detalhes'}
+                            </button>
+                        )}
+                    </div>
+                </article>
+            </section>
+
+            {showActiveRentals && (
+                <section className="inventory-card inventory-role-panel">
+                    <div className="inventory-role-panel-header">
+                        <div>
+                            <h2>Detalhes em Posse</h2>
+                            <p>Lista completa dos alugueres ativos</p>
                         </div>
+                        <strong>{activeRentals.length}</strong>
+                    </div>
 
-                        <div className="inventory-role-rentals">
-                            {pendingRentals.length === 0 ? (
-                                <p className="inventory-size-empty">Sem pedidos pendentes.</p>
-                            ) : (
-                                pendingRentals.map((rental) => (
-                                    <article key={rental.IdAluguer} className="inventory-role-rental inventory-role-rental--pending">
-                                        <div className="inventory-role-rental-top">
-                                            <div>
-                                                <h3>{rental.EstadoAluguer || 'Pendente'}</h3>
-                                                <p>Levantamento: {formatDate(rental.DataLevantamento)}</p>
-                                            </div>
-                                            <span>{getRentalItems(rental).length} item(ns)</span>
-                                        </div>
+                    <div className="inventory-role-rentals">
+                        {activeRentals.map((rental) => (
+                            <article key={rental.IdAluguer} className="inventory-role-rental">
+                                <div className="inventory-role-rental-top">
+                                    <div>
+                                        <h3>{rental.EstadoAluguer || 'Ativo'}</h3>
+                                        <p>Entrega: {formatDate(rental.DataEntrega)}</p>
+                                    </div>
+                                    <span>{getRentalItems(rental).length} item(ns)</span>
+                                </div>
 
-                                        <div className="inventory-role-rental-items">
-                                            {getRentalItems(rental).map((item) => (
-                                                <p key={item.id}>
-                                                    {item.name} · Tam. {item.size} · Qtd. {item.quantity}
-                                                </p>
-                                            ))}
-                                        </div>
-                                    </article>
-                                ))
-                            )}
-                        </div>
-                    </section>
-                </aside>
+                                <div className="inventory-role-rental-items">
+                                    {getRentalItems(rental).map((item) => (
+                                        <p key={item.id}>
+                                            {item.name} · Tam. {item.size} · Qtd. {item.quantity}
+                                        </p>
+                                    ))}
+                                </div>
 
-                <section className="inventory-role-main">
-                    <section className="inventory-card inventory-toolbar">
-                        <div className="inventory-search">
-                            <input
-                                value={searchQuery}
-                                onChange={(event) => setSearchQuery(event.target.value)}
-                                placeholder="Pesquisar por nome do artigo..."
-                            />
-                        </div>
-
-                        <div className="inventory-filters">
-                            {[
-                                ['all', 'Todos'],
-                                ['available', 'Disponiveis'],
-                                ['empty', 'Sem Stock'],
-                                ['inactive', 'Inativos']
-                            ].map(([value, label]) => (
                                 <button
-                                    key={value}
                                     type="button"
-                                    className={`inventory-filter ${filterStatus === value ? 'inventory-filter--active' : ''}`}
-                                    onClick={() => setFilterStatus(value)}
+                                    className="inventory-primary-button"
+                                    onClick={() => openExtensionDialog(rental)}
                                 >
-                                    {label}
+                                    Pedir Extensao
                                 </button>
-                            ))}
+                            </article>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {showPendingRentals && (
+                <section className="inventory-card inventory-role-panel">
+                    <div className="inventory-role-panel-header">
+                        <div>
+                            <h2>Detalhes dos Pendentes</h2>
+                            <p>Lista completa dos pedidos ainda por tratar</p>
                         </div>
-                    </section>
+                        <strong>{pendingRentals.length}</strong>
+                    </div>
 
-                    {loading ? (
-                        <section className="inventory-card inventory-empty">
-                            <p>A carregar inventario real da base de dados...</p>
-                        </section>
-                    ) : filteredInventory.length === 0 ? (
-                        <section className="inventory-card inventory-empty">
-                            <p>Nao foram encontrados artigos para os filtros atuais.</p>
-                        </section>
-                    ) : (
-                        <div className="inventory-grid">
-                            {filteredInventory.map((item) => {
-                                const totalStock = getTotalStock(item);
-                                const isInactive = item.EstadoArtigo === false;
+                    <div className="inventory-role-rentals">
+                        {pendingRentals.map((rental) => (
+                            <article key={rental.IdAluguer} className="inventory-role-rental inventory-role-rental--pending">
+                                <div className="inventory-role-rental-top">
+                                    <div>
+                                        <h3>{rental.EstadoAluguer || 'Pendente'}</h3>
+                                        <p>Levantamento: {formatDate(rental.DataLevantamento)}</p>
+                                    </div>
+                                    <span>{getRentalItems(rental).length} item(ns)</span>
+                                </div>
 
-                                return (
-                                    <article
-                                        key={item.IdArtigo}
-                                        className={`inventory-card inventory-item ${isInactive ? 'inventory-item--inactive' : ''}`}
-                                    >
-                                        <div className="inventory-item-top">
-                                            <div>
-                                                <h3>{item.Nome}</h3>
-                                                <p>{formatCurrency(item.CustoPorDia)} / dia</p>
-                                            </div>
-                                            <div className="inventory-badges">
-                                                <span className={`inventory-badge ${totalStock > 0 ? 'inventory-badge--available' : 'inventory-badge--empty'}`}>
-                                                    {totalStock > 0 ? 'Disponivel' : 'Sem stock'}
-                                                </span>
-                                                {isInactive && <span className="inventory-badge inventory-badge--inactive">Inativo</span>}
-                                            </div>
-                                        </div>
+                                <div className="inventory-role-rental-items">
+                                    {getRentalItems(rental).map((item) => (
+                                        <p key={item.id}>
+                                            {item.name} · Tam. {item.size} · Qtd. {item.quantity}
+                                        </p>
+                                    ))}
+                                </div>
+                            </article>
+                        ))}
+                    </div>
+                </section>
+            )}
 
-                                        <div className="inventory-meta">
-                                            <div className="inventory-meta-row">
-                                                <span>Referencia</span>
-                                                <strong>{item.IdArtigo}</strong>
-                                            </div>
-                                            <div className="inventory-meta-row">
-                                                <span>Total em stock</span>
-                                                <strong>{totalStock}</strong>
-                                            </div>
-                                            <div className="inventory-meta-row">
-                                                <span>Tamanhos registados</span>
-                                                <strong>{(item.TamanhoArtigo || []).length}</strong>
-                                            </div>
-                                        </div>
+            <section className="inventory-card inventory-toolbar">
+                <div className="inventory-search">
+                    <input
+                        value={searchQuery}
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        placeholder="Pesquisar por nome do artigo..."
+                    />
+                </div>
 
-                                        <div className="inventory-sizes">
-                                            <p className="inventory-sizes-title">Tamanhos</p>
+                <div className="inventory-filters">
+                    {[
+                        ['all', 'Todos'],
+                        ['available', 'Disponiveis'],
+                        ['empty', 'Sem Stock'],
+                        ['inactive', 'Inativos']
+                    ].map(([value, label]) => (
+                        <button
+                            key={value}
+                            type="button"
+                            className={`inventory-filter ${filterStatus === value ? 'inventory-filter--active' : ''}`}
+                            onClick={() => setFilterStatus(value)}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+            </section>
+
+            {loading ? (
+                <section className="inventory-card inventory-empty">
+                    <p>A carregar inventario...</p>
+                </section>
+            ) : filteredInventory.length === 0 ? (
+                <section className="inventory-card inventory-empty">
+                    <p>Nao foram encontrados artigos para os filtros atuais.</p>
+                </section>
+            ) : (
+                <div className="inventory-grid">
+                    {filteredInventory.map((item) => {
+                        const totalStock = getTotalStock(item);
+                        const isInactive = item.EstadoArtigo === false;
+                        const imageUrl = resolveInventoryImageUrl(item.ImagemPath);
+
+                        return (
+                            <article
+                                key={item.IdArtigo}
+                                className={`inventory-card inventory-item ${isInactive ? 'inventory-item--inactive' : ''}`}
+                            >
+                                <div className="inventory-item-media">
+                                    {imageUrl ? (
+                                        <img className="inventory-item-image" src={imageUrl} alt={item.Nome || 'Imagem do artigo'} />
+                                    ) : (
+                                        <div className="inventory-item-placeholder">{getFallbackLabel(item.Nome)}</div>
+                                    )}
+                                </div>
+
+                                <div className="inventory-item-top">
+                                    <div>
+                                        <h3>{item.Nome}</h3>
+                                        <p>{formatCurrency(item.CustoPorDia)} / dia</p>
+                                    </div>
+                                    <div className="inventory-badges">
+                                        <span className={`inventory-badge ${totalStock > 0 ? 'inventory-badge--available' : 'inventory-badge--empty'}`}>
+                                            {totalStock > 0 ? 'Disponivel' : 'Sem stock'}
+                                        </span>
+                                        {isInactive && <span className="inventory-badge inventory-badge--inactive">Inativo</span>}
+                                    </div>
+                                </div>
+
+                                <div className="inventory-meta">
+                                    <div className="inventory-meta-row">
+                                        <span>Total em stock</span>
+                                        <strong>{totalStock}</strong>
+                                    </div>
+                                    <div className="inventory-meta-row">
+                                        <span>Tamanhos</span>
+                                        <strong>{(item.TamanhoArtigo || []).length}</strong>
+                                    </div>
+                                </div>
+
+                                <div className="inventory-sizes">
+                                    <p className="inventory-sizes-title">Tamanhos</p>
                                             {(item.TamanhoArtigo || []).length === 0 ? (
-                                                <p className="inventory-size-empty">Sem tamanhos registados.</p>
+                                                <p className="inventory-size-empty">Sem tamanhos.</p>
                                             ) : (
                                                 <div className="inventory-size-list">
                                                     {item.TamanhoArtigo.map((size) => (
@@ -381,20 +433,18 @@ const RoleInventory = () => {
                                                             <strong>{size.Quantidade}</strong>
                                                         </div>
                                                     ))}
-                                                </div>
-                                            )}
                                         </div>
+                                    )}
+                                </div>
 
-                                        <button type="button" className="inventory-secondary-button" onClick={() => openItemDetails(item)}>
-                                            Ver detalhes
-                                        </button>
-                                    </article>
-                                );
-                            })}
-                        </div>
-                    )}
-                </section>
-            </div>
+                                <button type="button" className="inventory-secondary-button" onClick={() => openItemDetails(item)}>
+                                    Ver detalhes
+                                </button>
+                            </article>
+                        );
+                    })}
+                </div>
+            )}
 
             {isDetailOpen && selectedItem && (
                 <div className="inventory-modal-backdrop" onClick={() => setIsDetailOpen(false)}>
@@ -410,12 +460,25 @@ const RoleInventory = () => {
                         </div>
 
                         <div className="inventory-form-note">
-                            <p>Dados reais do artigo registados na base de dados.</p>
+                            <p>Imagem do artigo.</p>
+                            <div className="inventory-detail-media">
+                                {resolveInventoryImageUrl(selectedItem.ImagemPath) ? (
+                                    <img
+                                        className="inventory-detail-image"
+                                        src={resolveInventoryImageUrl(selectedItem.ImagemPath)}
+                                        alt={selectedItem.Nome || 'Imagem do artigo'}
+                                    />
+                                ) : (
+                                    <div className="inventory-item-placeholder inventory-item-placeholder--large">
+                                        {getFallbackLabel(selectedItem.Nome)}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="inventory-form-note">
+                            <p>Informacoes do artigo.</p>
                             <div className="inventory-role-detail-grid">
-                                <div className="inventory-meta-row">
-                                    <span>Referencia</span>
-                                    <strong>{selectedItem.IdArtigo}</strong>
-                                </div>
                                 <div className="inventory-meta-row">
                                     <span>Custo por dia</span>
                                     <strong>{formatCurrency(selectedItem.CustoPorDia)}</strong>
@@ -428,18 +491,22 @@ const RoleInventory = () => {
                                     <span>Total em stock</span>
                                     <strong>{getTotalStock(selectedItem)}</strong>
                                 </div>
+                                <div className="inventory-meta-row">
+                                    <span>Condicao</span>
+                                    <strong>{getConditionSummary(selectedItem)}</strong>
+                                </div>
                             </div>
                         </div>
 
                         <div className="inventory-form-note">
-                            <p>Tamanhos e quantidades registados.</p>
+                            <p>Tamanhos, condicao e quantidades.</p>
                             {(selectedItem.TamanhoArtigo || []).length === 0 ? (
-                                <p className="inventory-size-empty">Sem tamanhos registados.</p>
+                                <p className="inventory-size-empty">Sem tamanhos.</p>
                             ) : (
                                 <div className="inventory-size-list">
                                     {selectedItem.TamanhoArtigo.map((size) => (
                                         <div key={size.IdTamanhoArtigo} className="inventory-size-chip">
-                                            <span>{size.Tamanho}</span>
+                                            <span>Tam. {size.Tamanho} | Condicao: {size.Condicao || 'Bom'}</span>
                                             <strong>{size.Quantidade}</strong>
                                         </div>
                                     ))}

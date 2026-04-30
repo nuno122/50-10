@@ -1,12 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { PERMISSOES } from '../utils/permissions';
 import { criarAula, getAulas, getEstilos, getEstudios, getUtilizadores } from '../services/api';
-
-const PERMISSOES = {
-    ALUNO: 1,
-    PROFESSOR: 2,
-    DIRECAO: 3,
-    ENCARREGADO: 4
-};
 
 const getStartOfWeek = (date) => {
     const result = new Date(date);
@@ -149,6 +143,7 @@ const initialForm = {
     date: '',
     teacher: '',
     style: '',
+    lessonType: 'Regular',
     capacity: '',
     startTime: '',
     endTime: '',
@@ -267,6 +262,7 @@ const ScheduleManagement = () => {
             endMinutes: Math.max(endMinutes, startMinutes + 30),
             teacher: aula.Professor?.Utilizador?.NomeCompleto || aula.IdProfessor,
             style: aula.EstiloDanca?.Nome || 'Sem estilo',
+            lessonType: aula.TipoAula || 'Regular',
             studio: studioLabel,
             capacity: aula.CapacidadeMaxima,
             enrolled: (aula.Marcacao || []).length,
@@ -304,6 +300,7 @@ const ScheduleManagement = () => {
                 HoraFim: buildIsoTime(effectiveDate, effectiveEndTime),
                 CapacidadeMaxima: Number(formData.capacity),
                 Preco: 0,
+                TipoAula: formData.lessonType || 'Regular',
                 IdProfessor: formData.teacher,
                 IdEstudio: formData.studio,
                 IdEstiloDanca: formData.style
@@ -327,7 +324,7 @@ const ScheduleManagement = () => {
                     <p className="schedule-eyebrow">Direcao</p>
                     <h1>Gestao de Horarios</h1>
                     <p className="schedule-subtitle">
-                        Agenda aulas e consulta o calendario semanal com informacao real da base de dados.
+                        Agenda aulas e consulta o calendario semanal.
                     </p>
                 </div>
                 <button type="button" className="schedule-button schedule-button--primary" onClick={() => handleQuickBook(new Date())}>
@@ -359,7 +356,7 @@ const ScheduleManagement = () => {
                 {loading ? (
                     <div className="schedule-empty">
                         <p className="schedule-empty-title">A carregar horarios...</p>
-                        <p className="schedule-empty-copy">Estamos a ler aulas, estudios, estilos e professores da base de dados.</p>
+                        <p className="schedule-empty-copy">A preparar aulas, estudios, estilos e professores.</p>
                     </div>
                 ) : (
                     <div className="schedule-calendar">
@@ -432,6 +429,7 @@ const ScheduleManagement = () => {
                                                             <div className="schedule-lesson-meta">{lesson.teacher}</div>
                                                             <div className="schedule-lesson-badges">
                                                                 <span>{lesson.enrolled}/{lesson.capacity}</span>
+                                                                <span>{lesson.lessonType}</span>
                                                                 {lesson.validated && <span>Dir OK</span>}
                                                             </div>
                                                         </div>
@@ -501,6 +499,17 @@ const ScheduleManagement = () => {
                                     </select>
                                 </label>
                             </div>
+
+                            <label>
+                                <span>Tipo de aula *</span>
+                                <select
+                                    value={formData.lessonType}
+                                    onChange={(event) => setFormData((prev) => ({ ...prev, lessonType: event.target.value }))}
+                                >
+                                    <option value="Regular">Regular</option>
+                                    <option value="Particular">Particular</option>
+                                </select>
+                            </label>
 
                             <label>
                                 <span>Estilo de danca *</span>

@@ -292,7 +292,7 @@ const FinanceManagement = () => {
                         {loading ? (
                             <div className="finance-empty">
                                 <p className="finance-empty-title">A carregar aulas...</p>
-                                <p className="finance-empty-copy">Estamos a ler aulas e pagamentos da base de dados.</p>
+                                <p className="finance-empty-copy">A preparar a informacao financeira.</p>
                             </div>
                         ) : sortedLessons.length === 0 ? (
                             <div className="finance-empty">
@@ -304,7 +304,6 @@ const FinanceManagement = () => {
                                 <table className="finance-table">
                                     <thead>
                                         <tr>
-                                            <th><button type="button" onClick={() => handleSort('id')}>ID Aula</button></th>
                                             <th><button type="button" onClick={() => handleSort('rawDate')}>Data</button></th>
                                             <th><button type="button" onClick={() => handleSort('teacher')}>Professor</button></th>
                                             <th><button type="button" onClick={() => handleSort('lessonType')}>Tipo</button></th>
@@ -324,7 +323,6 @@ const FinanceManagement = () => {
 
                                             return (
                                                 <tr key={lesson.id} className={isFullyValidated ? 'finance-row finance-row--validated' : 'finance-row'}>
-                                                    <td className="finance-cell-strong">{lesson.id}</td>
                                                     <td>{lesson.date}</td>
                                                     <td>{lesson.teacher}</td>
                                                     <td>{lesson.lessonType}</td>

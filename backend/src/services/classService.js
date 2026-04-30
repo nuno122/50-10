@@ -7,6 +7,8 @@ const criarErro = (mensagem, statusCode) => {
     return erro;
 };
 
+const TIPOS_AULA_VALIDOS = ['Regular', 'Particular'];
+
 const ConsultarVagas = async () => {
     return await classRepo.GetAulasDisponiveis();
 };
@@ -30,6 +32,12 @@ const criarAula = async (dados) => {
 
     if (emFalta.length > 0) {
         throw criarErro(`Campos obrigatorios em falta: ${emFalta.join(', ')}`, 400);
+    }
+
+    const tipoAula = dados.TipoAula || 'Regular';
+
+    if (!TIPOS_AULA_VALIDOS.includes(tipoAula)) {
+        throw criarErro('TipoAula invalido. Usa Regular ou Particular.', 400);
     }
 
     const [professor, estudio, estilo] = await Promise.all([
@@ -65,7 +73,10 @@ const criarAula = async (dados) => {
         throw criarErro('Conflito de horario! Estudio ocupado.', 400);
     }
 
-    const novaAula = await classRepo.create(dados);
+    const novaAula = await classRepo.create({
+        ...dados,
+        TipoAula: tipoAula
+    });
 
     return {
         mensagem: 'Aula agendada!',

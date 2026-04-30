@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { PERMISSOES } from '../utils/permissions';
 import {
     avaliarPedidoExtensao,
     criarAluguer,
@@ -8,13 +9,6 @@ import {
     getUtilizadores,
     registarDevolucaoAluguer
 } from '../services/api';
-
-const PERMISSOES = {
-    ALUNO: 1,
-    PROFESSOR: 2,
-    DIRECAO: 3,
-    ENCARREGADO: 4
-};
 
 const roleLabel = (permission) => {
     switch (permission) {
@@ -279,7 +273,7 @@ const RequestValidation = ({ embedded = false }) => {
                         <p className="rental-eyebrow">Direcao</p>
                         <h1>Gestao de Requisicoes / Alugueres</h1>
                         <p className="rental-subtitle">
-                            Gira entregas, devolucoes e pedidos de extensao usando os dados reais da base de dados.
+                            Gira entregas, devolucoes e pedidos de extensao.
                         </p>
                     </div>
 
@@ -357,7 +351,7 @@ const RequestValidation = ({ embedded = false }) => {
                             {loading ? (
                                 <div className="rental-empty">
                                     <p className="rental-empty-title">A carregar alugueres...</p>
-                                    <p className="rental-empty-copy">Estamos a ler os registos da base de dados.</p>
+                                    <p className="rental-empty-copy">A preparar os registos de aluguer.</p>
                                 </div>
                             ) : filteredRentals.length === 0 ? (
                                 <div className="rental-empty">
@@ -393,7 +387,7 @@ const RequestValidation = ({ embedded = false }) => {
                                                     <div className="rental-grid">
                                                         <div>
                                                             <span className="rental-label">Solicitado por</span>
-                                                            <p>{rental.Utilizador?.NomeCompleto || rental.IdUtilizador}</p>
+                                                            <p>{rental.Utilizador?.NomeCompleto || 'Utilizador'}</p>
                                                         </div>
                                                         <div>
                                                             <span className="rental-label">Data de requisicao</span>
@@ -476,7 +470,7 @@ const RequestValidation = ({ embedded = false }) => {
                         <section className="rental-card rental-form-card">
                             <div className="rental-form-header">
                                 <h2>Novo Aluguer Presencial</h2>
-                                <p>Registo criado diretamente com utilizador e tamanho reais da BD.</p>
+                                <p>Cria um novo aluguer a partir dos dados disponiveis.</p>
                             </div>
 
                             <div className="rental-form">
@@ -541,11 +535,11 @@ const RequestValidation = ({ embedded = false }) => {
                             </button>
                         </div>
 
-                        <div className="rental-summary">
-                            <div className="rental-summary-row">
-                                <span>Utilizador</span>
-                                <strong>{returnRental.Utilizador?.NomeCompleto || returnRental.IdUtilizador}</strong>
-                            </div>
+                            <div className="rental-summary">
+                                <div className="rental-summary-row">
+                                    <span>Utilizador</span>
+                                    <strong>{returnRental.Utilizador?.NomeCompleto || 'Utilizador'}</strong>
+                                </div>
                             <div className="rental-summary-row">
                                 <span>Artigo(s)</span>
                                 <strong>{getRentalItems(returnRental).map((item) => `${item.name} (${item.size})`).join(', ')}</strong>
@@ -608,7 +602,7 @@ const RequestValidation = ({ embedded = false }) => {
                             </div>
                             <div>
                                 <span className="rental-label">Solicitado por</span>
-                                <p>{selectedRental.Utilizador?.NomeCompleto || selectedRental.IdUtilizador}</p>
+                                <p>{selectedRental.Utilizador?.NomeCompleto || 'Utilizador'}</p>
                             </div>
                             <div>
                                 <span className="rental-label">Data de requisicao</span>

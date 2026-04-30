@@ -1,11 +1,25 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { criarArtigo, editarArtigo, getInventario } from '../services/api';
+import { resolveInventoryImageUrl } from '../utils/imagePaths';
 
 const emptyForm = {
     Nome: '',
     CustoPorDia: '',
+    ImagemPath: '',
     EstadoArtigo: true
 };
+
+const getTotalStock = (item) => (
+    (item.TamanhoArtigo || []).reduce((sum, size) => sum + Number(size.Quantidade || 0), 0)
+);
+
+const getConditionSummary = (item) => {
+    const conditions = [...new Set((item.TamanhoArtigo || []).map((size) => size.Condicao || 'Bom'))];
+    if (conditions.length === 0) return 'Sem informacao';
+    return conditions.join(', ');
+};
+
+const getFallbackLabel = (name) => String(name || '?').trim().charAt(0).toUpperCase() || '?';
 
 const InventoryManagement = () => {
     const [inventory, setInventory] = useState([]);
@@ -40,7 +54,7 @@ const InventoryManagement = () => {
     const filteredInventory = useMemo(() => (
         inventory.filter((item) => {
             const matchesSearch = item.Nome?.toLowerCase().includes(searchQuery.toLowerCase());
-            const totalStock = (item.TamanhoArtigo || []).reduce((sum, size) => sum + Number(size.Quantidade || 0), 0);
+            const totalStock = getTotalStock(item);
 
             let matchesStatus = false;
             if (filterStatus === 'all') matchesStatus = true;
@@ -53,7 +67,8 @@ const InventoryManagement = () => {
     ), [filterStatus, inventory, searchQuery]);
 
     const availableCount = inventory.filter((item) => item.EstadoArtigo !== false && (item.TamanhoArtigo || []).some((size) => Number(size.Quantidade || 0) > 0)).length;
-    const outOfStockCount = inventory.filter((item) => item.EstadoArtigo !== false && (item.TamanhoArtigo || []).reduce((sum, size) => sum + Number(size.Quantidade || 0), 0) === 0).length;
+    const outOfStockCount = inventory.filter((item) => item.EstadoArtigo !== false && getTotalStock(item) === 0).length;
+    const previewImageUrl = resolveInventoryImageUrl(formData.ImagemPath);
 
     const openCreate = () => {
         setIsCreating(true);
@@ -68,6 +83,7 @@ const InventoryManagement = () => {
         setFormData({
             Nome: item.Nome || '',
             CustoPorDia: item.CustoPorDia ?? '',
+            ImagemPath: item.ImagemPath || '',
             EstadoArtigo: item.EstadoArtigo !== false
         });
         setIsDialogOpen(true);
@@ -81,12 +97,14 @@ const InventoryManagement = () => {
             if (isCreating) {
                 await criarArtigo({
                     Nome: formData.Nome,
-                    CustoPorDia: Number(formData.CustoPorDia)
+                    CustoPorDia: formData.CustoPorDia,
+                    ImagemPath: formData.ImagemPath
                 });
             } else if (selectedItem) {
                 await editarArtigo(selectedItem.IdArtigo, {
                     Nome: formData.Nome,
-                    CustoPorDia: Number(formData.CustoPorDia),
+                    CustoPorDia: formData.CustoPorDia,
+                    ImagemPath: formData.ImagemPath,
                     EstadoArtigo: formData.EstadoArtigo
                 });
             }
@@ -109,7 +127,7 @@ const InventoryManagement = () => {
                     <p className="inventory-eyebrow">Direcao</p>
                     <h1>Gestao de Inventario</h1>
                     <p className="inventory-subtitle">
-                        Informacao apresentada a partir dos registos reais de artigos e tamanhos em stock.
+                        Consulta artigos, imagens e tamanhos atualmente disponiveis.
                     </p>
                 </div>
 
@@ -179,14 +197,23 @@ const InventoryManagement = () => {
             ) : (
                 <div className="inventory-grid">
                     {filteredInventory.map((item) => {
-                        const totalStock = (item.TamanhoArtigo || []).reduce((sum, size) => sum + Number(size.Quantidade || 0), 0);
+                        const totalStock = getTotalStock(item);
                         const isInactive = item.EstadoArtigo === false;
+                        const imageUrl = resolveInventoryImageUrl(item.ImagemPath);
 
                         return (
                             <article
                                 key={item.IdArtigo}
                                 className={`inventory-card inventory-item ${isInactive ? 'inventory-item--inactive' : ''}`}
                             >
+                                <div className="inventory-item-media">
+                                    {imageUrl ? (
+                                        <img className="inventory-item-image" src={imageUrl} alt={item.Nome || 'Imagem do artigo'} />
+                                    ) : (
+                                        <div className="inventory-item-placeholder">{getFallbackLabel(item.Nome)}</div>
+                                    )}
+                                </div>
+
                                 <div className="inventory-item-top">
                                     <div>
                                         <h3>{item.Nome}</h3>
@@ -202,10 +229,6 @@ const InventoryManagement = () => {
 
                                 <div className="inventory-meta">
                                     <div className="inventory-meta-row">
-                                        <span>Referencia</span>
-                                        <strong>{item.IdArtigo}</strong>
-                                    </div>
-                                    <div className="inventory-meta-row">
                                         <span>Total em stock</span>
                                         <strong>{totalStock}</strong>
                                     </div>
@@ -214,7 +237,7 @@ const InventoryManagement = () => {
                                 <div className="inventory-sizes">
                                     <p className="inventory-sizes-title">Tamanhos</p>
                                     {(item.TamanhoArtigo || []).length === 0 ? (
-                                        <p className="inventory-size-empty">Sem tamanhos registados.</p>
+                                        <p className="inventory-size-empty">Sem tamanhos.</p>
                                     ) : (
                                         <div className="inventory-size-list">
                                             {item.TamanhoArtigo.map((size) => (
@@ -271,6 +294,27 @@ const InventoryManagement = () => {
                                 />
                             </label>
 
+                            <label>
+                                <span>ImagemPath</span>
+                                <input
+                                    value={formData.ImagemPath}
+                                    onChange={(event) => setFormData((current) => ({ ...current, ImagemPath: event.target.value }))}
+                                    placeholder="Ex: Saia.jpg ou /images/Saia.jpg"
+                                />
+                                <small className="inventory-field-hint">
+                                    Usa o nome do ficheiro ou o caminho `/images/...`.
+                                </small>
+                            </label>
+
+                            {previewImageUrl && (
+                                <div className="inventory-form-note">
+                                    <p>Pre-visualizacao da imagem.</p>
+                                    <div className="inventory-detail-media">
+                                        <img className="inventory-detail-image" src={previewImageUrl} alt={formData.Nome || 'Pre-visualizacao do artigo'} />
+                                    </div>
+                                </div>
+                            )}
+
                             {!isCreating && (
                                 <label className="inventory-switch">
                                     <span>Artigo ativo</span>
@@ -283,12 +327,12 @@ const InventoryManagement = () => {
                             )}
 
                             {selectedItem && (
-                                <div className="inventory-form-note">
-                                    <p>Tamanhos e quantidades registados na base de dados.</p>
-                                    <div className="inventory-size-list">
+                            <div className="inventory-form-note">
+                                <p>Tamanhos, condicao e quantidades atuais.</p>
+                                <div className="inventory-size-list">
                                         {(selectedItem.TamanhoArtigo || []).map((size) => (
                                             <div key={size.IdTamanhoArtigo} className="inventory-size-chip">
-                                                <span>{size.Tamanho}</span>
+                                                <span>Tam. {size.Tamanho} | Condicao: {size.Condicao || 'Bom'}</span>
                                                 <strong>{size.Quantidade}</strong>
                                             </div>
                                         ))}

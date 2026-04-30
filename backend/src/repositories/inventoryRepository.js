@@ -28,7 +28,8 @@ const inventoryRepository = {
                     select: {
                         IdTamanhoArtigo: true,
                         Tamanho: true,
-                        Quantidade: true
+                        Quantidade: true,
+                        Condicao: true
                     }
                 }
             }

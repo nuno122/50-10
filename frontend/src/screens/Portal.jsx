@@ -1,46 +1,27 @@
 import React, { useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { getRoleLabel, isAluno, isDirecao, isEncarregado, isProfessor } from '../utils/permissions';
 import Dashboard from './Dashboard';
 import FinanceManagement from './FinanceManagement';
+import GuardianLessons from './GuardianLessons';
+import GuardianLessonRequest from './GuardianLessonRequest';
 import InventoryManagement from './InventoryManagement';
 import RoleInventory from './RoleInventory';
 import RequestValidation from './RequestValidation';
 import ScheduleManagement from './ScheduleManagement';
 import StudentAgenda from './StudentAgenda';
 import TeacherSchedule from './TeacherSchedule';
-import TestsBackend from './TestsBackend';
-
-const PERMISSOES = {
-    ALUNO: 1,
-    PROFESSOR: 2,
-    DIRECAO: 3,
-    ENCARREGADO: 4
-};
-
-const getRoleLabel = (permission) => {
-    switch (permission) {
-        case PERMISSOES.DIRECAO:
-            return 'Direcao';
-        case PERMISSOES.PROFESSOR:
-            return 'Professor';
-        case PERMISSOES.ENCARREGADO:
-            return 'Encarregado';
-        case PERMISSOES.ALUNO:
-            return 'Aluno';
-        default:
-            return 'Utilizador';
-    }
-};
 
 const Portal = () => {
     const { user, logout } = useAuth();
-    const isDirecao = user?.Permissoes === PERMISSOES.DIRECAO;
-    const isProfessor = user?.Permissoes === PERMISSOES.PROFESSOR;
-    const isAluno = user?.Permissoes === PERMISSOES.ALUNO;
+    const userIsDirecao = isDirecao(user);
+    const userIsProfessor = isProfessor(user);
+    const userIsAluno = isAluno(user);
+    const userIsEncarregado = isEncarregado(user);
     const [activeView, setActiveView] = useState('dashboard');
 
     const menuItems = useMemo(() => (
-        isDirecao
+        userIsDirecao
             ? [
                 { id: 'dashboard', label: 'Dashboard' },
                 { id: 'schedule', label: 'Gestao de Horarios' },
@@ -48,57 +29,65 @@ const Portal = () => {
                 { id: 'finance', label: 'Financeiro' },
                 { id: 'inventory', label: 'Gestao de Inventario' }
             ]
-            : isProfessor
+            : userIsProfessor
                 ? [
                     { id: 'dashboard', label: 'Dashboard' },
                     { id: 'teacher-schedule', label: 'Aulas e Disponibilidade' },
-                    { id: 'inventory', label: 'Inventario e Aluguer' },
-                    { id: 'tests', label: 'Tests Backend' }
+                    { id: 'inventory', label: 'Inventario e Aluguer' }
                 ]
-            : isAluno
+            : userIsEncarregado
                 ? [
                     { id: 'dashboard', label: 'Dashboard' },
-                    { id: 'agenda', label: 'A Minha Agenda' },
-                    { id: 'tests', label: 'Tests Backend' }
+                    { id: 'lesson-request', label: 'Requisicao de Aula' },
+                    { id: 'guardian-lessons', label: 'Inscricao em Aulas' },
+                    { id: 'inventory', label: 'Inventario e Aluguer' }
+                ]
+            : userIsAluno
+                ? [
+                    { id: 'dashboard', label: 'Dashboard' },
+                    { id: 'agenda', label: 'A Minha Agenda' }
                 ]
             : [
                 { id: 'dashboard', label: 'Dashboard' },
-                { id: 'inventory', label: 'Inventario e Aluguer' },
-                { id: 'tests', label: 'Tests Backend' }
+                { id: 'inventory', label: 'Inventario e Aluguer' }
             ]
-    ), [isAluno, isDirecao, isProfessor]);
+    ), [userIsAluno, userIsDirecao, userIsEncarregado, userIsProfessor]);
 
     const renderContent = () => {
-        if (activeView === 'requests' && isDirecao) {
+        if (activeView === 'requests' && userIsDirecao) {
             return <RequestValidation embedded />;
         }
 
-        if (activeView === 'schedule' && isDirecao) {
+        if (activeView === 'schedule' && userIsDirecao) {
             return <ScheduleManagement />;
         }
 
-        if (activeView === 'inventory' && isDirecao) {
+        if (activeView === 'inventory' && userIsDirecao) {
             return <InventoryManagement />;
         }
 
-        if (activeView === 'finance' && isDirecao) {
+        if (activeView === 'finance' && userIsDirecao) {
             return <FinanceManagement />;
         }
 
-        if (activeView === 'agenda' && isAluno) {
+        if (activeView === 'agenda' && userIsAluno) {
             return <StudentAgenda />;
         }
 
-        if (activeView === 'inventory' && !isDirecao && !isAluno) {
+        if (activeView === 'lesson-request' && userIsEncarregado) {
+            return <GuardianLessonRequest />;
+        }
+
+        if (activeView === 'guardian-lessons' && userIsEncarregado) {
+            return <GuardianLessons />;
+        }
+
+        if (activeView === 'inventory' && !userIsDirecao && !userIsAluno) {
             return <RoleInventory />;
         }
 
-        if (activeView === 'teacher-schedule' && isProfessor) {
+        if (activeView === 'teacher-schedule' && userIsProfessor) {
             return <TeacherSchedule />;
-        }
-
-        if (activeView === 'tests' && !isDirecao) {
-            return <TestsBackend embedded />;
         }
 
         return <Dashboard />;

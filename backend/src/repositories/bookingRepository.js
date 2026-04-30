@@ -13,21 +13,18 @@ const create = async (idAluno, idAula) => {
 };
 
 const bookingRepository = {
-    // Procurar todas as marcações com detalhes
     findAll: async () => {
         return await prisma.marcacao.findMany({
             include: { Aluno: true, Aula: true }
         });
     },
 
-    // Procurar um aluno específico
     findAlunoById: async (idUtilizador) => {
         return await prisma.aluno.findUnique({
             where: { IdUtilizador: idUtilizador }
         });
     },
 
-    // Procurar uma aula com as suas marcações (para contar vagas)
     findAulaWithMarcacoes: async (idAula) => {
         return await prisma.aula.findUnique({
             where: { IdAula: idAula },
@@ -35,25 +32,22 @@ const bookingRepository = {
         });
     },
 
-    // Verificar se já existe uma inscrição ativa
     findExisting: async (idAluno, idAula) => {
         return await prisma.marcacao.findFirst({
             where: {
                 IdAluno: idAluno,
                 IdAula: idAula,
-                EstaAtivo: true  // Mantido: ignora canceladas para permitir nova inscrição
+                EstaAtivo: true
             }
         });
     },
 
-    // Procurar uma marcação pelo ID
     findById: async (idMarcacao) => {
         return await prisma.marcacao.findUnique({
             where: { IdMarcacao: idMarcacao }
         });
     },
 
-    // NOVA: Encontrar marcação com aula associada (unificado)
     findByIdComAula: async (idMarcacao) => {
         return await prisma.marcacao.findUnique({
             where: { IdMarcacao: idMarcacao },
@@ -63,7 +57,6 @@ const bookingRepository = {
         });
     },
 
-    // Procurar todas as marcações de um aluno
     findByAluno: async (idAluno) => {
         return await prisma.marcacao.findMany({
             where: { IdAluno: idAluno },
@@ -80,29 +73,39 @@ const bookingRepository = {
         });
     },
 
-    // Criar a marcação
+    findStudentsByGuardian: async (idEncarregado) => {
+        return await prisma.encarregadoAluno.findMany({
+            where: { IdEncarregado: idEncarregado },
+            include: {
+                Aluno: {
+                    include: {
+                        Utilizador: true
+                    }
+                }
+            }
+        });
+    },
+
     create,
 
-    // Cancelar uma marcação (Unificado: aceita motivo ou estado)
     cancelar: async (idMarcacao, motivoOuEstado) => {
         return await prisma.marcacao.update({
             where: { IdMarcacao: idMarcacao },
             data: {
                 EstaAtivo: false,
-                MotivoCancelamento: motivoOuEstado === 'Pendente_Cancelamento' 
-                    ? 'Pedido pelo aluno' 
+                MotivoCancelamento: motivoOuEstado === 'Pendente_Cancelamento'
+                    ? 'Pedido pelo aluno'
                     : (motivoOuEstado ?? 'Cancelado pelo aluno')
             }
         });
     },
 
-    // Criar pagamento associado à marcação
     criarPagamento: async (idMarcacao, custo, prazoPagamento) => {
         return await prisma.pagamento.create({
             data: {
-                IdMarcacao:      idMarcacao,
-                Custo:           custo,
-                PrazoPagamento:  prazoPagamento,
+                IdMarcacao: idMarcacao,
+                Custo: custo,
+                PrazoPagamento: prazoPagamento,
                 EstadoPagamento: 'Pendente'
             }
         });

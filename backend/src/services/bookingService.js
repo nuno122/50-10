@@ -7,7 +7,6 @@ const criarErro = (mensagem, statusCode) => {
     return erro;
 };
 
-// ─── Criar ───────────────────────────────────────────────────────────────────
 const ConsultarVagas = async () => {
     return await classRepo.GetAulasDisponiveis();
 };
@@ -16,6 +15,29 @@ const GetPreco = async (idAula) => {
     const aula = await bookingRepo.findAulaWithMarcacoes(idAula);
     if (!aula) throw criarErro('Aula nao encontrada.', 404);
     return aula.Preco;
+};
+
+const listarAlunosDoEncarregado = async (idEncarregado) => {
+    if (!idEncarregado) throw criarErro('IdEncarregado e obrigatorio.', 400);
+
+    const relations = await bookingRepo.findStudentsByGuardian(idEncarregado);
+
+    return relations.map((relation) => ({
+        IdAluno: relation.IdAluno,
+        Nome: relation.Aluno?.Utilizador?.NomeCompleto || 'Aluno',
+        RelacaoParental: relation.RelacaoParental
+    }));
+};
+
+const validarAlunoDoEncarregado = async (idEncarregado, idAluno) => {
+    const alunos = await listarAlunosDoEncarregado(idEncarregado);
+    const aluno = alunos.find((item) => item.IdAluno === idAluno);
+
+    if (!aluno) {
+        throw criarErro('O aluno selecionado nao esta associado a este encarregado.', 403);
+    }
+
+    return aluno;
 };
 
 const FazerMarcacao = async (idAula, idAluno) => {
@@ -58,7 +80,10 @@ const FazerMarcacao = async (idAula, idAluno) => {
     };
 };
 
-// ─── Cancelar (Unificado com regra de 24h) ───────────────────────────────────
+const FazerMarcacaoComoEncarregado = async (idAula, idAluno, idEncarregado) => {
+    await validarAlunoDoEncarregado(idEncarregado, idAluno);
+    return await FazerMarcacao(idAula, idAluno);
+};
 
 const isPrazoValido = (dataAulaCompleta) => {
     const agora = new Date();
@@ -102,7 +127,14 @@ const CancelarMarcacao = async (idMarcacao, idAluno, motivo) => {
     return await ProcessarCancelamento(idMarcacao, isPrazoValido(dataAulaCompleta), motivo);
 };
 
-// ─── Listar ──────────────────────────────────────────────────────────────────
+const CancelarMarcacaoComoEncarregado = async (idMarcacao, idEncarregado, motivo) => {
+    const marcacao = await bookingRepo.findByIdComAula(idMarcacao);
+    if (!marcacao) throw criarErro('Marcacao nao encontrada.', 404);
+
+    await validarAlunoDoEncarregado(idEncarregado, marcacao.IdAluno);
+    return await CancelarMarcacao(idMarcacao, marcacao.IdAluno, motivo);
+};
+
 const listarMarcacoes = async () => {
     return await bookingRepo.findAll();
 };
@@ -112,15 +144,24 @@ const listarMarcacoesDoAluno = async (idAluno) => {
     return await bookingRepo.findByAluno(idAluno);
 };
 
+const listarMarcacoesDoEncarregado = async (idEncarregado, idAluno) => {
+    await validarAlunoDoEncarregado(idEncarregado, idAluno);
+    return await listarMarcacoesDoAluno(idAluno);
+};
+
 module.exports = {
     ConsultarVagas,
     GetPreco,
     FazerMarcacao,
+    FazerMarcacaoComoEncarregado,
     isPrazoValido,
     ProcessarCancelamento,
     CancelarMarcacao,
+    CancelarMarcacaoComoEncarregado,
     criarMarcacao: FazerMarcacao,
     cancelarMarcacao: CancelarMarcacao,
     listarMarcacoes,
-    listarMarcacoesDoAluno
+    listarMarcacoesDoAluno,
+    listarMarcacoesDoEncarregado,
+    listarAlunosDoEncarregado
 };

@@ -8,24 +8,53 @@ const criarMarcacao = async (req, res) => {
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao processar a marcação.'
+            erro: erro.message || 'Erro ao processar a marcacao.'
+        });
+    }
+};
+
+const criarMarcacaoEncarregado = async (req, res) => {
+    try {
+        const { IdAluno, IdAula } = req.body;
+        const idEncarregado = req.utilizador ? req.utilizador.IdUtilizador : null;
+        const resultado = await bookingService.FazerMarcacaoComoEncarregado(IdAula, IdAluno, idEncarregado);
+        res.status(201).json(resultado);
+    } catch (erro) {
+        console.error(erro);
+        res.status(erro.statusCode || 500).json({
+            erro: erro.message || 'Erro ao processar a marcacao.'
         });
     }
 };
 
 const cancelarMarcacao = async (req, res) => {
     try {
-        // Uni as duas lógicas: usa o ID da rota e o ID do aluno do token para segurança
         const idMarcacao = req.params.idMarcacao || req.params.id;
         const { Motivo } = req.body;
-        const idAluno = req.utilizador ? req.utilizador.IdUtilizador : null; 
+        const idAluno = req.utilizador ? req.utilizador.IdUtilizador : null;
 
         const resultado = await bookingService.CancelarMarcacao(idMarcacao, idAluno, Motivo);
-        res.status(200).json({ mensagem: 'Marcação cancelada com sucesso.', marcacao: resultado });
+        res.status(200).json({ mensagem: 'Marcacao cancelada com sucesso.', marcacao: resultado });
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 400).json({
-            erro: erro.message || 'Erro ao cancelar a marcação.'
+            erro: erro.message || 'Erro ao cancelar a marcacao.'
+        });
+    }
+};
+
+const cancelarMarcacaoEncarregado = async (req, res) => {
+    try {
+        const idMarcacao = req.params.idMarcacao || req.params.id;
+        const { Motivo } = req.body;
+        const idEncarregado = req.utilizador ? req.utilizador.IdUtilizador : null;
+
+        const resultado = await bookingService.CancelarMarcacaoComoEncarregado(idMarcacao, idEncarregado, Motivo);
+        res.status(200).json({ mensagem: 'Marcacao cancelada com sucesso.', marcacao: resultado });
+    } catch (erro) {
+        console.error(erro);
+        res.status(erro.statusCode || 400).json({
+            erro: erro.message || 'Erro ao cancelar a marcacao.'
         });
     }
 };
@@ -36,7 +65,7 @@ const getMarcacoes = async (req, res) => {
         res.json(marcacoes);
     } catch (erro) {
         console.error(erro);
-        res.status(500).json({ erro: 'Erro ao carregar marcações.' });
+        res.status(500).json({ erro: 'Erro ao carregar marcacoes.' });
     }
 };
 
@@ -48,14 +77,45 @@ const getMarcacoesDoAluno = async (req, res) => {
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao carregar marcações do aluno.'
+            erro: erro.message || 'Erro ao carregar marcacoes do aluno.'
         });
     }
 };
 
-module.exports = { 
-    criarMarcacao, 
-    cancelarMarcacao, 
-    getMarcacoes, 
-    getMarcacoesDoAluno 
+const getAlunosDoEncarregado = async (req, res) => {
+    try {
+        const idEncarregado = req.utilizador ? req.utilizador.IdUtilizador : null;
+        const alunos = await bookingService.listarAlunosDoEncarregado(idEncarregado);
+        res.json(alunos);
+    } catch (erro) {
+        console.error(erro);
+        res.status(erro.statusCode || 500).json({
+            erro: erro.message || 'Erro ao carregar os alunos do encarregado.'
+        });
+    }
+};
+
+const getMarcacoesDoEncarregado = async (req, res) => {
+    try {
+        const idEncarregado = req.utilizador ? req.utilizador.IdUtilizador : null;
+        const idAluno = req.query.idAluno;
+        const marcacoes = await bookingService.listarMarcacoesDoEncarregado(idEncarregado, idAluno);
+        res.json(marcacoes);
+    } catch (erro) {
+        console.error(erro);
+        res.status(erro.statusCode || 500).json({
+            erro: erro.message || 'Erro ao carregar marcacoes do encarregado.'
+        });
+    }
+};
+
+module.exports = {
+    criarMarcacao,
+    criarMarcacaoEncarregado,
+    cancelarMarcacao,
+    cancelarMarcacaoEncarregado,
+    getMarcacoes,
+    getMarcacoesDoAluno,
+    getAlunosDoEncarregado,
+    getMarcacoesDoEncarregado
 };

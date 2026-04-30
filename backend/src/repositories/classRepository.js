@@ -58,6 +58,7 @@ const classRepository = {
                 ConfirmacaoProfessor: false,
                 ValidacaoDirecao: false,
                 EstaAtivo: true,
+                TipoAula: dados.TipoAula || 'Regular',
                 IdProfessor: dados.IdProfessor,
                 IdEstudio: dados.IdEstudio,
                 IdEstiloDanca: dados.IdEstiloDanca

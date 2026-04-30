@@ -42,10 +42,10 @@ export const loginAutenticacao = async ({ Email, Password }) =>
 
 export const getInventario = async () => request('/inventario');
 
-export const criarArtigo = async ({ Nome, CustoPorDia }) =>
+export const criarArtigo = async ({ Nome, CustoPorDia, ImagemPath }) =>
     request('/inventario', {
         method: 'POST',
-        body: JSON.stringify({ Nome, CustoPorDia })
+        body: JSON.stringify({ Nome, CustoPorDia, ImagemPath })
     });
 
 export const editarArtigo = async (id, dados) =>
@@ -81,10 +81,27 @@ export const getMarcacoes = async () => request('/marcacoes');
 
 export const getMinhasMarcacoes = async () => request('/marcacoes/minhas');
 
+export const getAlunosEncarregado = async () => request('/marcacoes/encarregado/alunos');
+
+export const getMarcacoesEncarregado = async (idAluno) =>
+    request(`/marcacoes/encarregado/minhas?idAluno=${encodeURIComponent(idAluno)}`);
+
 export const criarMarcacao = async ({ IdAluno, IdAula }) =>
     request('/marcacoes', {
         method: 'POST',
         body: JSON.stringify({ IdAluno, IdAula })
+    });
+
+export const criarMarcacaoEncarregado = async ({ IdAluno, IdAula }) =>
+    request('/marcacoes/encarregado', {
+        method: 'POST',
+        body: JSON.stringify({ IdAluno, IdAula })
+    });
+
+export const cancelarMarcacaoEncarregado = async (idMarcacao, Motivo) =>
+    request(`/marcacoes/encarregado/${idMarcacao}/cancelar`, {
+        method: 'PATCH',
+        body: JSON.stringify({ Motivo })
     });
 
 export const getAlugueres = async () => request('/alugueres');

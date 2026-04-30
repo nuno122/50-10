@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { PERMISSOES } from '../utils/permissions';
 import {
     getAulas,
     getAlugueres,
@@ -10,13 +11,6 @@ import {
     getPagamentos,
     getUtilizadores
 } from '../services/api';
-
-const PERMISSOES = {
-    ALUNO: 1,
-    PROFESSOR: 2,
-    DIRECAO: 3,
-    ENCARREGADO: 4
-};
 
 const emptyDashboard = {
     welcome: "Bem-vindo a Ent'Artes",
@@ -243,7 +237,7 @@ const buildGuardianDashboard = ({ aluguers, pagamentos, aulas, estilos, inventor
 
     return {
         welcome: 'Acompanhe a sua conta e a oferta atual da escola',
-        note: 'Com os endpoints atuais, o perfil de encarregado mostra dados reais da sua conta e da operacao geral da escola.',
+        note: '',
         stats: [
             { title: 'Alugueres da Sua Conta', value: ownRentals.length, icon: 'PK', tone: 'purple' },
             { title: 'Pagamentos Pendentes', value: ownPayments.filter((pagamento) => pagamento.EstadoPagamento !== 'Pago').length, icon: 'EU', tone: 'amber' },
@@ -339,7 +333,7 @@ const Dashboard = () => {
 
             {loading ? (
                 <section className="dashboard-card dashboard-loading">
-                    <p>A carregar dados reais do dashboard...</p>
+                    <p>A carregar dashboard...</p>
                 </section>
             ) : (
                 <>

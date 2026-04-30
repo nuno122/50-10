@@ -181,7 +181,7 @@ const TeacherSchedule = () => {
                     className={`teacher-tab ${activeTab === 'availability' ? 'teacher-tab--active' : ''}`}
                     onClick={() => setActiveTab('availability')}
                 >
-                    Disponibilidade BD
+                    Disponibilidade
                 </button>
             </div>
 
@@ -209,7 +209,7 @@ const TeacherSchedule = () => {
                             {filteredLessons.filter((lesson) => lesson.status !== 'cancelled').map((lesson) => (
                                 <article key={lesson.id} className="teacher-card">
                                     <div className="teacher-card-header">
-                                        <span className="teacher-badge teacher-badge--primary">{lesson.id}</span>
+                                        <span className="teacher-badge teacher-badge--primary">Aula</span>
                                         <h2>{lesson.title}</h2>
                                     </div>
 
@@ -252,8 +252,8 @@ const TeacherSchedule = () => {
                 <div className="teacher-availability-card">
                     <div className="teacher-availability-header">
                         <div>
-                            <h2>Resumo Semanal a partir da BD</h2>
-                            <p>Esta grelha e calculada a partir das aulas reais atualmente registadas para este professor.</p>
+                            <h2>Resumo Semanal</h2>
+                            <p>Vista semanal das aulas atualmente associadas a este professor.</p>
                         </div>
                     </div>
 
@@ -274,7 +274,7 @@ const TeacherSchedule = () => {
                                             <div className="teacher-availability-pill">{day.endTime}</div>
                                         </div>
                                     ) : (
-                                        <span className="teacher-availability-off">Sem aulas registadas</span>
+                                        <span className="teacher-availability-off">Sem aulas agendadas</span>
                                     )}
                                 </div>
                             );

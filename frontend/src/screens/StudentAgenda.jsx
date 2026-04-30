@@ -176,7 +176,7 @@ const StudentAgenda = () => {
                     <p className="student-agenda-eyebrow">Aluno</p>
                     <h1>A Minha Agenda</h1>
                     <p className="student-agenda-subtitle">
-                        Consulta as tuas proximas aulas reais organizadas por data.
+                        Consulta as tuas proximas aulas organizadas por data.
                     </p>
                 </div>
 
@@ -224,7 +224,7 @@ const StudentAgenda = () => {
 
                 {loading ? (
                     <div className="student-agenda-empty">
-                        <p>A carregar agenda real da base de dados...</p>
+                        <p>A carregar agenda...</p>
                     </div>
                 ) : groupedEntries.length === 0 ? (
                     <div className="student-agenda-empty">
