@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 
 // Importar as rotas
 const inventoryRoutes = require('./src/routes/inventoryRoutes');
@@ -16,6 +17,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+app.use('/images', express.static(path.join(__dirname, '..', 'frontend', 'Images')));
 
 app.get('/api/status', (req, res) => {
     res.json({ sucesso: true, mensagem: "O servidor da Ent'Artes está online! 🚀" });

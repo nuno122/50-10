@@ -69,7 +69,7 @@ const userRepository = {
                     connect: { CodigoPostal: dados.CodigoPostal }
                 },
 
-                ...(Permissoes === 1 && {
+                ...(Permissoes === PERMISSOES.ALUNO && {
                     Aluno: {
                         create: {
                             DataNascimento: dados.DataNascimento,
@@ -77,14 +77,14 @@ const userRepository = {
                         }
                     }
                 }),
-                ...(Permissoes === 2 && {
+                ...(Permissoes === PERMISSOES.PROFESSOR && {
                     Professor: {
                         create: {
                             Iban: dados.Iban ?? null
                         }
                     }
                 }),
-                ...(Permissoes === 4 && {
+                ...(Permissoes === PERMISSOES.ENCARREGADO && {
                     Encarregado: {
                         create: {}
                     }

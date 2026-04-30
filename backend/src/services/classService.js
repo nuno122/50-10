@@ -1,4 +1,5 @@
 const classRepo = require('../repositories/classRepository');
+const PERMISSOES = require('../config/permissions');
 
 const criarErro = (mensagem, statusCode) => {
     const erro = new Error(mensagem);
@@ -86,7 +87,7 @@ const cancelarAula = async (idAula, utilizador) => {
         throw criarErro('A aula ja se encontra cancelada.', 400);
     }
 
-    if (utilizador?.Permissoes === 2 && aula.IdProfessor !== utilizador.IdUtilizador) {
+    if (utilizador?.Permissoes === PERMISSOES.PROFESSOR && aula.IdProfessor !== utilizador.IdUtilizador) {
         throw criarErro('Apenas o professor responsavel pode cancelar esta aula.', 403);
     }
 
