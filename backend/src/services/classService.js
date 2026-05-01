@@ -84,6 +84,52 @@ const criarAula = async (dados) => {
     };
 };
 
+const criarAulasEmLote = async (dados = {}) => {
+    const aulas = Array.isArray(dados.Aulas) ? dados.Aulas : [];
+
+    if (aulas.length === 0) {
+        throw criarErro('Envia pelo menos uma aula para criar.', 400);
+    }
+
+    const criadas = [];
+    const erros = [];
+
+    for (let index = 0; index < aulas.length; index += 1) {
+        const aula = aulas[index];
+
+        try {
+            const resultado = await criarAula(aula);
+            criadas.push(resultado.aula);
+        } catch (erro) {
+            erros.push({
+                indice: index + 1,
+                referencia: aula?.Referencia || `${aula?.Data || 'sem-data'} ${aula?.HoraInicio || ''}`.trim(),
+                mensagem: erro.message || 'Nao foi possivel criar a aula.'
+            });
+        }
+    }
+
+    const totalCriadas = criadas.length;
+    const totalFalhas = erros.length;
+
+    let mensagem = `${totalCriadas} aula(s) criada(s) com sucesso.`;
+
+    if (totalFalhas > 0 && totalCriadas > 0) {
+        mensagem = `${totalCriadas} aula(s) criada(s) e ${totalFalhas} com erro.`;
+    } else if (totalFalhas > 0) {
+        mensagem = 'Nao foi possivel criar as aulas enviadas.';
+    }
+
+    return {
+        mensagem,
+        totalRecebidas: aulas.length,
+        totalCriadas,
+        totalFalhas,
+        aulas: criadas,
+        erros
+    };
+};
+
 const ConfirmarPresenca = async (idAula) => {
     return await classRepo.ValidarConclusaoAula(idAula, true);
 };
@@ -133,6 +179,7 @@ module.exports = {
     ConsultarVagas,
     listarAulas: ConsultarVagas,
     criarAula,
+    criarAulasEmLote,
     ConfirmarPresenca,
     confirmarPresencaProfessor: ConfirmarPresenca,
     cancelarAula,

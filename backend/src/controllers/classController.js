@@ -24,6 +24,19 @@ const criarAula = async (req, res) => {
     }
 };
 
+const criarAulasEmLote = async (req, res) => {
+    try {
+        const resultado = await classService.criarAulasEmLote(req.body);
+        const statusCode = resultado.totalFalhas === 0 ? 201 : 200;
+        res.status(statusCode).json(resultado);
+    } catch (erro) {
+        console.error(erro);
+        res.status(erro.statusCode || 500).json({
+            erro: erro.message || 'Nao foi possivel importar as aulas.'
+        });
+    }
+};
+
 const confirmarAula = async (req, res) => {
     try {
         const idAula = req.params.id;
@@ -61,6 +74,7 @@ module.exports = {
     exibirAulas: getAulas,
     getAulas,
     criarAula,
+    criarAulasEmLote,
     confirmarAula,
     cancelarAula,
     validarAula

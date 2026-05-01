@@ -39,8 +39,21 @@ const buscarTodosPagamentos = async () => {
                 Aluguer: true,
                 Marcacao: {
                     include: {
-                        Aluno: true,
-                        Aula: true
+                        Aluno: {
+                            include: {
+                                Utilizador: true
+                            }
+                        },
+                        Aula: {
+                            include: {
+                                EstiloDanca: true,
+                                Professor: {
+                                    include: {
+                                        Utilizador: true
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -53,6 +66,45 @@ const buscarTodosPagamentos = async () => {
         console.error('Erro buscarTodosPagamentos:', error);
         throw new Error('Erro ao buscar pagamentos');
     }
+};
+
+const buscarPagamentosPorAlunos = async (alunosIds) => {
+    return await prisma.pagamento.findMany({
+        where: {
+            IdMarcacao: { not: null },
+            Marcacao: {
+                IdAluno: {
+                    in: alunosIds
+                }
+            }
+        },
+        include: {
+            Aluguer: true,
+            Marcacao: {
+                include: {
+                    Aluno: {
+                        include: {
+                            Utilizador: true
+                        }
+                    },
+                    Aula: {
+                        include: {
+                            EstiloDanca: true,
+                            Professor: {
+                                include: {
+                                    Utilizador: true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        orderBy: [
+            { DataPagamento: 'desc' },
+            { PrazoPagamento: 'desc' }
+        ]
+    });
 };
 
 const buscarPagamentoPorId = async (idPagamento) => {
@@ -83,6 +135,7 @@ const registarRecebimento = async (idPagamento) => {
 module.exports = {
     ...paymentRepository,
     buscarTodosPagamentos,
+    buscarPagamentosPorAlunos,
     buscarPagamentoPorId,
     registarRecebimento
 };
