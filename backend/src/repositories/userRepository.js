@@ -3,6 +3,17 @@ const prisma = new PrismaClient();
 const { query } = require('../database/sqlServer');
 const PERMISSOES = require('../config/permissions');
 
+const normalizeOptionalValue = (value) => {
+    if (value === undefined || value === null) {
+        return null;
+    }
+
+    const text = String(value).trim();
+    return text ? text : null;
+};
+
+const normalizeRequiredValue = (value) => String(value || '').trim();
+
 const userRepository = {
     // Buscar todos
     findAll: async () => {
@@ -75,17 +86,17 @@ const userRepository = {
 
         return await prisma.utilizador.create({
             data: {
-                NomeCompleto: dados.NomeCompleto,
-                NomeUtilizador: dados.NomeUtilizador,
-                Email: dados.Email,
+                NomeCompleto: normalizeRequiredValue(dados.NomeCompleto),
+                NomeUtilizador: normalizeRequiredValue(dados.NomeUtilizador),
+                Email: normalizeRequiredValue(dados.Email),
                 PalavraPasseHash: dados.PalavraPasseHash,
                 Permissoes,
-                Nif: dados.Nif,
-                Morada: dados.Morada,
-                NumeroTelemovel: dados.NumeroTelemovel,
+                Nif: normalizeRequiredValue(dados.Nif),
+                Morada: normalizeRequiredValue(dados.Morada),
+                NumeroTelemovel: normalizeOptionalValue(dados.NumeroTelemovel),
                 EstaAtivo: true,
                 CodigoPostal_Utilizador_CodigoPostalToCodigoPostal: {
-                    connect: { CodigoPostal: dados.CodigoPostal }
+                    connect: { CodigoPostal: normalizeRequiredValue(dados.CodigoPostal) }
                 },
 
                 ...(Permissoes === PERMISSOES.ALUNO && {
@@ -99,7 +110,7 @@ const userRepository = {
                 ...(Permissoes === PERMISSOES.PROFESSOR && {
                     Professor: {
                         create: {
-                            Iban: dados.Iban ?? null
+                            Iban: normalizeOptionalValue(dados.Iban)
                         }
                     }
                 }),
@@ -125,20 +136,20 @@ const userRepository = {
         return await prisma.utilizador.update({
             where: { IdUtilizador: idUtilizador },
             data: {
-                NomeCompleto: dados.NomeCompleto,
-                NomeUtilizador: dados.NomeUtilizador,
-                Email: dados.Email,
+                NomeCompleto: normalizeRequiredValue(dados.NomeCompleto),
+                NomeUtilizador: normalizeRequiredValue(dados.NomeUtilizador),
+                Email: normalizeRequiredValue(dados.Email),
                 ...(dados.PalavraPasseHash ? { PalavraPasseHash: dados.PalavraPasseHash } : {}),
-                Nif: dados.Nif,
-                Morada: dados.Morada,
-                NumeroTelemovel: dados.NumeroTelemovel,
+                Nif: normalizeRequiredValue(dados.Nif),
+                Morada: normalizeRequiredValue(dados.Morada),
+                NumeroTelemovel: normalizeOptionalValue(dados.NumeroTelemovel),
                 CodigoPostal_Utilizador_CodigoPostalToCodigoPostal: {
-                    connect: { CodigoPostal: dados.CodigoPostal }
+                    connect: { CodigoPostal: normalizeRequiredValue(dados.CodigoPostal) }
                 },
                 ...(dados.Permissoes === PERMISSOES.PROFESSOR && {
                     Professor: {
                         update: {
-                            Iban: dados.Iban ?? null
+                            Iban: normalizeOptionalValue(dados.Iban)
                         }
                     }
                 })

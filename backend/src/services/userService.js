@@ -15,7 +15,6 @@ const hashPassword = (password) => {
     return crypto.createHash('sha256').update(password).digest('hex');
 };
 
-
 const listarUtilizadores = async () => {
     const utilizadores = await userRepository.findAll();
     return utilizadores.map((utilizador) => {
@@ -56,39 +55,84 @@ const validarCamposBase = (dados) => {
     if (!dados.Morada) {
         throw criarErro('Morada é obrigatória.', 400);
     }
+
+    if (!dados.Nif) {
+        throw criarErro('NIF é obrigatório.', 400);
+    }
+};
+
+const extrairCampoUnico = (erro) => {
+    const target = erro?.meta?.target;
+
+    if (Array.isArray(target) && target.length > 0) {
+        return String(target[0]);
+    }
+
+    const rawText = String(target || erro?.message || '');
+
+    if (rawText.includes('NomeUtilizador')) return 'NomeUtilizador';
+    if (rawText.includes('Email')) return 'Email';
+    if (rawText.includes('Nif')) return 'Nif';
+
+    return '';
+};
+
+const traduzirErroRepositorio = (erro) => {
+    if (erro?.code === 'P2002' || String(erro?.message || '').includes('Unique constraint failed')) {
+        const campo = extrairCampoUnico(erro);
+
+        if (campo === 'NomeUtilizador') {
+            throw criarErro('Ja existe um utilizador com esse nome de utilizador.', 400);
+        }
+
+        if (campo === 'Email') {
+            throw criarErro('Ja existe um utilizador com esse email.', 400);
+        }
+
+        if (campo === 'Nif') {
+            throw criarErro('Ja existe um utilizador com esse NIF.', 400);
+        }
+
+        throw criarErro('Ja existe um utilizador com um dos dados inseridos.', 400);
+    }
+
+    if (erro?.code === 'P2025') {
+        throw criarErro('Codigo postal invalido.', 400);
+    }
+
+    throw erro;
 };
 
 const criarUtilizador = async (dados) => {
-    // Validate each mandatory field individually with exact messages the tests expect
-    if (!dados.NomeCompleto) {
-        throw criarErro('NomeCompleto \u00e9 obrigat\u00f3rio.', 400);
-    }
-
-    if (!dados.Email) {
-        throw criarErro('Email \u00e9 obrigat\u00f3rio.', 400);
-    }
+    validarCamposBase(dados);
 
     const permissoesValidas = Object.values(PERMISSOES);
     if (dados.Permissoes === undefined || dados.Permissoes === null || !permissoesValidas.includes(dados.Permissoes)) {
-        throw criarErro('N\u00edvel de permiss\u00e3o inv\u00e1lido.', 400);
+        throw criarErro('Nível de permissão inválido.', 400);
     }
 
     if (dados.Permissoes === PERMISSOES.ALUNO && !dados.DataNascimento) {
-        throw criarErro('Data de Nascimento \u00e9 obrigat\u00f3ria para alunos.', 400);
+        throw criarErro('Data de Nascimento é obrigatória para alunos.', 400);
     }
 
     if (dados.Permissoes === PERMISSOES.PROFESSOR && !dados.Iban) {
-        throw criarErro('IBAN \u00e9 obrigat\u00f3rio para professores.', 400);
+        throw criarErro('IBAN é obrigatório para professores.', 400);
     }
 
-    // Hash the plain-text password (PalavraPasse field) if provided
     const plainPassword = dados.PalavraPasse || dados.PalavraPasseHash || '';
     if (!plainPassword) {
         throw criarErro('PalavraPasse é obrigatória.', 400);
     }
-    const hash = hashPassword(plainPassword);
 
-    const utilizador = await userRepository.create({ ...dados, PalavraPasseHash: hash });
+    const hash = hashPassword(plainPassword);
+    let utilizador;
+
+    try {
+        utilizador = await userRepository.create({ ...dados, PalavraPasseHash: hash });
+    } catch (erro) {
+        traduzirErroRepositorio(erro);
+    }
+
     const { PalavraPasseHash: _, ...dadosSeguros } = utilizador;
     return dadosSeguros;
 };
@@ -114,11 +158,17 @@ const atualizarUtilizador = async (idUtilizador, dados) => {
     const plainPassword = dados.PalavraPasse || '';
     const hash = plainPassword ? hashPassword(plainPassword) : undefined;
 
-    const utilizador = await userRepository.update(idUtilizador, {
-        ...dados,
-        Permissoes: utilizadorAtual.Permissoes,
-        PalavraPasseHash: hash
-    });
+    let utilizador;
+
+    try {
+        utilizador = await userRepository.update(idUtilizador, {
+            ...dados,
+            Permissoes: utilizadorAtual.Permissoes,
+            PalavraPasseHash: hash
+        });
+    } catch (erro) {
+        traduzirErroRepositorio(erro);
+    }
 
     const { PalavraPasseHash: _, ...dadosSeguros } = utilizador;
     return dadosSeguros;
@@ -143,23 +193,23 @@ const atualizarEstadoUtilizador = async (idUtilizador, estaAtivo) => {
 
 const autenticarUtilizador = async (email, palavraPasse) => {
     if (!email || !palavraPasse) {
-        throw criarErro('Email e palavra-passe s\u00e3o obrigat\u00f3rios.', 400);
+        throw criarErro('Email e palavra-passe são obrigatórios.', 400);
     }
 
     const utilizador = await userRepository.findByEmail(email);
 
     if (!utilizador) {
-        throw criarErro('Credenciais inv\u00e1lidas.', 401);
+        throw criarErro('Credenciais inválidas.', 401);
     }
 
     if (!utilizador.EstaAtivo) {
-        throw criarErro('Conta desativada. Contacte a dire\u00e7\u00e3o.', 403);
+        throw criarErro('Conta desativada. Contacte a direção.', 403);
     }
 
     const hashDaEntrada = hashPassword(palavraPasse);
 
     if (hashDaEntrada !== utilizador.PalavraPasseHash) {
-        throw criarErro('Credenciais inv\u00e1lidas.', 401);
+        throw criarErro('Credenciais inválidas.', 401);
     }
 
     const token = jwt.sign(

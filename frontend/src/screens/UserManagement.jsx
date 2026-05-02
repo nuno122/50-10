@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNotifications } from '../contexts/NotificationContext';
 import { atualizarEstadoUtilizador, atualizarUtilizador, criarUtilizador, getUtilizadores } from '../services/api';
 import { PERMISSOES } from '../utils/permissions';
@@ -26,6 +26,18 @@ const emptyForm = {
 
 const getRoleLabel = (permission) => ROLE_OPTIONS.find((role) => role.value === permission)?.label || 'Outro';
 
+const validateUserForm = (formData, editingUser) => {
+    if (!formData.NomeCompleto.trim()) return 'Indica o nome completo.';
+    if (!formData.NomeUtilizador.trim()) return 'Indica o nome de utilizador.';
+    if (!formData.Email.trim()) return 'Indica o email.';
+    if (!formData.Nif.trim()) return 'Indica o NIF.';
+    if (!formData.CodigoPostal.trim()) return 'Indica o codigo postal.';
+    if (!formData.Morada.trim()) return 'Indica a morada.';
+    if (!editingUser && !formData.PalavraPasse.trim()) return 'Indica a palavra-passe.';
+    if (Number(formData.Permissoes) === PERMISSOES.PROFESSOR && !formData.Iban.trim()) return 'Indica o IBAN do professor.';
+    return '';
+};
+
 const UserManagement = () => {
     const { notify } = useNotifications();
     const [users, setUsers] = useState([]);
@@ -33,12 +45,21 @@ const UserManagement = () => {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [feedback, setFeedback] = useState('');
+    const [modalError, setModalError] = useState('');
+    const [modalFeedback, setModalFeedback] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
     const [formData, setFormData] = useState(emptyForm);
+    const submitLockRef = useRef(false);
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setModalError('');
+        setModalFeedback('');
+    };
 
     const loadUsers = async () => {
         setLoading(true);
@@ -64,6 +85,8 @@ const UserManagement = () => {
         setIsModalOpen(true);
         setError('');
         setFeedback('');
+        setModalError('');
+        setModalFeedback('');
     };
 
     const openEditModal = (user) => {
@@ -83,6 +106,8 @@ const UserManagement = () => {
         setIsModalOpen(true);
         setError('');
         setFeedback('');
+        setModalError('');
+        setModalFeedback('');
     };
 
     const filteredUsers = useMemo(() => {
@@ -106,13 +131,30 @@ const UserManagement = () => {
     }, [roleFilter, searchTerm, statusFilter, users]);
 
     const handleChange = (field, value) => {
+        if (modalError) {
+            setModalError('');
+        }
         setFormData((current) => ({ ...current, [field]: value }));
     };
 
     const handleSubmit = async () => {
+        if (submitLockRef.current) {
+            return;
+        }
+
+        const validationError = validateUserForm(formData, editingUser);
+        if (validationError) {
+            setModalError(validationError);
+            setModalFeedback('');
+            return;
+        }
+
+        submitLockRef.current = true;
         setSaving(true);
         setError('');
         setFeedback('');
+        setModalError('');
+        setModalFeedback('');
 
         try {
             const payload = {
@@ -149,8 +191,9 @@ const UserManagement = () => {
             setIsModalOpen(false);
             await loadUsers();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel guardar o utilizador.');
+            setModalError(err.message || 'Nao foi possivel guardar o utilizador.');
         } finally {
+            submitLockRef.current = false;
             setSaving(false);
         }
     };
@@ -289,19 +332,22 @@ const UserManagement = () => {
             )}
 
             {isModalOpen && (
-                <div className="schedule-modal-backdrop" onClick={() => setIsModalOpen(false)}>
+                <div className="schedule-modal-backdrop" onClick={closeModal}>
                     <section className="schedule-modal" onClick={(event) => event.stopPropagation()}>
                         <div className="schedule-modal-header">
                             <div>
                                 <p className="user-admin-eyebrow">{editingUser ? 'Editar utilizador' : 'Novo utilizador'}</p>
                                 <h2>{editingUser ? editingUser.NomeCompleto : 'Criar utilizador'}</h2>
                             </div>
-                            <button type="button" className="schedule-button schedule-button--ghost" onClick={() => setIsModalOpen(false)}>
+                            <button type="button" className="schedule-button schedule-button--ghost" onClick={closeModal}>
                                 Fechar
                             </button>
                         </div>
 
                         <div className="schedule-form">
+                            {modalFeedback && <div className="inventory-banner inventory-banner--success">{modalFeedback}</div>}
+                            {modalError && <div className="inventory-banner inventory-banner--error">{modalError}</div>}
+
                             <div className="schedule-form-grid">
                                 <label>
                                     <span>Nome completo *</span>
@@ -350,7 +396,7 @@ const UserManagement = () => {
 
                             <div className="schedule-form-grid">
                                 <label>
-                                    <span>NIF</span>
+                                    <span>NIF *</span>
                                     <input value={formData.Nif} onChange={(event) => handleChange('Nif', event.target.value)} />
                                 </label>
 
@@ -374,7 +420,7 @@ const UserManagement = () => {
                         </div>
 
                         <div className="schedule-modal-actions">
-                            <button type="button" className="schedule-button schedule-button--ghost" onClick={() => setIsModalOpen(false)}>
+                            <button type="button" className="schedule-button schedule-button--ghost" onClick={closeModal}>
                                 Cancelar
                             </button>
                             <button type="button" className="schedule-button schedule-button--primary" onClick={handleSubmit} disabled={saving}>
