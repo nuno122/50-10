@@ -9,6 +9,27 @@ const criarErro = (mensagem, statusCode) => {
 
 const TIPOS_AULA_VALIDOS = ['Regular', 'Particular'];
 
+const intervaloCabeNaDisponibilidade = (horaInicio, horaFim, disponibilidades = []) => {
+    const inicioAula = new Date(horaInicio).getTime();
+    const fimAula = new Date(horaFim).getTime();
+
+    return disponibilidades.some((disponibilidade) => {
+        const inicioDisponivel = new Date(disponibilidade.HoraInicio).getTime();
+        const fimDisponivel = new Date(disponibilidade.HoraFim).getTime();
+        return inicioAula >= inicioDisponivel && fimAula <= fimDisponivel;
+    });
+};
+
+const professorSuportaEstilo = (professor, idEstiloDanca) => (
+    Array.isArray(professor?.EstiloProfessor) &&
+    professor.EstiloProfessor.some((item) => item.IdEstiloDanca === idEstiloDanca)
+);
+
+const estudioSuportaEstilo = (estudio, idEstiloDanca) => (
+    Array.isArray(estudio?.EstudioEstilo) &&
+    estudio.EstudioEstilo.some((item) => item.IdEstiloDanca === idEstiloDanca)
+);
+
 const ConsultarVagas = async () => {
     return await classRepo.GetAulasDisponiveis();
 };
@@ -50,18 +71,37 @@ const criarAula = async (dados) => {
         throw criarErro('O professor selecionado nao existe na tabela Professor.', 400);
     }
 
+    if (!professorSuportaEstilo(professor, dados.IdEstiloDanca)) {
+        throw criarErro('O professor selecionado nao esta associado ao estilo escolhido.', 400);
+    }
+
     if (!estudio) {
         throw criarErro('O estudio selecionado nao existe.', 400);
+    }
+
+    if (!estudioSuportaEstilo(estudio, dados.IdEstiloDanca)) {
+        throw criarErro('O estudio selecionado nao suporta o estilo escolhido.', 400);
     }
 
     if (!estilo) {
         throw criarErro('O estilo de danca selecionado nao existe.', 400);
     }
 
-    const aulasNoDia = await classRepo.findOverlapping(dados.IdEstudio, dados.Data);
-
     const novaHoraInicio = new Date(dados.HoraInicio).getTime();
     const novaHoraFim = new Date(dados.HoraFim).getTime();
+
+    if (novaHoraFim <= novaHoraInicio) {
+        throw criarErro('A hora de fim tem de ser posterior a hora de inicio.', 400);
+    }
+
+    const [aulasNoDia, disponibilidadesProfessor] = await Promise.all([
+        classRepo.findOverlapping(dados.IdEstudio, dados.Data),
+        classRepo.findProfessorAvailabilityByDate(dados.IdProfessor, dados.Data)
+    ]);
+
+    if (!intervaloCabeNaDisponibilidade(dados.HoraInicio, dados.HoraFim, disponibilidadesProfessor)) {
+        throw criarErro('O professor nao tem disponibilidade registada para este horario.', 400);
+    }
 
     const aulaSobreposta = aulasNoDia.find((aulaExistente) => {
         const existenteInicio = new Date(aulaExistente.HoraInicio).getTime();

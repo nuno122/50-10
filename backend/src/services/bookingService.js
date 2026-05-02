@@ -7,6 +7,17 @@ const criarErro = (mensagem, statusCode) => {
     return erro;
 };
 
+const aulaCabeNaDisponibilidadeProfessor = (aula, disponibilidades = []) => {
+    const inicioAula = new Date(aula.HoraInicio).getTime();
+    const fimAula = new Date(aula.HoraFim).getTime();
+
+    return disponibilidades.some((disponibilidade) => {
+        const inicioDisponivel = new Date(disponibilidade.HoraInicio).getTime();
+        const fimDisponivel = new Date(disponibilidade.HoraFim).getTime();
+        return inicioAula >= inicioDisponivel && fimAula <= fimDisponivel;
+    });
+};
+
 const ConsultarVagas = async () => {
     return await classRepo.GetAulasDisponiveis();
 };
@@ -52,6 +63,12 @@ const FazerMarcacao = async (idAula, idAluno) => {
     if (!aula) throw criarErro('Aula nao encontrada.', 404);
 
     if (!aula.EstaAtivo) throw criarErro('Esta aula foi cancelada.', 400);
+
+    const disponibilidadesProfessor = await classRepo.findProfessorAvailabilityByDate(aula.IdProfessor, aula.Data);
+
+    if (!aulaCabeNaDisponibilidadeProfessor(aula, disponibilidadesProfessor)) {
+        throw criarErro('O professor nao tem disponibilidade registada para este horario.', 400);
+    }
 
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);

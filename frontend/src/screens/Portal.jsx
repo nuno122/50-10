@@ -11,6 +11,7 @@ import RequestValidation from './RequestValidation';
 import ScheduleManagement from './ScheduleManagement';
 import StudentAgenda from './StudentAgenda';
 import TeacherSchedule from './TeacherSchedule';
+import UserManagement from './UserManagement';
 
 const Portal = () => {
     const { user, logout } = useAuth();
@@ -25,6 +26,7 @@ const Portal = () => {
             ? [
                 { id: 'dashboard', label: 'Dashboard' },
                 { id: 'schedule', label: 'Gestao de Horarios' },
+                { id: 'users', label: 'Gestao de Utilizadores' },
                 { id: 'requests', label: 'Validacao de Pedidos' },
                 { id: 'finance', label: 'Financeiro' },
                 { id: 'inventory', label: 'Gestao de Inventario' }
@@ -40,6 +42,7 @@ const Portal = () => {
                     { id: 'dashboard', label: 'Dashboard' },
                     { id: 'lesson-request', label: 'Requisicao de Aula' },
                     { id: 'guardian-lessons', label: 'Inscricao em Aulas' },
+                    { id: 'finance', label: 'Pagamentos' },
                     { id: 'inventory', label: 'Inventario e Aluguer' }
                 ]
             : userIsAluno
@@ -66,7 +69,11 @@ const Portal = () => {
             return <InventoryManagement />;
         }
 
-        if (activeView === 'finance' && userIsDirecao) {
+        if (activeView === 'users' && userIsDirecao) {
+            return <UserManagement />;
+        }
+
+        if (activeView === 'finance' && (userIsDirecao || userIsEncarregado)) {
             return <FinanceManagement />;
         }
 

@@ -2,7 +2,11 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const findAllEstudios = async () => {
-    return await prisma.estudio.findMany();
+    return await prisma.estudio.findMany({
+        include: {
+            EstudioEstilo: true
+        }
+    });
 };
 
 const findAllEstilos = async () => {

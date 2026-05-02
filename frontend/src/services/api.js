@@ -4,7 +4,11 @@ const handleResponse = async (response) => {
     const data = await response.json().catch(() => null);
 
     if (!response.ok) {
-        throw new Error(data?.erro || `Erro no pedido: ${response.statusText}`);
+        const error = new Error(data?.erro || `Erro no pedido: ${response.statusText}`);
+        if (data && typeof data === 'object') {
+            Object.assign(error, data);
+        }
+        throw error;
     }
 
     return data;
@@ -27,6 +31,24 @@ const request = async (path, options = {}) => {
 };
 
 export const getUtilizadores = async () => request('/utilizadores');
+
+export const criarUtilizador = async (dados) =>
+    request('/utilizadores', {
+        method: 'POST',
+        body: JSON.stringify(dados)
+    });
+
+export const atualizarUtilizador = async (idUtilizador, dados) =>
+    request(`/utilizadores/${idUtilizador}`, {
+        method: 'PUT',
+        body: JSON.stringify(dados)
+    });
+
+export const atualizarEstadoUtilizador = async (idUtilizador, EstaAtivo) =>
+    request(`/utilizadores/${idUtilizador}/estado`, {
+        method: 'PATCH',
+        body: JSON.stringify({ EstaAtivo })
+    });
 
 export const loginUtilizador = async ({ Email, PalavraPasseHash }) =>
     request('/utilizadores/login', {
@@ -56,10 +78,32 @@ export const editarArtigo = async (id, dados) =>
 
 export const getAulas = async () => request('/aulas');
 
+export const getMinhasDisponibilidades = async () => request('/disponibilidades/minhas');
+
+export const getDisponibilidades = async ({ from, to } = {}) => {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const query = params.toString();
+    return request(`/disponibilidades${query ? `?${query}` : ''}`);
+};
+
+export const guardarMinhasDisponibilidades = async ({ replaceRange, replaceDates, disponibilidades }) =>
+    request('/disponibilidades/minhas', {
+        method: 'PUT',
+        body: JSON.stringify({ replaceRange, replaceDates, disponibilidades })
+    });
+
 export const criarAula = async (dados) =>
     request('/aulas', {
         method: 'POST',
         body: JSON.stringify(dados)
+    });
+
+export const criarAulasEmLote = async ({ Aulas }) =>
+    request('/aulas/lote', {
+        method: 'POST',
+        body: JSON.stringify({ Aulas })
     });
 
 export const confirmarAulaProfessor = async (idAula) =>
@@ -72,6 +116,11 @@ export const validarAulaDirecao = async (idAula) =>
     request(`/aulas/${idAula}/validar-direcao`, { method: 'PATCH' });
 
 export const getPagamentos = async () => request('/pagamentos');
+
+export const getPagamentosEncarregado = async () => request('/pagamentos/encarregado');
+
+export const pagarPagamento = async (idPagamento) =>
+    request(`/pagamentos/${idPagamento}/pagar`, { method: 'PATCH' });
 
 
 export const cancelarMarcacao = async (idMarcacao) =>

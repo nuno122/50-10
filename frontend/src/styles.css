@@ -34,6 +34,65 @@ button {
   border: 0;
 }
 
+.app-notifications {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 2200;
+  display: grid;
+  gap: 12px;
+  width: min(360px, calc(100vw - 32px));
+}
+
+.app-notification {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid #d6e2f0;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(14px);
+}
+
+.app-notification--success {
+  border-color: #86efac;
+}
+
+.app-notification--warning {
+  border-color: #fcd34d;
+}
+
+.app-notification--info {
+  border-color: #93c5fd;
+}
+
+.app-notification-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.app-notification-copy strong {
+  color: #16324f;
+}
+
+.app-notification-copy p {
+  margin: 0;
+  color: #60758f;
+  line-height: 1.5;
+}
+
+.app-notification-close {
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #edf3fb;
+  color: #27496d;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
 .login-page {
   min-height: 100vh;
   padding: 32px;
@@ -2547,6 +2606,12 @@ button {
   color: #b42318;
 }
 
+.finance-banner--warning {
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  color: #b45309;
+}
+
 .finance-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
@@ -2828,6 +2893,126 @@ button {
   color: #b42318;
 }
 
+.schedule-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.schedule-action-card,
+.schedule-import-panel,
+.schedule-summary {
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(206, 218, 232, 0.95);
+  box-shadow: 0 24px 60px rgba(37, 58, 90, 0.08);
+}
+
+.schedule-action-card {
+  padding: 24px;
+  display: grid;
+  gap: 14px;
+}
+
+.schedule-action-card h2,
+.schedule-import-header h2,
+.schedule-summary h2 {
+  margin: 0;
+}
+
+.schedule-action-card--active {
+  border-color: #93c5fd;
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.98) 0%, rgba(255, 255, 255, 0.98) 100%);
+}
+
+.schedule-action-copy,
+.schedule-helper {
+  margin: 0;
+  color: #60758f;
+  line-height: 1.6;
+}
+
+.schedule-import-panel,
+.schedule-summary {
+  padding: 24px;
+  display: grid;
+  gap: 18px;
+}
+
+.schedule-import-header,
+.schedule-summary-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.schedule-segmented {
+  display: inline-grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 6px;
+  border-radius: 18px;
+  background: #eef3f9;
+  width: min(760px, 100%);
+}
+
+.schedule-segment {
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: transparent;
+  color: #33516d;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.schedule-segment--active {
+  background: #fff;
+  color: #16324f;
+  box-shadow: 0 10px 18px rgba(37, 58, 90, 0.08);
+}
+
+.schedule-summary-metrics {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.schedule-summary-metrics span {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: #edf3fb;
+  color: #1e3a8a;
+  font-weight: 700;
+}
+
+.schedule-summary-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+
+.schedule-summary-list li {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.schedule-summary-list strong {
+  color: #16324f;
+}
+
+.schedule-summary-list span {
+  color: #60758f;
+}
+
 .schedule-shell {
   border-radius: 26px;
   background: rgba(255, 255, 255, 0.92);
@@ -3002,46 +3187,40 @@ button {
   z-index: 1;
 }
 
-.schedule-lesson-card {
+.schedule-lesson-marker {
+  width: 100%;
   height: 100%;
-  min-height: 58px;
-  border-radius: 14px;
-  padding: 10px;
+  min-height: 28px;
+  border-radius: 999px;
+  padding: 6px 8px;
   border: 1px solid #bfdbfe;
   background: #eff6ff;
   box-shadow: 0 8px 20px rgba(37, 99, 235, 0.08);
   overflow: hidden;
-}
-
-.schedule-lesson-title {
-  font-weight: 700;
-  color: #1e3a8a;
-  font-size: 0.85rem;
-}
-
-.schedule-lesson-meta {
-  margin-top: 4px;
-  color: #1d4ed8;
-  font-size: 0.76rem;
-  line-height: 1.4;
-}
-
-.schedule-lesson-badges {
   display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 6px;
-  flex-wrap: wrap;
-  margin-top: 8px;
+  color: #1e3a8a;
+  cursor: pointer;
 }
 
-.schedule-lesson-badges span {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 8px;
+.schedule-lesson-marker:hover {
+  background: #dbeafe;
+}
+
+.schedule-lesson-marker-icon {
+  width: 10px;
+  height: 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
+  background: #2563eb;
+  flex: 0 0 auto;
+}
+
+.schedule-lesson-marker-time {
+  font-weight: 700;
   color: #1e3a8a;
   font-size: 0.72rem;
-  font-weight: 700;
 }
 
 .schedule-empty {
@@ -3079,6 +3258,10 @@ button {
   border-radius: 28px;
   padding: 28px;
   box-shadow: 0 30px 80px rgba(15, 23, 42, 0.3);
+}
+
+.schedule-modal--detail {
+  width: min(640px, 100%);
 }
 
 .schedule-modal-header {
@@ -3136,6 +3319,176 @@ button {
   gap: 12px;
   margin-top: 24px;
   flex-wrap: wrap;
+}
+
+.schedule-lesson-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.schedule-lesson-detail-card {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid #dbe4f0;
+  background: #f8fbff;
+}
+
+.schedule-lesson-detail-card span {
+  color: #60758f;
+  font-size: 0.85rem;
+}
+
+.schedule-lesson-detail-card strong {
+  color: #16324f;
+  font-size: 1rem;
+}
+
+@media (max-width: 720px) {
+  .schedule-lesson-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.user-admin-page {
+  display: grid;
+  gap: 20px;
+}
+
+.user-admin-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.user-admin-eyebrow {
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.72rem;
+  color: #60758f;
+}
+
+.user-admin-header h1,
+.user-admin-card h2 {
+  margin: 0;
+}
+
+.user-admin-subtitle {
+  margin: 10px 0 0;
+  color: #60758f;
+}
+
+.user-admin-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(180px, 0.6fr));
+  gap: 14px;
+}
+
+.user-admin-toolbar input,
+.user-admin-toolbar select {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid #d2ddea;
+  background: rgba(255, 255, 255, 0.92);
+  color: #102238;
+}
+
+.user-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.user-admin-card,
+.user-admin-empty {
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(206, 218, 232, 0.95);
+  box-shadow: 0 24px 60px rgba(37, 58, 90, 0.08);
+}
+
+.user-admin-card {
+  padding: 22px;
+  display: grid;
+  gap: 18px;
+}
+
+.user-admin-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.user-admin-card-top p {
+  margin: 8px 0 0;
+  color: #60758f;
+}
+
+.user-admin-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.user-admin-badge--active {
+  background: #ecfdf3;
+  color: #166534;
+}
+
+.user-admin-badge--inactive {
+  background: #fff1f2;
+  color: #b42318;
+}
+
+.user-admin-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+}
+
+.user-admin-card-grid span {
+  display: block;
+  color: #60758f;
+  font-size: 0.86rem;
+}
+
+.user-admin-card-grid p {
+  margin: 6px 0 0;
+  color: #16324f;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.user-admin-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.user-admin-button--danger {
+  background: #fff1f2;
+  color: #b42318;
+}
+
+.user-admin-empty {
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.user-admin-empty-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #16324f;
 }
 
 .teacher-page {
@@ -3342,6 +3695,12 @@ button {
   color: #fff;
 }
 
+.teacher-availability-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
 .teacher-availability-header {
   display: flex;
   align-items: flex-start;
@@ -3375,6 +3734,19 @@ button {
   background: #eff6ff;
 }
 
+.teacher-availability-check {
+  min-width: 220px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.teacher-availability-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: #2563eb;
+}
+
 .teacher-availability-day {
   width: 220px;
   display: flex;
@@ -3383,6 +3755,11 @@ button {
 }
 
 .teacher-availability-day label {
+  font-weight: 600;
+  color: #334155;
+}
+
+.teacher-availability-day span {
   font-weight: 600;
   color: #334155;
 }
@@ -3405,6 +3782,161 @@ button {
   gap: 12px;
   flex-wrap: wrap;
   flex: 1;
+}
+
+.teacher-availability-note {
+  margin-top: 4px;
+  color: #60758f;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.teacher-availability-tools {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.teacher-availability-month-list {
+  max-height: 460px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.teacher-availability-file {
+  display: grid;
+  gap: 8px;
+}
+
+.teacher-availability-file input[type="file"] {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid #d2ddea;
+  background: #f9fbfe;
+  color: #102238;
+}
+
+.teacher-availability-tip {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #f8fafc;
+  color: #60758f;
+  line-height: 1.5;
+}
+
+.teacher-calendar-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.teacher-calendar-header h3,
+.teacher-calendar-editor-copy h3 {
+  margin: 0;
+  color: #16324f;
+}
+
+.teacher-calendar-header p,
+.teacher-calendar-editor-copy p {
+  margin: 8px 0 0;
+  color: #60758f;
+}
+
+.teacher-calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.teacher-calendar-weekdays span {
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #60758f;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.teacher-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.teacher-calendar-day {
+  min-height: 92px;
+  padding: 14px 12px;
+  border-radius: 18px;
+  border: 1px solid #dbe4ef;
+  background: #f8fafc;
+  display: grid;
+  align-content: space-between;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.teacher-calendar-day:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(37, 58, 90, 0.08);
+}
+
+.teacher-calendar-day strong {
+  color: #16324f;
+  font-size: 1rem;
+}
+
+.teacher-calendar-day span {
+  color: #60758f;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.teacher-calendar-day--available {
+  border-color: #bfdbfe;
+  background: linear-gradient(180deg, #eff6ff 0%, #f8fbff 100%);
+}
+
+.teacher-calendar-day--selected {
+  border-color: #2563eb;
+  box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.16);
+  background: linear-gradient(180deg, #dbeafe 0%, #eff6ff 100%);
+}
+
+.teacher-calendar-day--empty {
+  min-height: 92px;
+  border-radius: 18px;
+  background: transparent;
+  border: 1px dashed rgba(203, 213, 225, 0.4);
+}
+
+.teacher-calendar-editor {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 22px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.teacher-selection-summary {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.teacher-selection-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4f91;
+  font-weight: 700;
+  font-size: 0.82rem;
 }
 
 .teacher-availability-pill {
@@ -3548,6 +4080,20 @@ button {
     grid-template-columns: 1fr 1fr;
   }
 
+  .teacher-availability-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .teacher-calendar-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .teacher-calendar-grid,
+  .teacher-calendar-weekdays {
+    gap: 8px;
+  }
+
   .teacher-availability-day {
     width: auto;
   }
@@ -3570,7 +4116,11 @@ button {
   .rental-modal-header,
   .rental-summary-row,
   .rental-detail-item,
+  .schedule-import-header,
   .schedule-header,
+  .schedule-summary-head,
+  .user-admin-card-top,
+  .user-admin-header,
   .schedule-toolbar,
   .schedule-toolbar-left,
   .schedule-modal-header,
@@ -3617,7 +4167,12 @@ button {
   .rental-grid,
   .rental-detail-grid,
   .finance-layout,
+  .schedule-actions-grid,
   .schedule-form-grid,
+  .user-admin-card-grid,
+  .user-admin-grid,
+  .user-admin-toolbar,
+  .teacher-availability-actions,
   .teacher-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -3629,6 +4184,16 @@ button {
 
   .schedule-shell {
     overflow: auto;
+  }
+
+  .schedule-segmented {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .teacher-calendar-grid,
+  .teacher-calendar-weekdays {
+    min-width: 760px;
   }
 
   .schedule-calendar {
@@ -3671,6 +4236,14 @@ button {
 }
 
 @media (max-width: 640px) {
+  .app-notifications {
+    top: auto;
+    right: 12px;
+    left: 12px;
+    bottom: 12px;
+    width: auto;
+  }
+
   .portal-sidebar {
     padding: 20px 16px;
   }
@@ -3697,7 +4270,12 @@ button {
   .rental-grid,
   .rental-detail-grid,
   .finance-layout,
+  .schedule-actions-grid,
   .schedule-form-grid,
+  .user-admin-card-grid,
+  .user-admin-grid,
+  .user-admin-toolbar,
+  .teacher-availability-actions,
   .teacher-grid {
     grid-template-columns: 1fr;
   }
@@ -3767,6 +4345,15 @@ button {
 
   .schedule-modal {
     padding: 20px;
+  }
+
+  .schedule-segmented {
+    grid-template-columns: 1fr;
+  }
+
+  .teacher-calendar-day {
+    min-height: 82px;
+    padding: 12px 10px;
   }
 
   .teacher-modal {

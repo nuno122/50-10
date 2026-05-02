@@ -10,7 +10,11 @@ const userRepository = {
             return await prisma.utilizador.findMany({
                 include: {
                     Aluno: true,
-                    Professor: true,
+                    Professor: {
+                        include: {
+                            EstiloProfessor: true
+                        }
+                    },
                     Encarregado: true
                 }
             });
@@ -48,7 +52,11 @@ const userRepository = {
             where: { IdUtilizador: idUtilizador },
             include: {
                 Aluno: true,
-                Professor: true,
+                Professor: {
+                    include: {
+                        EstiloProfessor: true
+                    }
+                },
                 Encarregado: true
             }
         });
@@ -103,7 +111,11 @@ const userRepository = {
             },
             include: {
                 Aluno: true,
-                Professor: true,
+                Professor: {
+                    include: {
+                        EstiloProfessor: true
+                    }
+                },
                 Encarregado: true
             }
         });
@@ -133,7 +145,11 @@ const userRepository = {
             },
             include: {
                 Aluno: true,
-                Professor: true,
+                Professor: {
+                    include: {
+                        EstiloProfessor: true
+                    }
+                },
                 Encarregado: true
             }
         });
@@ -145,7 +161,11 @@ const userRepository = {
             data: { EstaAtivo: estaAtivo },
             include: {
                 Aluno: true,
-                Professor: true,
+                Professor: {
+                    include: {
+                        EstiloProfessor: true
+                    }
+                },
                 Encarregado: true
             }
         });

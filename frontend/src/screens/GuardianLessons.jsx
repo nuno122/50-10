@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNotifications } from '../contexts/NotificationContext';
 import {
     cancelarMarcacaoEncarregado,
     criarMarcacaoEncarregado,
@@ -21,7 +22,23 @@ const formatTime = (value) => {
 
 const getStudioLabel = (lesson) => lesson.Estudio?.Numero ? `Estudio ${lesson.Estudio.Numero}` : 'Estudio';
 
+const isAvailableGuardianLesson = (lesson) => {
+    if (!lesson || lesson.EstaAtivo === false) return false;
+    if ((lesson.TipoAula || 'Regular') !== 'Regular') return false;
+
+    const lessonDate = new Date(lesson.Data);
+    if (Number.isNaN(lessonDate.getTime())) return false;
+
+    lessonDate.setHours(0, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return lessonDate >= today;
+};
+
 const GuardianLessons = () => {
+    const { notify, refreshSnapshot } = useNotifications();
     const [lessons, setLessons] = useState([]);
     const [students, setStudents] = useState([]);
     const [bookings, setBookings] = useState([]);
@@ -43,17 +60,8 @@ const GuardianLessons = () => {
                 getAlunosEncarregado()
             ]);
 
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
             const availableLessons = (aulasData || [])
-                .filter((lesson) => lesson.EstaAtivo !== false && lesson.ValidacaoDirecao)
-                .filter((lesson) => (lesson.TipoAula || 'Regular') === 'Regular')
-                .filter((lesson) => {
-                    const lessonDate = new Date(lesson.Data);
-                    lessonDate.setHours(0, 0, 0, 0);
-                    return lessonDate >= today;
-                })
+                .filter((lesson) => isAvailableGuardianLesson(lesson))
                 .sort((left, right) => {
                     const leftDate = new Date(`${formatDateKey(left.Data)}T${formatTime(left.HoraInicio)}`);
                     const rightDate = new Date(`${formatDateKey(right.Data)}T${formatTime(right.HoraInicio)}`);
@@ -182,6 +190,12 @@ const GuardianLessons = () => {
             });
             await loadBookings(selectedStudentId);
             await loadBaseData();
+            await refreshSnapshot();
+            notify({
+                title: 'Inscricao concluida',
+                message: `${selectedLesson.style} foi adicionada ao horario do educando.`,
+                tone: 'success'
+            });
             setFeedback('Inscricao realizada com sucesso.');
             setSelectedLesson(null);
         } catch (err) {
@@ -202,6 +216,12 @@ const GuardianLessons = () => {
             const result = await cancelarMarcacaoEncarregado(selectedLesson.bookingId);
             await loadBookings(selectedStudentId);
             await loadBaseData();
+            await refreshSnapshot();
+            notify({
+                title: 'Inscricao cancelada',
+                message: `${selectedLesson.style} foi removida da agenda do educando.`,
+                tone: 'info'
+            });
             setFeedback(result?.mensagem || 'Inscricao cancelada com sucesso.');
             setSelectedLesson(null);
         } catch (err) {

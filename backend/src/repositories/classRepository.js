@@ -47,6 +47,18 @@ const classRepository = {
         });
     },
 
+    findProfessorAvailabilityByDate: async (idProfessor, data) => {
+        return await prisma.disponibilidade.findMany({
+            where: {
+                IdProfessor: idProfessor,
+                Data: new Date(data)
+            },
+            orderBy: {
+                HoraInicio: 'asc'
+            }
+        });
+    },
+
     create: async (dados) => {
         return await prisma.aula.create({
             data: {
@@ -123,13 +135,19 @@ const classRepository = {
     // Lookup methods used by classService (and mocked in tests)
     findProfessorById: async (idProfessor) => {
         return await prisma.professor.findUnique({
-            where: { IdUtilizador: idProfessor }
+            where: { IdUtilizador: idProfessor },
+            include: {
+                EstiloProfessor: true
+            }
         });
     },
 
     findEstudioById: async (idEstudio) => {
         return await prisma.estudio.findUnique({
-            where: { IdEstudio: idEstudio }
+            where: { IdEstudio: idEstudio },
+            include: {
+                EstudioEstilo: true
+            }
         });
     },
 
