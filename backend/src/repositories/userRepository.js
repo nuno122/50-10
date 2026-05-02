@@ -43,6 +43,17 @@ const userRepository = {
         });
     },
 
+    findById: async (idUtilizador) => {
+        return await prisma.utilizador.findUnique({
+            where: { IdUtilizador: idUtilizador },
+            include: {
+                Aluno: true,
+                Professor: true,
+                Encarregado: true
+            }
+        });
+    },
+
     updatePasswordHash: async (idUtilizador, palavraPasseHash) => {
         return await prisma.utilizador.update({
             where: { IdUtilizador: idUtilizador },
@@ -90,6 +101,48 @@ const userRepository = {
                     }
                 })
             },
+            include: {
+                Aluno: true,
+                Professor: true,
+                Encarregado: true
+            }
+        });
+    },
+
+    update: async (idUtilizador, dados) => {
+        return await prisma.utilizador.update({
+            where: { IdUtilizador: idUtilizador },
+            data: {
+                NomeCompleto: dados.NomeCompleto,
+                NomeUtilizador: dados.NomeUtilizador,
+                Email: dados.Email,
+                ...(dados.PalavraPasseHash ? { PalavraPasseHash: dados.PalavraPasseHash } : {}),
+                Nif: dados.Nif,
+                Morada: dados.Morada,
+                NumeroTelemovel: dados.NumeroTelemovel,
+                CodigoPostal_Utilizador_CodigoPostalToCodigoPostal: {
+                    connect: { CodigoPostal: dados.CodigoPostal }
+                },
+                ...(dados.Permissoes === PERMISSOES.PROFESSOR && {
+                    Professor: {
+                        update: {
+                            Iban: dados.Iban ?? null
+                        }
+                    }
+                })
+            },
+            include: {
+                Aluno: true,
+                Professor: true,
+                Encarregado: true
+            }
+        });
+    },
+
+    updateStatus: async (idUtilizador, estaAtivo) => {
+        return await prisma.utilizador.update({
+            where: { IdUtilizador: idUtilizador },
+            data: { EstaAtivo: estaAtivo },
             include: {
                 Aluno: true,
                 Professor: true,

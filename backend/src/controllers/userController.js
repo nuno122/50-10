@@ -24,6 +24,30 @@ const criarUtilizador = async (req, res) => {
     }
 };
 
+const atualizarUtilizador = async (req, res) => {
+    try {
+        const utilizador = await userService.atualizarUtilizador(req.params.id, req.body);
+        res.json(utilizador);
+    } catch (erro) {
+        console.error(erro);
+        res.status(erro.statusCode || 500).json({
+            erro: erro.message || 'Erro ao atualizar utilizador.'
+        });
+    }
+};
+
+const atualizarEstadoUtilizador = async (req, res) => {
+    try {
+        const utilizador = await userService.atualizarEstadoUtilizador(req.params.id, req.body.EstaAtivo);
+        res.json(utilizador);
+    } catch (erro) {
+        console.error(erro);
+        res.status(erro.statusCode || 500).json({
+            erro: erro.message || 'Erro ao atualizar o estado do utilizador.'
+        });
+    }
+};
+
 const login = async (req, res) => {
     try {
         const { Email, PalavraPasseHash } = req.body;
@@ -37,4 +61,10 @@ const login = async (req, res) => {
     }
 };
 
-module.exports = { getUtilizadores, criarUtilizador, login };
+module.exports = {
+    getUtilizadores,
+    criarUtilizador,
+    atualizarUtilizador,
+    atualizarEstadoUtilizador,
+    login
+};

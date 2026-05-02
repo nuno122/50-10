@@ -17,9 +17,46 @@ const hashPassword = (password) => {
 
 
 const listarUtilizadores = async () => {
-    return await userRepository.findAll();
+    const utilizadores = await userRepository.findAll();
+    return utilizadores.map((utilizador) => {
+        const { PalavraPasseHash: _, ...dadosSeguros } = utilizador;
+        return dadosSeguros;
+    });
 };
 
+const validarPermissaoGerivel = (permissao) => {
+    const permissoesGeriveis = [
+        PERMISSOES.PROFESSOR,
+        PERMISSOES.ENCARREGADO,
+        PERMISSOES.DIRECAO
+    ];
+
+    if (!permissoesGeriveis.includes(permissao)) {
+        throw criarErro('So e permitido gerir Encarregados, Professores e Direcao.', 400);
+    }
+};
+
+const validarCamposBase = (dados) => {
+    if (!dados.NomeCompleto) {
+        throw criarErro('NomeCompleto é obrigatório.', 400);
+    }
+
+    if (!dados.Email) {
+        throw criarErro('Email é obrigatório.', 400);
+    }
+
+    if (!dados.NomeUtilizador) {
+        throw criarErro('NomeUtilizador é obrigatório.', 400);
+    }
+
+    if (!dados.CodigoPostal) {
+        throw criarErro('CodigoPostal é obrigatório.', 400);
+    }
+
+    if (!dados.Morada) {
+        throw criarErro('Morada é obrigatória.', 400);
+    }
+};
 
 const criarUtilizador = async (dados) => {
     // Validate each mandatory field individually with exact messages the tests expect
@@ -46,11 +83,63 @@ const criarUtilizador = async (dados) => {
 
     // Hash the plain-text password (PalavraPasse field) if provided
     const plainPassword = dados.PalavraPasse || dados.PalavraPasseHash || '';
+    if (!plainPassword) {
+        throw criarErro('PalavraPasse é obrigatória.', 400);
+    }
     const hash = hashPassword(plainPassword);
 
-    return await userRepository.create({ ...dados, PalavraPasseHash: hash });
+    const utilizador = await userRepository.create({ ...dados, PalavraPasseHash: hash });
+    const { PalavraPasseHash: _, ...dadosSeguros } = utilizador;
+    return dadosSeguros;
 };
 
+const atualizarUtilizador = async (idUtilizador, dados) => {
+    if (!idUtilizador) {
+        throw criarErro('IdUtilizador é obrigatório.', 400);
+    }
+
+    validarCamposBase(dados);
+
+    const utilizadorAtual = await userRepository.findById(idUtilizador);
+    if (!utilizadorAtual) {
+        throw criarErro('Utilizador não encontrado.', 404);
+    }
+
+    validarPermissaoGerivel(utilizadorAtual.Permissoes);
+
+    if (utilizadorAtual.Permissoes === PERMISSOES.PROFESSOR && !dados.Iban) {
+        throw criarErro('IBAN é obrigatório para professores.', 400);
+    }
+
+    const plainPassword = dados.PalavraPasse || '';
+    const hash = plainPassword ? hashPassword(plainPassword) : undefined;
+
+    const utilizador = await userRepository.update(idUtilizador, {
+        ...dados,
+        Permissoes: utilizadorAtual.Permissoes,
+        PalavraPasseHash: hash
+    });
+
+    const { PalavraPasseHash: _, ...dadosSeguros } = utilizador;
+    return dadosSeguros;
+};
+
+const atualizarEstadoUtilizador = async (idUtilizador, estaAtivo) => {
+    if (!idUtilizador) {
+        throw criarErro('IdUtilizador é obrigatório.', 400);
+    }
+
+    const utilizadorAtual = await userRepository.findById(idUtilizador);
+    if (!utilizadorAtual) {
+        throw criarErro('Utilizador não encontrado.', 404);
+    }
+
+    validarPermissaoGerivel(utilizadorAtual.Permissoes);
+
+    const utilizador = await userRepository.updateStatus(idUtilizador, Boolean(estaAtivo));
+    const { PalavraPasseHash: _, ...dadosSeguros } = utilizador;
+    return dadosSeguros;
+};
 
 const autenticarUtilizador = async (email, palavraPasse) => {
     if (!email || !palavraPasse) {
@@ -94,5 +183,7 @@ const autenticarUtilizador = async (email, palavraPasse) => {
 module.exports = {
     listarUtilizadores,
     criarUtilizador,
+    atualizarUtilizador,
+    atualizarEstadoUtilizador,
     autenticarUtilizador
 };
