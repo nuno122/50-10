@@ -81,12 +81,17 @@ describe('Integração - Alugueres', () => {
             // Arrange: ArticleId válido mas quantidade absurda
             const { PrismaClient } = require('@prisma/client');
             const prisma = new PrismaClient();
-            const artigo = await prisma.tamanhoArtigo.findFirst();
+            let artigo = await prisma.tamanhoArtigo.findFirst();
             await prisma.$disconnect();
 
             if (!artigo) {
-                console.warn('Nenhum TamanhoArtigo encontrado na BD, a ignorar teste.');
-                return;
+                // Criar Artigo temporário para teste
+                const baseArtigo = await prisma.artigo.create({
+                    data: { Nome: `Artigo Integ ${Date.now()}`, CustoPorDia: 5 }
+                });
+                artigo = await prisma.tamanhoArtigo.create({
+                    data: { IdArtigo: baseArtigo.IdArtigo, Tamanho: 'M', Quantidade: 10 }
+                });
             }
 
             const token = getAdminToken();

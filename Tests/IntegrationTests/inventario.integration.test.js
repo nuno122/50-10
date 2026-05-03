@@ -40,8 +40,7 @@ describe('Integracao - Inventario', () => {
     describe('PUT /inventario/:id', () => {
         it('4 Deve editar o artigo criado com sucesso', async () => {
             if (!artigoCriadoId) {
-                console.warn('Artigo nao foi criado, a ignorar teste de edicao.');
-                return;
+                throw new Error('Dependência falhou: Artigo não foi criado no teste anterior.');
             }
 
             const res = await makeRequest(`/inventario/${artigoCriadoId}`, 'PUT', {
@@ -56,8 +55,7 @@ describe('Integracao - Inventario', () => {
     describe('DELETE /inventario/:id', () => {
         it('5 Deve apagar o artigo e retornar mensagem de confirmacao', async () => {
             if (!artigoCriadoId) {
-                console.warn('Artigo nao foi criado, a ignorar teste de eliminacao.');
-                return;
+                throw new Error('Dependência falhou: Artigo não foi criado no teste anterior.');
             }
 
             const res = await makeRequest(`/inventario/${artigoCriadoId}`, 'DELETE', null, token);

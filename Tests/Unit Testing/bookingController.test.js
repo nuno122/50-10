@@ -56,7 +56,7 @@ describe('Booking Controller', () => {
             expect(res.status).toHaveBeenCalledWith(200);
             expect(bookingService.cancelarMarcacao).toHaveBeenCalledWith(1, 2, 'Gripe');
             expect(res.json).toHaveBeenCalledWith({ 
-                mensagem: 'Marcação cancelada com sucesso.',
+                mensagem: 'Marcacao cancelada com sucesso.',
                 marcacao: { sucesso: true }
             });
         });

@@ -13,7 +13,7 @@ describe('Payment Service', () => {
             const mockPagamento = { IdPagamento: 1, Valor: 50 };
             paymentRepository.create.mockResolvedValue(mockPagamento);
 
-            await paymentService.GerarPagamento(1, 50, 'Mensalidade');
+            await paymentService.GerarPagamentoIndividual(1, 50, 'Mensalidade');
 
             const callData = paymentRepository.create.mock.calls[0][0];
             

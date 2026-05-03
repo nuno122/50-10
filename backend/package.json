@@ -6,7 +6,7 @@
   "scripts": {
     "test": "jest",
     "test:coverage": "jest --coverage --collectCoverageFrom=\"src/**/*.js\"",
-    "test:integration": "jest --roots \"../Tests/IntegrationTests\" --testTimeout=15000 --config=\"{\\\"testEnvironment\\\":\\\"node\\\",\\\"modulePaths\\\":[\\\"<rootDir>/node_modules\\\"]}\"",
+    "test:integration": "jest --config jest.integration.config.js",
     "start": "npm --prefix .. run build && electron ../electron/main.cjs",
     "dev": "nodemon index.js"
   },
