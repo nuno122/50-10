@@ -1,5 +1,0 @@
-
-> 50_10@1.0.0 test:integration
-> jest --roots "../Tests/IntegrationTests" --testTimeout=15000 --config="{\"testEnvironment\":\"node\",\"modulePaths\":[\"<rootDir>/node_modules\"]}"
-
-O sistema n∆o conseguiu localizar o ficheiro especificado.
