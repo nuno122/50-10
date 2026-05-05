@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const path = require('path');
 const prisma = new PrismaClient();
 
 const normalizeImagePath = (value) => {
@@ -7,8 +8,18 @@ const normalizeImagePath = (value) => {
     const normalized = value.trim().replace(/\\/g, '/');
     if (!normalized) return null;
 
-    if (/^https?:\/\//i.test(normalized) || normalized.startsWith('data:')) {
-        return normalized;
+    if (normalized.startsWith('data:')) {
+        return null;
+    }
+
+    if (/^https?:\/\//i.test(normalized)) {
+        try {
+            const url = new URL(normalized);
+            const urlFileName = path.basename(decodeURIComponent(url.pathname));
+            return urlFileName || null;
+        } catch (erro) {
+            return null;
+        }
     }
 
     const relativePath = normalized
@@ -16,7 +27,15 @@ const normalizeImagePath = (value) => {
         .replace(/^\.?\/*images\//i, '')
         .replace(/^\/+/, '');
 
-    return relativePath || null;
+    const filename = path.basename(relativePath);
+    return filename || null;
+};
+
+const normalizeBoolean = (value) => {
+    if (value === undefined) return undefined;
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') return value.toLowerCase() === 'true';
+    return Boolean(value);
 };
 
 const inventoryRepository = {
@@ -49,15 +68,16 @@ const inventoryRepository = {
 
     // Atualizar um artigo existente
     update: async (id, dados) => {
-        const hasImagemPath = Object.prototype.hasOwnProperty.call(dados || {}, 'ImagemPath');
+        const payload = dados || {};
+        const hasImagemPath = Object.prototype.hasOwnProperty.call(payload, 'ImagemPath');
 
         return await prisma.artigo.update({
             where: { IdArtigo: id },
             data: {
-                Nome: dados.Nome,
-                CustoPorDia: dados.CustoPorDia ? parseFloat(dados.CustoPorDia) : undefined,
-                EstadoArtigo: dados.EstadoArtigo,
-                ImagemPath: hasImagemPath ? normalizeImagePath(dados.ImagemPath) : undefined
+                Nome: payload.Nome,
+                CustoPorDia: payload.CustoPorDia ? parseFloat(payload.CustoPorDia) : undefined,
+                EstadoArtigo: normalizeBoolean(payload.EstadoArtigo),
+                ImagemPath: hasImagemPath ? normalizeImagePath(payload.ImagemPath) : undefined
             }
         });
     },

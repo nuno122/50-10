@@ -14,7 +14,11 @@ const getInventario = async (req, res) => {
 
 const criarArtigo = async (req, res) => {
     try {
-        const novoArtigo = await inventoryService.criarArtigo(req.body);
+        const dados = {
+            ...req.body,
+            ...(req.file?.filename ? { ImagemPath: req.file.filename } : {})
+        };
+        const novoArtigo = await inventoryService.criarArtigo(dados);
         res.status(201).json(novoArtigo);
     } catch (erro) {
         console.error(erro);
@@ -26,7 +30,11 @@ const criarArtigo = async (req, res) => {
 
 const editarArtigo = async (req, res) => {
     try {
-        const artigoAtualizado = await inventoryService.editarArtigo(req.params.id, req.body);
+        const dados = {
+            ...req.body,
+            ...(req.file?.filename ? { ImagemPath: req.file.filename } : {})
+        };
+        const artigoAtualizado = await inventoryService.editarArtigo(req.params.id, dados);
         res.json(artigoAtualizado);
     } catch (erro) {
         console.error(erro);

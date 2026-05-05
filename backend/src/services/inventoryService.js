@@ -29,6 +29,10 @@ const editarArtigo = async (id, dados) => {
         throw criarErro('ID do artigo \u00e9 obrigat\u00f3rio para edi\u00e7\u00e3o.', 400);
     }
 
+    if (!dados || typeof dados !== 'object') {
+        throw criarErro('Dados do artigo s\u00e3o obrigat\u00f3rios para edi\u00e7\u00e3o.', 400);
+    }
+
     return await inventoryRepo.update(id, dados);
 };
 

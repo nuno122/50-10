@@ -54,14 +54,14 @@ const Login = () => {
                                 <p className="login-eyebrow">Sistema de Gestao</p>
                                 <h1>Ent'Artes</h1>
                                 <p className="login-copy login-copy--dark">
-                                    Autentica-te para aceder ao painel interno e aos testes da plataforma.
+                                    Autentica-te para aceder ao painel interno da plataforma.
                                 </p>
                             </div>
                         </div>
 
                         <div className="login-card-header">
                             <h2>Autenticacao</h2>
-                            <p>Usa as tuas credenciais para entrar nos testes da API e no painel interno.</p>
+                            <p>Usa as tuas credenciais para entrar no painel interno.</p>
                         </div>
 
                         <form onSubmit={handleSubmit} className="login-form">
@@ -96,7 +96,7 @@ const Login = () => {
                                 disabled={loading}
                                 className="login-submit"
                             >
-                                {loading ? 'A autenticar...' : 'Entrar nos Testes'}
+                                {loading ? 'A autenticar...' : 'Login'}
                             </button>
                         </form>
                     </div>

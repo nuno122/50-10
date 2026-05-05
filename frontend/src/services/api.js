@@ -17,14 +17,16 @@ const handleResponse = async (response) => {
 const request = async (path, options = {}) => {
     // Get token from localStorage for auth
     const token = localStorage.getItem('authToken');
+    const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+    const { headers: optionHeaders, ...fetchOptions } = options;
     
     const response = await fetch(`${API_BASE_URL}${path}`, {
+        ...fetchOptions,
         headers: {
-            'Content-Type': 'application/json',
+            ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
             ...(token && { 'Authorization': `Bearer ${token}` }),
-            ...(options.headers || {})
-        },
-        ...options
+            ...(optionHeaders || {})
+        }
     });
 
     return await handleResponse(response);
@@ -64,16 +66,36 @@ export const loginAutenticacao = async ({ Email, Password }) =>
 
 export const getInventario = async () => request('/inventario');
 
-export const criarArtigo = async ({ Nome, CustoPorDia, ImagemPath }) =>
+const buildInventoryPayload = (dados = {}) => {
+    if (dados.ImagemFile) {
+        const formData = new FormData();
+
+        Object.entries(dados).forEach(([key, value]) => {
+            if (key === 'ImagemFile' || value === undefined || value === null) {
+                return;
+            }
+
+            formData.append(key, value);
+        });
+        formData.append('Imagem', dados.ImagemFile);
+
+        return formData;
+    }
+
+    const { ImagemFile, ...jsonPayload } = dados;
+    return JSON.stringify(jsonPayload);
+};
+
+export const criarArtigo = async (dados) =>
     request('/inventario', {
         method: 'POST',
-        body: JSON.stringify({ Nome, CustoPorDia, ImagemPath })
+        body: buildInventoryPayload(dados)
     });
 
 export const editarArtigo = async (id, dados) =>
     request(`/inventario/${id}`, {
         method: 'PUT',
-        body: JSON.stringify(dados)
+        body: buildInventoryPayload(dados)
     });
 
 export const getAulas = async () => request('/aulas');

@@ -61,7 +61,7 @@ model Aula {
   Preco                Decimal     @db.Decimal(18, 2)
   EstaAtivo            Boolean     @default(true, map: "DF__Aula__EstaAtivo__02084FDA")
   CapacidadeMaxima     Int
-  TipoAula             String      @default("Regular") @db.NVarChar(50)
+  TipoAula             String      @default("Regular", map: "DF_Aula_TipoAula") @db.NVarChar(50)
   EstiloDanca          EstiloDanca @relation(fields: [IdEstiloDanca], references: [IdEstiloDanca], onUpdate: NoAction, map: "FK__Aula__IdEstiloDa__04E4BC85")
   Estudio              Estudio     @relation(fields: [IdEstudio], references: [IdEstudio], onUpdate: NoAction, map: "FK__Aula__IdEstudio__03F0984C")
   Professor            Professor   @relation(fields: [IdProfessor], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Aula__IdProfesso__02FC7413")
@@ -219,7 +219,7 @@ model TamanhoArtigo {
   IdArtigo        String          @db.UniqueIdentifier
   Tamanho         String          @db.NVarChar(20)
   Quantidade      Int             @default(0, map: "DF__TamanhoAr__Quant__14270015")
-  Condicao        String          @default("Bom") @db.NVarChar(50)
+  Condicao        String          @default("Bom", map: "DF_TamanhoArtigo_Condicao") @db.NVarChar(50)
   ArtigoAluguer   ArtigoAluguer[]
   Artigo          Artigo          @relation(fields: [IdArtigo], references: [IdArtigo], onUpdate: NoAction, map: "FK__TamanhoAr__IdArt__151B244E")
 }
