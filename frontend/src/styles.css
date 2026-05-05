@@ -254,22 +254,6 @@ button {
   background: #ffffff;
 }
 
-.login-checkbox {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-top: 4px;
-  color: #4e627b;
-  font-size: 0.93rem;
-}
-
-.login-checkbox input {
-  width: 18px;
-  height: 18px;
-  margin-top: 2px;
-  accent-color: #295c9e;
-}
-
 .login-error {
   padding: 14px 16px;
   border-radius: 16px;
