@@ -68,7 +68,7 @@ model Aula {
   Estudio              Estudio     @relation(fields: [IdEstudio], references: [IdEstudio], onUpdate: NoAction, map: "FK__Aula__IdEstudio__03F0984C")
   Professor            Professor   @relation(fields: [IdProfessor], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Aula__IdProfesso__02FC7413")
   Marcacao             Marcacao[]
-  PedidoAulaOrigem     PedidoAula? @relation("PedidoAulaParaAula")
+  PedidoAula           PedidoAula[]
 }
 
 model Cidade {
@@ -163,45 +163,18 @@ model Marcacao {
   IdMarcacao                    String      @id(map: "PK__Marcacao__0FFD43310A4D8F8C") @default(dbgenerated("newsequentialid()"), map: "DF__Marcacao__IdMarc__08B54D69") @db.UniqueIdentifier
   IdAluno                       String      @db.UniqueIdentifier
   IdAula                        String      @db.UniqueIdentifier
-  IdDiretorCancelamento         String?     @db.UniqueIdentifier
   EstaAtivo                     Boolean     @default(true, map: "DF__Marcacao__EstaAt__09A971A2")
   PresencaConfirmada            Boolean     @default(false, map: "DF__Marcacao__Presen__0A9D95DB")
   MotivoCancelamento            String?     @db.NVarChar(Max)
-  EstadoCancelamento            String      @default("SemPedido") @db.NVarChar(50)
-  DataPedidoCancelamento        DateTime?
   DataDecisaoCancelamento       DateTime?
+  DataPedidoCancelamento        DateTime?
+  EstadoCancelamento            String      @default("SemPedido") @db.NVarChar(50)
+  IdDiretorCancelamento         String?     @db.UniqueIdentifier
   ObservacaoDirecaoCancelamento String?     @db.NVarChar(Max)
   Aluno                         Aluno       @relation(fields: [IdAluno], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Marcacao__IdAlun__0B91BA14")
   Aula                          Aula        @relation(fields: [IdAula], references: [IdAula], onUpdate: NoAction, map: "FK__Marcacao__IdAula__0C85DE4D")
-  DiretorCancelamento           Utilizador? @relation("MarcacaoCancelamentoDiretor", fields: [IdDiretorCancelamento], references: [IdUtilizador], onUpdate: NoAction)
+  Utilizador                    Utilizador? @relation(fields: [IdDiretorCancelamento], references: [IdUtilizador], onUpdate: NoAction)
   Pagamento                     Pagamento[]
-}
-
-model PedidoAula {
-  IdPedidoAulaPrivada  String      @id @default(dbgenerated("newsequentialid()")) @db.UniqueIdentifier
-  IdEncarregado        String      @db.UniqueIdentifier
-  IdAluno              String      @db.UniqueIdentifier
-  IdEstiloDanca        String      @db.UniqueIdentifier
-  IdAulaCriada         String?     @unique @db.UniqueIdentifier
-  IdDiretorDecisao     String?     @db.UniqueIdentifier
-  DataPretendida       DateTime    @db.Date
-  HoraPretendida       DateTime    @db.Time
-  DuracaoMinutos       Int
-  CapacidadePretendida Int         @default(1)
-  Observacoes          String?     @db.NVarChar(Max)
-  EstadoPedido         String      @default("Pendente") @db.NVarChar(50)
-  ObservacaoDirecao    String?     @db.NVarChar(Max)
-  DataPedido           DateTime    @default(now())
-  DataDecisao          DateTime?
-  Aluno                Aluno       @relation(fields: [IdAluno], references: [IdUtilizador], onUpdate: NoAction)
-  AulaCriada           Aula?       @relation("PedidoAulaParaAula", fields: [IdAulaCriada], references: [IdAula], onUpdate: NoAction)
-  DiretorDecisao       Utilizador? @relation("PedidoAulaDiretor", fields: [IdDiretorDecisao], references: [IdUtilizador], onUpdate: NoAction)
-  Encarregado          Encarregado @relation(fields: [IdEncarregado], references: [IdUtilizador], onUpdate: NoAction)
-  EstiloDanca          EstiloDanca @relation(fields: [IdEstiloDanca], references: [IdEstiloDanca], onUpdate: NoAction)
-
-  @@index([EstadoPedido, DataPedido])
-  @@index([IdEncarregado, DataPedido])
-  @@index([IdAluno, DataPedido])
 }
 
 model Pagamento {
@@ -279,8 +252,35 @@ model Utilizador {
   Aluguer                                            Aluguer[]
   Aluno                                              Aluno?
   Encarregado                                        Encarregado?
-  MarcacaoCancelamentoDiretor                        Marcacao[]   @relation("MarcacaoCancelamentoDiretor")
-  PedidoAulaDiretor                                  PedidoAula[] @relation("PedidoAulaDiretor")
+  Marcacao                                           Marcacao[]
+  PedidoAula                                         PedidoAula[]
   Professor                                          Professor?
   CodigoPostal_Utilizador_CodigoPostalToCodigoPostal CodigoPostal @relation("Utilizador_CodigoPostalToCodigoPostal", fields: [CodigoPostal], references: [CodigoPostal], onUpdate: NoAction, map: "FK__Utilizado__Codig__5DCAEF64")
+}
+
+model PedidoAula {
+  IdPedidoAulaPrivada  String      @id @default(dbgenerated("newsequentialid()")) @db.UniqueIdentifier
+  IdEncarregado        String      @db.UniqueIdentifier
+  IdAluno              String      @db.UniqueIdentifier
+  IdEstiloDanca        String      @db.UniqueIdentifier
+  IdAulaCriada         String?     @db.UniqueIdentifier
+  IdDiretorDecisao     String?     @db.UniqueIdentifier
+  DataPretendida       DateTime    @db.Date
+  HoraPretendida       DateTime    @db.Time
+  DuracaoMinutos       Int
+  CapacidadePretendida Int         @default(1)
+  Observacoes          String?     @db.NVarChar(Max)
+  EstadoPedido         String      @default("Pendente") @db.NVarChar(50)
+  ObservacaoDirecao    String?     @db.NVarChar(Max)
+  DataPedido           DateTime    @default(now())
+  DataDecisao          DateTime?
+  Aluno                Aluno       @relation(fields: [IdAluno], references: [IdUtilizador], onUpdate: NoAction)
+  Aula                 Aula?       @relation(fields: [IdAulaCriada], references: [IdAula], onUpdate: NoAction)
+  Utilizador           Utilizador? @relation(fields: [IdDiretorDecisao], references: [IdUtilizador], onUpdate: NoAction)
+  Encarregado          Encarregado @relation(fields: [IdEncarregado], references: [IdUtilizador], onUpdate: NoAction)
+  EstiloDanca          EstiloDanca @relation(fields: [IdEstiloDanca], references: [IdEstiloDanca], onUpdate: NoAction)
+
+  @@index([EstadoPedido, DataPedido])
+  @@index([IdAluno, DataPedido])
+  @@index([IdEncarregado, DataPedido])
 }

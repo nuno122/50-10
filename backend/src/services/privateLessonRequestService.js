@@ -23,12 +23,18 @@ const extrairHorasEMinutos = (value) => {
 };
 
 const construirData = (value) => {
+    const dateOnlyMatch = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dateOnlyMatch) {
+        const [, year, month, day] = dateOnlyMatch;
+        return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 0, 0, 0, 0));
+    }
+
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
         return null;
     }
 
-    date.setHours(0, 0, 0, 0);
+    date.setUTCHours(0, 0, 0, 0);
     return date;
 };
 
@@ -37,7 +43,7 @@ const construirDataHora = (dataValue, horaValue) => {
     if (!data) return null;
 
     const { hours, minutes } = extrairHorasEMinutos(horaValue);
-    data.setHours(hours, minutes, 0, 0);
+    data.setUTCHours(hours, minutes, 0, 0);
     return data;
 };
 

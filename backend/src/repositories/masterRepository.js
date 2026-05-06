@@ -4,7 +4,11 @@ const prisma = new PrismaClient();
 const findAllEstudios = async () => {
     return await prisma.estudio.findMany({
         include: {
-            EstudioEstilo: true
+            EstudioEstilo: {
+                include: {
+                    EstiloDanca: true
+                }
+            }
         }
     });
 };

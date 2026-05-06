@@ -24,7 +24,7 @@ const pedidoInclude = {
         }
     },
     EstiloDanca: true,
-    AulaCriada: {
+    Aula: {
         include: {
             Professor: {
                 include: {
@@ -37,7 +37,7 @@ const pedidoInclude = {
             EstiloDanca: true
         }
     },
-    DiretorDecisao: {
+    Utilizador: {
         select: {
             IdUtilizador: true,
             NomeCompleto: true

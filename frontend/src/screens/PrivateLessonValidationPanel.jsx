@@ -21,7 +21,7 @@ const normalizeDateKey = (value) => {
     if (!value) return '';
 
     const text = String(value);
-    const directMatch = text.match(/^(\d{4}-\d{2}-\d{2})/);
+    const directMatch = text.match(/^(\d{4}-\d{2}-\d{2})$/);
     if (directMatch) {
         return directMatch[1];
     }
@@ -29,9 +29,9 @@ const normalizeDateKey = (value) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '';
 
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(date.getUTCDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 };
 
@@ -43,6 +43,13 @@ const toMinutes = (value) => {
 };
 
 const overlaps = (startA, endA, startB, endB) => startA < endB && endA > startB;
+
+const normalizeText = (value) => String(value || '').trim().toLowerCase();
+
+const relationMatchesStyle = (relation, request) => (
+    relation.IdEstiloDanca === request.IdEstiloDanca ||
+    normalizeText(relation.EstiloDanca?.Nome) === normalizeText(request.EstiloDanca?.Nome)
+);
 
 const buildDefaultForm = (request) => ({
     DataPretendida: toDateInputValue(request.DataPretendida),
@@ -75,16 +82,16 @@ const getScheduleCriteria = (request, form) => {
 const getTeacherOptions = (users, request, form, disponibilidades, aulas) => {
     const criteria = getScheduleCriteria(request, form);
 
-    return (users || []).filter((user) => {
+    const styleTeachers = (users || []).filter((user) => {
         if (user.Permissoes !== PERMISSOES.PROFESSOR || user.EstaAtivo === false || !user.Professor) {
             return false;
         }
 
         const styles = user.Professor?.EstiloProfessor || [];
-        const supportsStyle = styles.length === 0 || styles.some((item) => item.IdEstiloDanca === request.IdEstiloDanca);
-        if (!supportsStyle) {
-            return false;
-        }
+        return styles.some((item) => relationMatchesStyle(item, request));
+    });
+
+    const availableTeachers = styleTeachers.filter((user) => {
 
         if (!criteria.hasValidWindow) {
             return true;
@@ -115,6 +122,8 @@ const getTeacherOptions = (users, request, form, disponibilidades, aulas) => {
 
         return !hasConflict;
     });
+
+    return availableTeachers.length > 0 ? availableTeachers : styleTeachers;
 };
 
 const getStudioOptions = (studios, request, form, aulas) => {
@@ -122,7 +131,7 @@ const getStudioOptions = (studios, request, form, aulas) => {
 
     return (studios || []).filter((studio) => {
         const styles = studio.EstudioEstilo || [];
-        const supportsStyle = styles.length === 0 || styles.some((item) => item.IdEstiloDanca === request.IdEstiloDanca);
+        const supportsStyle = styles.some((item) => relationMatchesStyle(item, request));
         if (!supportsStyle) {
             return false;
         }

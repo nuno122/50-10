@@ -1,12 +1,19 @@
-const { verificarToken } = require('../../backend/src/authMiddleware');
 const jwt = require('jsonwebtoken');
+const { verificarToken, verificarPermissao } = require('../../backend/src/authMiddleware');
+const userRepository = require('../../backend/src/repositories/userRepository');
 
-describe('Auth Middleware - verificarToken', () => {
-    let req, res, next;
+jest.mock('../../backend/src/repositories/userRepository');
+
+describe('Auth Middleware', () => {
+    let req;
+    let res;
+    let next;
 
     const JWT_SECRET = process.env.JWT_SECRET || "ChaveSuperSecretaDaEntArtes_2026";
 
     beforeEach(() => {
+        jest.clearAllMocks();
+
         req = { headers: {} };
         res = {
             status: jest.fn().mockReturnThis(),
@@ -15,48 +22,115 @@ describe('Auth Middleware - verificarToken', () => {
         next = jest.fn();
     });
 
-    it('1️⃣ Deve rejeitar requisição sem header authorization', () => {
-        verificarToken(req, res, next);
+    describe('verificarToken', () => {
+        it('deve rejeitar requisicao sem header authorization', async () => {
+            await verificarToken(req, res, next);
 
-        expect(res.status).toHaveBeenCalledWith(401);
-        expect(res.json).toHaveBeenCalledWith({ erro: "Acesso negado! Inicie sessão para continuar." });
-        expect(next).not.toHaveBeenCalled();
+            expect(res.status).toHaveBeenCalledWith(401);
+            expect(res.json).toHaveBeenCalledWith({ erro: 'Acesso negado! Inicie sessao para continuar.' });
+            expect(next).not.toHaveBeenCalled();
+        });
+
+        it('deve rejeitar se authorization nao comecar com Bearer', async () => {
+            req.headers.authorization = 'TokenInvalido 123';
+
+            await verificarToken(req, res, next);
+
+            expect(res.status).toHaveBeenCalledWith(401);
+            expect(next).not.toHaveBeenCalled();
+        });
+
+        it('deve chamar next e usar os dados atuais da base de dados quando o token for valido', async () => {
+            const tokenValido = jwt.sign(
+                { IdUtilizador: 'user-1', Permissoes: 2 },
+                JWT_SECRET,
+                { expiresIn: '1h' }
+            );
+            req.headers.authorization = `Bearer ${tokenValido}`;
+            userRepository.findAuthById.mockResolvedValue({
+                IdUtilizador: 'user-1',
+                Email: 'direcao@example.com',
+                NomeCompleto: 'Direcao Teste',
+                Permissoes: 3,
+                EstaAtivo: true
+            });
+
+            await verificarToken(req, res, next);
+
+            expect(userRepository.findAuthById).toHaveBeenCalledWith('user-1');
+            expect(next).toHaveBeenCalled();
+            expect(req.utilizador).toMatchObject({
+                IdUtilizador: 'user-1',
+                Email: 'direcao@example.com',
+                NomeCompleto: 'Direcao Teste',
+                Permissoes: 3,
+                EstaAtivo: true
+            });
+        });
+
+        it('deve rejeitar token valido se o utilizador ja nao existir', async () => {
+            const tokenValido = jwt.sign({ IdUtilizador: 'apagado', Permissoes: 3 }, JWT_SECRET, { expiresIn: '1h' });
+            req.headers.authorization = `Bearer ${tokenValido}`;
+            userRepository.findAuthById.mockResolvedValue(null);
+
+            await verificarToken(req, res, next);
+
+            expect(res.status).toHaveBeenCalledWith(401);
+            expect(res.json).toHaveBeenCalledWith({ erro: 'Sessao expirada ou invalida. Por favor, faca login novamente.' });
+            expect(next).not.toHaveBeenCalled();
+        });
+
+        it('deve rejeitar token valido se o utilizador estiver inativo', async () => {
+            const tokenValido = jwt.sign({ IdUtilizador: 'inativo', Permissoes: 3 }, JWT_SECRET, { expiresIn: '1h' });
+            req.headers.authorization = `Bearer ${tokenValido}`;
+            userRepository.findAuthById.mockResolvedValue({
+                IdUtilizador: 'inativo',
+                Permissoes: 3,
+                EstaAtivo: false
+            });
+
+            await verificarToken(req, res, next);
+
+            expect(res.status).toHaveBeenCalledWith(401);
+            expect(next).not.toHaveBeenCalled();
+        });
+
+        it('deve rejeitar token expirado', async () => {
+            const tokenExpirado = jwt.sign({ IdUtilizador: 'user-1' }, JWT_SECRET, { expiresIn: '-1s' });
+            req.headers.authorization = `Bearer ${tokenExpirado}`;
+
+            await verificarToken(req, res, next);
+
+            expect(res.status).toHaveBeenCalledWith(401);
+            expect(res.json).toHaveBeenCalledWith({ erro: 'Sessao expirada ou invalida. Por favor, faca login novamente.' });
+        });
+
+        it('deve rejeitar token mal-formado', async () => {
+            req.headers.authorization = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.invalid.signature';
+
+            await verificarToken(req, res, next);
+
+            expect(res.status).toHaveBeenCalledWith(401);
+            expect(res.json).toHaveBeenCalledWith({ erro: 'Sessao expirada ou invalida. Por favor, faca login novamente.' });
+        });
     });
 
-    it('2️⃣ Deve rejeitar se authorization não começar com Bearer', () => {
-        req.headers.authorization = "TokenInvalido 123";
-        verificarToken(req, res, next);
+    describe('verificarPermissao', () => {
+        it('deve permitir quando a permissao atual esta autorizada', () => {
+            req.utilizador = { Permissoes: 3 };
 
-        expect(res.status).toHaveBeenCalledWith(401);
-    });
+            verificarPermissao(3)(req, res, next);
 
-    it('3️⃣ Deve chamar next() e setar req.utilizador se o token for válido', () => {
-        const tokenValido = jwt.sign({ id: 1, email: "teste@example.com", role: "user" }, JWT_SECRET, { expiresIn: '1h' });
-        req.headers.authorization = `Bearer ${tokenValido}`;
+            expect(next).toHaveBeenCalled();
+        });
 
-        verificarToken(req, res, next);
+        it('deve rejeitar quando a permissao atual nao esta autorizada', () => {
+            req.utilizador = { Permissoes: 2 };
 
-        expect(next).toHaveBeenCalled();
-        expect(req.utilizador).toBeDefined();
-        expect(req.utilizador.email).toBe("teste@example.com");
-    });
+            verificarPermissao(3)(req, res, next);
 
-    it('4️⃣ Deve rejeitar com sessão expirada se o token tiver expirado', () => {
-        const tokenExpirado = jwt.sign({ id: 1, email: "teste@example.com" }, JWT_SECRET, { expiresIn: '-1s' });
-        req.headers.authorization = `Bearer ${tokenExpirado}`;
-
-        verificarToken(req, res, next);
-
-        expect(res.status).toHaveBeenCalledWith(401);
-        expect(res.json).toHaveBeenCalledWith({ erro: "Sessão expirada ou inválida. Por favor, faça login novamente." });
-    });
-
-    it('5️⃣ Deve rejeitar token mal-formado', () => {
-        req.headers.authorization = `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.invalid.signature`;
-
-        verificarToken(req, res, next);
-
-        expect(res.status).toHaveBeenCalledWith(401);
-        expect(res.json).toHaveBeenCalledWith({ erro: "Sessão expirada ou inválida. Por favor, faça login novamente." });
+            expect(res.status).toHaveBeenCalledWith(403);
+            expect(next).not.toHaveBeenCalled();
+        });
     });
 });

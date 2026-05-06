@@ -309,7 +309,7 @@ const FinanceManagement = () => {
 
         try {
             await Promise.all(unpaidPayments.map((payment) => pagarPagamento(payment.IdPagamento)));
-            setFeedback('Pagamento registado com sucesso.');
+            setFeedback('Pagamento presencial registado com sucesso.');
             await loadData();
         } catch (err) {
             setError(err.message || 'Nao foi possivel registar o pagamento.');
@@ -346,8 +346,8 @@ const FinanceManagement = () => {
                     <h1>{isGuardian ? 'Pagamentos' : 'Validacao Financeira'}</h1>
                     <p className="finance-subtitle">
                         {isGuardian
-                            ? 'Consulte os pagamentos das aulas dos educandos e liquide os que ja foram validados.'
-                            : 'Reveja aulas reais, acompanhe o prazo de 48 horas e valide as que ja foram confirmadas pelo professor.'}
+                            ? 'Consulte os pagamentos das aulas dos educandos. O pagamento e registado presencialmente pela Direcao.'
+                            : 'Reveja aulas reais, valide as que ja foram confirmadas pelo professor e registe pagamentos presenciais.'}
                     </p>
                 </div>
 
@@ -364,7 +364,7 @@ const FinanceManagement = () => {
             {error && <div className="finance-banner finance-banner--error">{error}</div>}
             {isGuardian && pendingPaymentsCount > 0 && (
                 <div className="finance-banner finance-banner--warning">
-                    Tem {pendingPaymentsCount} pagamento(s) pendente(s) para liquidar.
+                    Tem {pendingPaymentsCount} pagamento(s) pendente(s). O pagamento deve ser feito presencialmente na Direcao.
                 </div>
             )}
 
@@ -403,7 +403,7 @@ const FinanceManagement = () => {
                                             const timeRemaining = calculateTimeRemaining(lesson.deadlineDate, currentTime);
                                             const isFullyValidated = lesson.validation.teacher && lesson.validation.director;
                                             const canValidate = isDirector && lesson.validation.teacher && !lesson.validation.director;
-                                            const canPay = isGuardian && isFullyValidated && !lesson.paid;
+                                            const canRegisterPayment = isDirector && isFullyValidated && !lesson.paid;
 
                                             return (
                                                 <tr key={lesson.id} className={isFullyValidated ? 'finance-row finance-row--validated' : 'finance-row'}>
@@ -458,19 +458,19 @@ const FinanceManagement = () => {
                                                             >
                                                                 {submittingId === lesson.id ? 'A validar...' : 'Aprovar'}
                                                             </button>
-                                                        ) : canPay ? (
+                                                        ) : canRegisterPayment ? (
                                                             <button
                                                                 type="button"
                                                                 className="finance-button finance-button--primary"
                                                                 onClick={() => handlePayLesson(lesson)}
                                                                 disabled={submittingId === lesson.id}
                                                             >
-                                                                {submittingId === lesson.id ? 'A pagar...' : 'Pagar'}
+                                                                {submittingId === lesson.id ? 'A registar...' : 'Registar Pagamento'}
                                                             </button>
                                                         ) : (
                                                             <span className="finance-action-note">
                                                                 {isGuardian
-                                                                    ? (lesson.paid ? 'Sem pagamento pendente' : 'Pagamento disponivel')
+                                                                    ? (lesson.paid ? 'Sem pagamento pendente' : 'Pagamento presencial')
                                                                     : (lesson.validation.teacher ? 'Sem acao pendente' : 'Aguarda professor')}
                                                             </span>
                                                         )}

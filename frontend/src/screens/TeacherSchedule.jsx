@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
     cancelarAulaProfessor,
+    confirmarAulaProfessor,
     getAulas,
     getMinhasDisponibilidades,
     guardarMinhasDisponibilidades
@@ -124,6 +125,16 @@ const getDateKey = (value) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '';
     return toDateInputValue(date);
+};
+
+const buildLessonDateTime = (dateValue, timeValue) => {
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return new Date(0);
+
+    const time = extractTime(timeValue);
+    const [hours, minutes] = time.split(':').map(Number);
+    date.setHours(Number(hours || 0), Number(minutes || 0), 0, 0);
+    return date;
 };
 
 const buildWeeklyDates = (weekday, startDate, endDate) => {
@@ -510,12 +521,15 @@ const TeacherSchedule = () => {
                     id: lesson.IdAula,
                     title: lesson.EstiloDanca?.Nome || 'Aula',
                     date: formatDate(lesson.Data),
+                    endDateTime: buildLessonDateTime(lesson.Data, lesson.HoraFim),
                     time: `${extractTime(lesson.HoraInicio) || '--:--'} - ${extractTime(lesson.HoraFim) || '--:--'}`,
                     studio: lesson.Estudio?.Numero ? `Estudio ${lesson.Estudio.Numero}` : lesson.IdEstudio,
                     students: (lesson.Marcacao || []).map((booking) => ({
                         id: booking.IdAluno,
                         name: booking.Aluno?.Utilizador?.NomeCompleto || booking.IdAluno
                     })),
+                    confirmed: Boolean(lesson.ConfirmacaoProfessor),
+                    validated: Boolean(lesson.ValidacaoDirecao),
                     status: lesson.EstaAtivo === false ? 'cancelled' : 'scheduled'
                 }));
 
@@ -616,6 +630,27 @@ const TeacherSchedule = () => {
             await loadData();
         } catch (err) {
             setError(err.message || 'Nao foi possivel cancelar a aula.');
+        } finally {
+            setSavingLesson(false);
+        }
+    };
+
+    const handleConfirmLesson = async (lesson) => {
+        setSavingLesson(true);
+        setError('');
+
+        try {
+            await confirmarAulaProfessor(lesson.id);
+            await refreshSnapshot();
+            notify({
+                title: 'Conclusao confirmada',
+                message: `${lesson.title} foi marcada como concluida.`,
+                tone: 'success'
+            });
+            setFeedback('Conclusao da aula confirmada. A Direcao ja pode validar no Financeiro.');
+            await loadData();
+        } catch (err) {
+            setError(err.message || 'Nao foi possivel confirmar a aula.');
         } finally {
             setSavingLesson(false);
         }
@@ -1025,30 +1060,46 @@ const TeacherSchedule = () => {
                         </div>
                     ) : (
                         <div className="teacher-grid">
-                            {filteredLessons.filter((lesson) => lesson.status !== 'cancelled').map((lesson) => (
-                                <article key={lesson.id} className="teacher-card">
-                                    <div className="teacher-card-header">
-                                        <span className="teacher-badge teacher-badge--primary">Aula</span>
-                                        <h2>{lesson.title}</h2>
-                                    </div>
+                            {filteredLessons.filter((lesson) => lesson.status !== 'cancelled').map((lesson) => {
+                                const canConfirmCompletion = !lesson.confirmed && lesson.endDateTime <= new Date();
 
-                                    <div className="teacher-card-body">
-                                        <p>{lesson.date}</p>
-                                        <p>{lesson.time}</p>
-                                        <p>{lesson.studio}</p>
-                                        <p>{lesson.students.length} aluno(s) inscrito(s)</p>
-                                    </div>
+                                return (
+                                    <article key={lesson.id} className="teacher-card">
+                                        <div className="teacher-card-header">
+                                            <span className="teacher-badge teacher-badge--primary">
+                                                {lesson.confirmed ? 'Concluida' : 'Por concluir'}
+                                            </span>
+                                            <h2>{lesson.title}</h2>
+                                        </div>
 
-                                    <div className="teacher-card-actions">
-                                        <button type="button" className="teacher-button teacher-button--ghost" onClick={() => openStudentsModal(lesson)}>
-                                            Ver Inscritos
-                                        </button>
-                                        <button type="button" className="teacher-button teacher-button--danger" onClick={() => openCancelModal(lesson)}>
-                                            Cancelar Aula
-                                        </button>
-                                    </div>
-                                </article>
-                            ))}
+                                        <div className="teacher-card-body">
+                                            <p>{lesson.date}</p>
+                                            <p>{lesson.time}</p>
+                                            <p>{lesson.studio}</p>
+                                            <p>{lesson.students.length} aluno(s) inscrito(s)</p>
+                                        </div>
+
+                                        <div className="teacher-card-actions">
+                                            <button type="button" className="teacher-button teacher-button--ghost" onClick={() => openStudentsModal(lesson)}>
+                                                Ver Inscritos
+                                            </button>
+                                            {canConfirmCompletion && (
+                                                <button
+                                                    type="button"
+                                                    className="teacher-button teacher-button--primary"
+                                                    onClick={() => handleConfirmLesson(lesson)}
+                                                    disabled={savingLesson}
+                                                >
+                                                    {savingLesson ? 'A confirmar...' : 'Confirmar Conclusao'}
+                                                </button>
+                                            )}
+                                            <button type="button" className="teacher-button teacher-button--danger" onClick={() => openCancelModal(lesson)}>
+                                                Cancelar Aula
+                                            </button>
+                                        </div>
+                                    </article>
+                                );
+                            })}
 
                             {filteredLessons.filter((lesson) => lesson.status === 'cancelled').map((lesson) => (
                                 <article key={lesson.id} className="teacher-card teacher-card--cancelled">

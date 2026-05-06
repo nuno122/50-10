@@ -23,7 +23,11 @@ const userRepository = {
                     Aluno: true,
                     Professor: {
                         include: {
-                            EstiloProfessor: true
+                            EstiloProfessor: {
+                                include: {
+                                    EstiloDanca: true
+                                }
+                            }
                         }
                     },
                     Encarregado: true
@@ -65,10 +69,27 @@ const userRepository = {
                 Aluno: true,
                 Professor: {
                     include: {
-                        EstiloProfessor: true
+                        EstiloProfessor: {
+                            include: {
+                                EstiloDanca: true
+                            }
+                        }
                     }
                 },
                 Encarregado: true
+            }
+        });
+    },
+
+    findAuthById: async (idUtilizador) => {
+        return await prisma.utilizador.findUnique({
+            where: { IdUtilizador: idUtilizador },
+            select: {
+                IdUtilizador: true,
+                NomeCompleto: true,
+                Email: true,
+                Permissoes: true,
+                EstaAtivo: true
             }
         });
     },
@@ -124,7 +145,11 @@ const userRepository = {
                 Aluno: true,
                 Professor: {
                     include: {
-                        EstiloProfessor: true
+                        EstiloProfessor: {
+                            include: {
+                                EstiloDanca: true
+                            }
+                        }
                     }
                 },
                 Encarregado: true
@@ -158,7 +183,11 @@ const userRepository = {
                 Aluno: true,
                 Professor: {
                     include: {
-                        EstiloProfessor: true
+                        EstiloProfessor: {
+                            include: {
+                                EstiloDanca: true
+                            }
+                        }
                     }
                 },
                 Encarregado: true
@@ -174,7 +203,11 @@ const userRepository = {
                 Aluno: true,
                 Professor: {
                     include: {
-                        EstiloProfessor: true
+                        EstiloProfessor: {
+                            include: {
+                                EstiloDanca: true
+                            }
+                        }
                     }
                 },
                 Encarregado: true

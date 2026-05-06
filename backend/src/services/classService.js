@@ -9,25 +9,54 @@ const criarErro = (mensagem, statusCode) => {
 
 const TIPOS_AULA_VALIDOS = ['Regular', 'Particular'];
 
+const normalizeText = (value) => String(value || '').trim().toLowerCase();
+
+const relationMatchesStyle = (relation, estilo) => (
+    relation.IdEstiloDanca === estilo?.IdEstiloDanca ||
+    normalizeText(relation.EstiloDanca?.Nome) === normalizeText(estilo?.Nome)
+);
+
+const toMinutes = (value) => {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+        return (date.getUTCHours() * 60) + date.getUTCMinutes();
+    }
+
+    const match = String(value || '').match(/(\d{2}):(\d{2})/);
+    if (!match) {
+        return null;
+    }
+
+    return (Number(match[1]) * 60) + Number(match[2]);
+};
+
 const intervaloCabeNaDisponibilidade = (horaInicio, horaFim, disponibilidades = []) => {
-    const inicioAula = new Date(horaInicio).getTime();
-    const fimAula = new Date(horaFim).getTime();
+    const inicioAula = toMinutes(horaInicio);
+    const fimAula = toMinutes(horaFim);
+
+    if (!Number.isFinite(inicioAula) || !Number.isFinite(fimAula)) {
+        return false;
+    }
 
     return disponibilidades.some((disponibilidade) => {
-        const inicioDisponivel = new Date(disponibilidade.HoraInicio).getTime();
-        const fimDisponivel = new Date(disponibilidade.HoraFim).getTime();
+        const inicioDisponivel = toMinutes(disponibilidade.HoraInicio);
+        const fimDisponivel = toMinutes(disponibilidade.HoraFim);
+        if (!Number.isFinite(inicioDisponivel) || !Number.isFinite(fimDisponivel)) {
+            return false;
+        }
+
         return inicioAula >= inicioDisponivel && fimAula <= fimDisponivel;
     });
 };
 
-const professorSuportaEstilo = (professor, idEstiloDanca) => (
+const professorSuportaEstilo = (professor, estilo) => (
     Array.isArray(professor?.EstiloProfessor) &&
-    professor.EstiloProfessor.some((item) => item.IdEstiloDanca === idEstiloDanca)
+    professor.EstiloProfessor.some((item) => relationMatchesStyle(item, estilo))
 );
 
-const estudioSuportaEstilo = (estudio, idEstiloDanca) => (
+const estudioSuportaEstilo = (estudio, estilo) => (
     Array.isArray(estudio?.EstudioEstilo) &&
-    estudio.EstudioEstilo.some((item) => item.IdEstiloDanca === idEstiloDanca)
+    estudio.EstudioEstilo.some((item) => relationMatchesStyle(item, estilo))
 );
 
 const ConsultarVagas = async () => {
@@ -71,7 +100,7 @@ const criarAula = async (dados) => {
         throw criarErro('O professor selecionado nao existe na tabela Professor.', 400);
     }
 
-    if (!professorSuportaEstilo(professor, dados.IdEstiloDanca)) {
+    if (!professorSuportaEstilo(professor, estilo)) {
         throw criarErro('O professor selecionado nao esta associado ao estilo escolhido.', 400);
     }
 
@@ -79,7 +108,7 @@ const criarAula = async (dados) => {
         throw criarErro('O estudio selecionado nao existe.', 400);
     }
 
-    if (!estudioSuportaEstilo(estudio, dados.IdEstiloDanca)) {
+    if (!estudioSuportaEstilo(estudio, estilo)) {
         throw criarErro('O estudio selecionado nao suporta o estilo escolhido.', 400);
     }
 
@@ -91,8 +120,12 @@ const criarAula = async (dados) => {
         throw criarErro('A capacidade da aula excede a capacidade do estudio selecionado.', 400);
     }
 
-    const novaHoraInicio = new Date(dados.HoraInicio).getTime();
-    const novaHoraFim = new Date(dados.HoraFim).getTime();
+    const novaHoraInicio = toMinutes(dados.HoraInicio);
+    const novaHoraFim = toMinutes(dados.HoraFim);
+
+    if (!Number.isFinite(novaHoraInicio) || !Number.isFinite(novaHoraFim)) {
+        throw criarErro('Horario da aula invalido.', 400);
+    }
 
     if (novaHoraFim <= novaHoraInicio) {
         throw criarErro('A hora de fim tem de ser posterior a hora de inicio.', 400);
@@ -109,8 +142,8 @@ const criarAula = async (dados) => {
     }
 
     const aulaSobrepostaNoEstudio = aulasNoEstudio.find((aulaExistente) => {
-        const existenteInicio = new Date(aulaExistente.HoraInicio).getTime();
-        const existenteFim = new Date(aulaExistente.HoraFim).getTime();
+        const existenteInicio = toMinutes(aulaExistente.HoraInicio);
+        const existenteFim = toMinutes(aulaExistente.HoraFim);
         return novaHoraInicio < existenteFim && novaHoraFim > existenteInicio;
     });
 
@@ -119,8 +152,8 @@ const criarAula = async (dados) => {
     }
 
     const aulaSobrepostaDoProfessor = aulasDoProfessorNoDia.find((aulaExistente) => {
-        const existenteInicio = new Date(aulaExistente.HoraInicio).getTime();
-        const existenteFim = new Date(aulaExistente.HoraFim).getTime();
+        const existenteInicio = toMinutes(aulaExistente.HoraInicio);
+        const existenteFim = toMinutes(aulaExistente.HoraFim);
         return novaHoraInicio < existenteFim && novaHoraFim > existenteInicio;
     });
 

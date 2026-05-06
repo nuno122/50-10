@@ -40,7 +40,7 @@ const marcacaoDetalhadaInclude = {
         include: aulaResumoInclude
     },
     Pagamento: true,
-    DiretorCancelamento: {
+    Utilizador: {
         select: {
             IdUtilizador: true,
             NomeCompleto: true
@@ -119,7 +119,7 @@ const bookingRepository = {
                     include: aulaResumoInclude
                 },
                 Pagamento: true,
-                DiretorCancelamento: {
+                Utilizador: {
                     select: {
                         IdUtilizador: true,
                         NomeCompleto: true
