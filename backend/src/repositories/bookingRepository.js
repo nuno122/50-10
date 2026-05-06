@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const paymentRepository = require('./paymentRepository');
 
 const ESTADOS_CANCELAMENTO = {
     SEM_PEDIDO: 'SemPedido',
@@ -164,19 +165,24 @@ const bookingRepository = {
     create,
 
     cancelar: async (idMarcacao, motivo, estadoCancelamento = ESTADOS_CANCELAMENTO.APROVADO_AUTOMATICO) => {
-        return await prisma.marcacao.update({
-            where: { IdMarcacao: idMarcacao },
-            data: {
-                EstaAtivo: false,
-                MotivoCancelamento: motivo ?? 'Cancelado pelo aluno',
-                EstadoCancelamento: estadoCancelamento,
-                DataPedidoCancelamento: new Date(),
-                DataDecisaoCancelamento: new Date(),
-                ObservacaoDirecaoCancelamento: estadoCancelamento === ESTADOS_CANCELAMENTO.APROVADO_AUTOMATICO
-                    ? 'Cancelamento processado automaticamente com antecedencia minima de 24h.'
-                    : null
-            },
-            include: marcacaoDetalhadaInclude
+        return await prisma.$transaction(async (tx) => {
+            const marcacao = await tx.marcacao.update({
+                where: { IdMarcacao: idMarcacao },
+                data: {
+                    EstaAtivo: false,
+                    MotivoCancelamento: motivo ?? 'Cancelado pelo aluno',
+                    EstadoCancelamento: estadoCancelamento,
+                    DataPedidoCancelamento: new Date(),
+                    DataDecisaoCancelamento: new Date(),
+                    ObservacaoDirecaoCancelamento: estadoCancelamento === ESTADOS_CANCELAMENTO.APROVADO_AUTOMATICO
+                        ? 'Cancelamento processado automaticamente com antecedencia minima de 24h.'
+                        : null
+                },
+                include: marcacaoDetalhadaInclude
+            });
+
+            await paymentRepository.cancelarPagamentosPendentesDaMarcacao(idMarcacao, tx);
+            return marcacao;
         });
     },
 
@@ -208,16 +214,21 @@ const bookingRepository = {
     },
 
     aprovarPedidoCancelamento: async (idMarcacao, idDiretor, observacao) => {
-        return await prisma.marcacao.update({
-            where: { IdMarcacao: idMarcacao },
-            data: {
-                EstaAtivo: false,
-                EstadoCancelamento: ESTADOS_CANCELAMENTO.APROVADO_DIRECAO,
-                DataDecisaoCancelamento: new Date(),
-                ObservacaoDirecaoCancelamento: observacao ?? null,
-                IdDiretorCancelamento: idDiretor
-            },
-            include: marcacaoDetalhadaInclude
+        return await prisma.$transaction(async (tx) => {
+            const marcacao = await tx.marcacao.update({
+                where: { IdMarcacao: idMarcacao },
+                data: {
+                    EstaAtivo: false,
+                    EstadoCancelamento: ESTADOS_CANCELAMENTO.APROVADO_DIRECAO,
+                    DataDecisaoCancelamento: new Date(),
+                    ObservacaoDirecaoCancelamento: observacao ?? null,
+                    IdDiretorCancelamento: idDiretor
+                },
+                include: marcacaoDetalhadaInclude
+            });
+
+            await paymentRepository.cancelarPagamentosPendentesDaMarcacao(idMarcacao, tx);
+            return marcacao;
         });
     },
 

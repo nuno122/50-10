@@ -25,6 +25,16 @@ const formatDateTime = (dateValue, timeValue) => {
     return `${new Intl.DateTimeFormat('pt-PT').format(date)} as ${time}`;
 };
 
+const normalizePaymentStatus = (value) => String(value || '').trim().toLowerCase();
+
+const isPendingPayment = (payment) => {
+    const status = normalizePaymentStatus(payment?.EstadoPagamento);
+    return Boolean(payment)
+        && payment?.Marcacao?.EstaAtivo !== false
+        && status !== 'pago'
+        && status !== 'cancelado';
+};
+
 const isFutureRegularLesson = (lesson) => {
     if (!lesson || lesson.EstaAtivo === false) return false;
     if ((lesson.TipoAula || 'Regular') !== 'Regular') return false;
@@ -103,7 +113,7 @@ const buildStudentSnapshot = async () => {
                 teacherConfirmed: Boolean(lesson?.ConfirmacaoProfessor),
                 directorValidated: Boolean(lesson?.ValidacaoDirecao),
                 pendingPaymentIds: (booking.Pagamento || [])
-                    .filter((payment) => payment.EstadoPagamento !== 'Pago')
+                    .filter(isPendingPayment)
                     .map((payment) => payment.IdPagamento)
             };
         })
@@ -127,7 +137,7 @@ const buildGuardianSnapshot = async () => {
             when: formatDateTime(lesson.Data, lesson.HoraInicio)
         })),
         pendingPaymentIds: (pagamentos || [])
-            .filter((payment) => payment.EstadoPagamento !== 'Pago')
+            .filter(isPendingPayment)
             .map((payment) => payment.IdPagamento)
     };
 };

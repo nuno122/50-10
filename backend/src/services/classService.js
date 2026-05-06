@@ -13,7 +13,11 @@ const normalizeText = (value) => String(value || '').trim().toLowerCase();
 
 const relationMatchesStyle = (relation, estilo) => (
     relation.IdEstiloDanca === estilo?.IdEstiloDanca ||
-    normalizeText(relation.EstiloDanca?.Nome) === normalizeText(estilo?.Nome)
+    (
+        Boolean(normalizeText(relation.EstiloDanca?.Nome)) &&
+        Boolean(normalizeText(estilo?.Nome)) &&
+        normalizeText(relation.EstiloDanca?.Nome) === normalizeText(estilo?.Nome)
+    )
 );
 
 const toMinutes = (value) => {
@@ -29,6 +33,23 @@ const toMinutes = (value) => {
 
     return (Number(match[1]) * 60) + Number(match[2]);
 };
+
+const construirDataHoraAula = (aula, campoHora = 'HoraFim') => {
+    const data = new Date(aula?.Data);
+    if (Number.isNaN(data.getTime())) {
+        return new Date(0);
+    }
+
+    const hora = new Date(aula?.[campoHora]);
+    if (Number.isNaN(hora.getTime())) {
+        return new Date(0);
+    }
+
+    data.setHours(hora.getUTCHours(), hora.getUTCMinutes(), 0, 0);
+    return data;
+};
+
+const aulaTerminou = (aula) => construirDataHoraAula(aula, 'HoraFim') <= new Date();
 
 const intervaloCabeNaDisponibilidade = (horaInicio, horaFim, disponibilidades = []) => {
     const inicioAula = toMinutes(horaInicio);
@@ -220,6 +241,24 @@ const criarAulasEmLote = async (dados = {}) => {
 };
 
 const ConfirmarPresenca = async (idAula) => {
+    const aula = await classRepo.findByIdComAlunos(idAula);
+    if (!aula) {
+        throw criarErro('Aula nao encontrada.', 404);
+    }
+
+    if (aula.EstaAtivo === false) {
+        throw criarErro('Nao e possivel confirmar uma aula cancelada.', 400);
+    }
+
+    if (!aulaTerminou(aula)) {
+        throw criarErro('So e possivel confirmar a conclusao depois da aula terminar.', 400);
+    }
+
+    const marcacoesAtivas = aula.Marcacao || [];
+    if (marcacoesAtivas.length === 0) {
+        throw criarErro('Nao e possivel confirmar uma aula sem alunos inscritos.', 400);
+    }
+
     return await classRepo.ValidarConclusaoAula(idAula, true);
 };
 
@@ -231,6 +270,10 @@ const cancelarAula = async (idAula, utilizador) => {
 
     if (aula.EstaAtivo === false) {
         throw criarErro('A aula ja se encontra cancelada.', 400);
+    }
+
+    if (aulaTerminou(aula)) {
+        throw criarErro('Nao e possivel cancelar uma aula que ja terminou.', 400);
     }
 
     if (utilizador?.Permissoes === PERMISSOES.PROFESSOR && aula.IdProfessor !== utilizador.IdUtilizador) {
@@ -246,15 +289,27 @@ const cancelarAula = async (idAula, utilizador) => {
 };
 
 const validarAula = async (idAula) => {
-    await classRepo.atualizarValidacaoDirecao(idAula);
-
     const aula = await classRepo.findByIdComAlunos(idAula);
     if (!aula) {
-        throw new Error('Aula nao encontrada.');
+        throw criarErro('Aula nao encontrada.', 404);
     }
 
-    const paymentService = require('./paymentService');
+    if (aula.EstaAtivo === false) {
+        throw criarErro('Nao e possivel validar uma aula cancelada.', 400);
+    }
+
+    if (!aula.ConfirmacaoProfessor) {
+        throw criarErro('A aula tem de ser confirmada pelo professor antes da validacao da Direcao.', 400);
+    }
+
     const marcacoesAtivas = aula.Marcacao;
+    if (marcacoesAtivas.length === 0) {
+        throw criarErro('Nao e possivel validar uma aula sem alunos inscritos.', 400);
+    }
+
+    await classRepo.atualizarValidacaoDirecao(idAula);
+
+    const paymentService = require('./paymentService');
     const resultadoPagamentos = await paymentService.GerarPagamento(marcacoesAtivas, aula.Preco);
 
     return {

@@ -116,19 +116,41 @@ const countInventoryUnits = (inventory) => (
 
 const createActivity = (action, when, type) => ({ action, when, type });
 
+const getActiveBookingsCount = (aula) => (
+    (aula.Marcacao || []).filter((booking) => booking.EstaAtivo !== false).length
+);
+
+const normalizePaymentStatus = (value) => String(value || '').trim().toLowerCase();
+
+const isPendingPayment = (payment) => {
+    const status = normalizePaymentStatus(payment?.EstadoPagamento);
+    return Boolean(payment)
+        && payment?.Marcacao?.EstaAtivo !== false
+        && status !== 'pago'
+        && status !== 'cancelado';
+};
+
 const buildDirectorDashboard = ({ users, aulas, inventory, estudios, pagamentos, aluguers }) => {
     const now = new Date();
     const { start, end } = getWeekRange();
     const activeClasses = aulas.filter((aula) => aula.EstaAtivo);
     const weeklyClasses = activeClasses.filter((aula) => isWithinRange(getAulaDateTime(aula), start, end));
-    const pendingValidation = activeClasses.filter((aula) => !aula.ValidacaoDirecao);
-    const pendingTeacherConfirmation = activeClasses.filter((aula) => !aula.ConfirmacaoProfessor);
+    const pendingValidation = activeClasses.filter((aula) => (
+        getActiveBookingsCount(aula) > 0 &&
+        aula.ConfirmacaoProfessor &&
+        !aula.ValidacaoDirecao
+    ));
+    const pendingTeacherConfirmation = activeClasses.filter((aula) => (
+        getActiveBookingsCount(aula) > 0 &&
+        !aula.ConfirmacaoProfessor &&
+        getAulaDateTime(aula) <= now
+    ));
     const nextClass = [...activeClasses]
         .map((aula) => ({ aula, date: getAulaDateTime(aula) }))
         .filter((entry) => entry.date > now)
         .sort((a, b) => a.date - b.date)[0];
     const overduePayments = pagamentos.filter((pagamento) => (
-        pagamento.EstadoPagamento !== 'Pago' &&
+        isPendingPayment(pagamento) &&
         pagamento.PrazoPagamento &&
         new Date(pagamento.PrazoPagamento) < now
     ));
@@ -171,7 +193,9 @@ const buildDirectorDashboard = ({ users, aulas, inventory, estudios, pagamentos,
     return {
         welcome: "Bem-vindo ao painel de gestao da Ent'Artes",
         note: pendingValidation.length > 0
-            ? `Tem ${pendingValidation.length} aula(s) por validar e ${pendingTeacherConfirmation.length} a aguardar confirmacao do professor.`
+            ? `Tem ${pendingValidation.length} aula(s) prontas para validacao da Direcao.`
+            : pendingTeacherConfirmation.length > 0
+                ? `${pendingTeacherConfirmation.length} aula(s) terminadas aguardam confirmacao do professor.`
             : overduePayments.length > 0
                 ? `Existem ${overduePayments.length} pagamento(s) em atraso para acompanhar.`
                 : '',
@@ -183,7 +207,7 @@ const buildDirectorDashboard = ({ users, aulas, inventory, estudios, pagamentos,
         ],
         quick: [
             ['Proxima aula', nextClass ? getUpcomingLabel(nextClass.date) : 'Sem aula futura'],
-            ['Aguardam confirmacao do professor', pendingTeacherConfirmation.length],
+            ['Aulas terminadas sem confirmacao', pendingTeacherConfirmation.length],
             ['Estudios ativos', estudios.length],
             ['Unidades alugadas', rentedItems]
         ],
@@ -204,7 +228,11 @@ const buildTeacherDashboard = ({ aulas, user }) => {
         .filter((entry) => entry.date > now)
         .sort((a, b) => a.date - b.date)[0];
     const pendingDirectorValidation = ownClasses.filter((aula) => aula.ConfirmacaoProfessor && !aula.ValidacaoDirecao);
-    const pendingOwnConfirmation = ownClasses.filter((aula) => !aula.ConfirmacaoProfessor && getAulaDateTime(aula) <= now);
+    const pendingOwnConfirmation = ownClasses.filter((aula) => (
+        getActiveBookingsCount(aula) > 0 &&
+        !aula.ConfirmacaoProfessor &&
+        getAulaDateTime(aula) <= now
+    ));
 
     return {
         welcome: 'Gerencie as suas aulas e disponibilidade',
@@ -250,7 +278,7 @@ const buildStudentDashboard = ({ marcacoes, aulas, user }) => {
 
     const nextBooking = futureBookings[0];
     const pendingPayments = activeBookings.flatMap((marcacao) => marcacao.Pagamento || [])
-        .filter((pagamento) => pagamento.EstadoPagamento !== 'Pago');
+        .filter(isPendingPayment);
     const ownClasses = activeBookings.map((marcacao) => aulasMap.get(marcacao.IdAula) || marcacao.Aula).filter(Boolean);
     const uniqueTeachers = new Set(ownClasses.map((aula) => aula.IdProfessor));
     const validatedFutureBookings = futureBookings.filter((entry) => entry.aula?.ValidacaoDirecao);
@@ -291,7 +319,7 @@ const buildStudentDashboard = ({ marcacoes, aulas, user }) => {
 const buildGuardianDashboard = ({ aluguers, pagamentos, aulas, inventory, user, students }) => {
     const ownRentals = aluguers.filter((aluguer) => aluguer.IdUtilizador === user?.Id || aluguer.Utilizador?.IdUtilizador === user?.Id);
     const ownPayments = pagamentos || [];
-    const pendingPayments = ownPayments.filter((pagamento) => pagamento.EstadoPagamento !== 'Pago');
+    const pendingPayments = ownPayments.filter(isPendingPayment);
     const availableLessons = [...aulas]
         .filter((aula) => isFutureRegularLesson(aula))
         .map((aula) => ({ aula, date: getAulaDateTime(aula) }))

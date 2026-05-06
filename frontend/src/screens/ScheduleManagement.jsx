@@ -147,6 +147,24 @@ const buildIsoTime = (date, time) => {
     return `${dayText}T${time}:00.000Z`;
 };
 
+const buildLessonDateTime = (dateValue, timeValue) => {
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return new Date(0);
+
+    const time = formatTime(timeValue);
+    const [hours, minutes] = time.split(':').map(Number);
+    date.setHours(Number(hours || 0), Number(minutes || 0), 0, 0);
+    return date;
+};
+
+const getDirectorLessonStatus = (lesson) => {
+    if (lesson.validated) return 'Concluida';
+    if (lesson.enrolled === 0 && lesson.endDateTime <= new Date()) return 'Expirada sem inscritos';
+    if (!lesson.confirmed && lesson.endDateTime <= new Date()) return 'Aguarda conclusao do professor';
+    if (!lesson.confirmed) return 'Agendada';
+    return 'Aguarda validacao da direcao';
+};
+
 const computeEndTime = (startTime, durationMinutes) => {
     if (!startTime || !durationMinutes) return '';
     const [hours, minutes] = startTime.split(':').map(Number);
@@ -687,8 +705,12 @@ const ScheduleManagement = () => {
         const lessonDate = new Date(aula.Data);
         const startMinutes = toMinutes(aula.HoraInicio);
         const endMinutes = toMinutes(aula.HoraFim);
+        const enrolled = (aula.Marcacao || []).length;
+        const confirmed = Boolean(aula.ConfirmacaoProfessor);
+        const validated = Boolean(aula.ValidacaoDirecao);
         const studioLabel = aula.Estudio?.Numero ? `Estudio ${aula.Estudio.Numero}` : aula.IdEstudio;
         const duration = Math.max(endMinutes - startMinutes, 30);
+        const endDateTime = buildLessonDateTime(aula.Data, aula.HoraFim);
 
         return {
             id: aula.IdAula,
@@ -703,9 +725,10 @@ const ScheduleManagement = () => {
             lessonType: aula.TipoAula || 'Regular',
             studio: studioLabel,
             capacity: aula.CapacidadeMaxima,
-            enrolled: (aula.Marcacao || []).length,
-            confirmed: Boolean(aula.ConfirmacaoProfessor),
-            validated: Boolean(aula.ValidacaoDirecao),
+            enrolled,
+            confirmed,
+            validated,
+            endDateTime,
             dateLabel: formatDate(aula.Data)
         };
     }), [aulas]);
@@ -1632,7 +1655,7 @@ const ScheduleManagement = () => {
                             </div>
                             <div className="schedule-lesson-detail-card">
                                 <span>Validacao da direcao</span>
-                                <strong>{selectedLesson.validated ? 'Concluida' : 'Pendente'}</strong>
+                                <strong>{getDirectorLessonStatus(selectedLesson)}</strong>
                             </div>
                         </div>
                     </section>

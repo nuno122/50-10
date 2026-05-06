@@ -13,20 +13,6 @@ const paymentRepository = {
                 IdMarcacao: dadosPagamento.IdMarcacao || null
             }
         });
-    },
-
-    // Alias usado pelo paymentService.GerarPagamento
-    create: async (dadosPagamento) => {
-        return await prisma.pagamento.create({
-            data: {
-                DataPagamento: null,
-                PrazoPagamento: dadosPagamento.DataLimite,
-                Custo: dadosPagamento.Valor,
-                EstadoPagamento: dadosPagamento.estado || 'Pendente',
-                IdAluguer: null,
-                IdAluno: dadosPagamento.IdAluno,
-            }
-        });
     }
 };
 
@@ -132,10 +118,23 @@ const registarRecebimento = async (idPagamento) => {
     });
 };
 
+const cancelarPagamentosPendentesDaMarcacao = async (idMarcacao, tx = prisma) => {
+    return await tx.pagamento.updateMany({
+        where: {
+            IdMarcacao: idMarcacao,
+            EstadoPagamento: 'Pendente'
+        },
+        data: {
+            EstadoPagamento: 'Cancelado'
+        }
+    });
+};
+
 module.exports = {
     ...paymentRepository,
     buscarTodosPagamentos,
     buscarPagamentosPorAlunos,
     buscarPagamentoPorId,
-    registarRecebimento
+    registarRecebimento,
+    cancelarPagamentosPendentesDaMarcacao
 };

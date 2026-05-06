@@ -137,6 +137,13 @@ const buildLessonDateTime = (dateValue, timeValue) => {
     return date;
 };
 
+const getLessonCompletionLabel = (lesson, now = new Date()) => {
+    if (lesson.confirmed) return 'Concluida';
+    if (lesson.endDateTime > now) return 'Agendada';
+    if (lesson.students.length === 0) return 'Expirada sem inscritos';
+    return 'Por concluir';
+};
+
 const buildWeeklyDates = (weekday, startDate, endDate) => {
     const dates = [];
     const current = new Date(startDate);
@@ -1061,13 +1068,18 @@ const TeacherSchedule = () => {
                     ) : (
                         <div className="teacher-grid">
                             {filteredLessons.filter((lesson) => lesson.status !== 'cancelled').map((lesson) => {
-                                const canConfirmCompletion = !lesson.confirmed && lesson.endDateTime <= new Date();
+                                const now = new Date();
+                                const lessonEnded = lesson.endDateTime <= now;
+                                const hasStudents = lesson.students.length > 0;
+                                const canConfirmCompletion = !lesson.confirmed && lessonEnded && hasStudents;
+                                const canCancelLesson = !lesson.confirmed && !lessonEnded;
+                                const completionLabel = getLessonCompletionLabel(lesson, now);
 
                                 return (
                                     <article key={lesson.id} className="teacher-card">
                                         <div className="teacher-card-header">
                                             <span className="teacher-badge teacher-badge--primary">
-                                                {lesson.confirmed ? 'Concluida' : 'Por concluir'}
+                                                {completionLabel}
                                             </span>
                                             <h2>{lesson.title}</h2>
                                         </div>
@@ -1093,9 +1105,11 @@ const TeacherSchedule = () => {
                                                     {savingLesson ? 'A confirmar...' : 'Confirmar Conclusao'}
                                                 </button>
                                             )}
-                                            <button type="button" className="teacher-button teacher-button--danger" onClick={() => openCancelModal(lesson)}>
-                                                Cancelar Aula
-                                            </button>
+                                            {canCancelLesson && (
+                                                <button type="button" className="teacher-button teacher-button--danger" onClick={() => openCancelModal(lesson)}>
+                                                    Cancelar Aula
+                                                </button>
+                                            )}
                                         </div>
                                     </article>
                                 );
