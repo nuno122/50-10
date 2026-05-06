@@ -1,86 +1,80 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNotifications } from '../contexts/NotificationContext';
-import {
-    cancelarMarcacaoEncarregado,
-    criarMarcacaoEncarregado,
-    getAlunosEncarregado,
-    getAulas,
-    getMarcacoesEncarregado
-} from '../services/api';
+import { cancelarMarcacaoEncarregado, getAlunosEncarregado, getMarcacoesEncarregado } from '../services/api';
 
-const formatDateKey = (value) => {
+const formatDate = (value) => {
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '';
-    return date.toISOString().split('T')[0];
+    if (Number.isNaN(date.getTime())) return '-';
+    return new Intl.DateTimeFormat('pt-PT', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    }).format(date);
 };
 
-const formatTime = (value) => {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '--:--';
-    return date.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+const extractTime = (value) => {
+    const text = String(value || '');
+    const match = text.match(/(\d{2}):(\d{2})/);
+    return match ? `${match[1]}:${match[2]}` : '--:--';
 };
 
-const getStudioLabel = (lesson) => lesson.Estudio?.Numero ? `Estudio ${lesson.Estudio.Numero}` : 'Estudio';
+const buildLessonDate = (booking) => {
+    const lesson = booking.Aula;
+    const date = new Date(lesson?.Data);
+    if (Number.isNaN(date.getTime())) return new Date(0);
 
-const isAvailableGuardianLesson = (lesson) => {
-    if (!lesson || lesson.EstaAtivo === false) return false;
-    if ((lesson.TipoAula || 'Regular') !== 'Regular') return false;
+    const [hours, minutes] = extractTime(lesson?.HoraInicio).split(':').map(Number);
+    date.setHours(Number(hours || 0), Number(minutes || 0), 0, 0);
+    return date;
+};
 
-    const lessonDate = new Date(lesson.Data);
-    if (Number.isNaN(lessonDate.getTime())) return false;
+const isFutureBooking = (booking) => buildLessonDate(booking) > new Date();
 
-    lessonDate.setHours(0, 0, 0, 0);
+const isWithin24Hours = (booking) => {
+    const diff = buildLessonDate(booking).getTime() - Date.now();
+    return diff > 0 && diff < (24 * 60 * 60 * 1000);
+};
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+const getStatusMeta = (booking) => {
+    if (booking.EstaAtivo === false) {
+        return { label: 'Cancelada', tone: 'danger' };
+    }
 
-    return lessonDate >= today;
+    switch (booking.EstadoCancelamento) {
+        case 'Pendente':
+            return { label: 'Cancelamento pendente', tone: 'warning' };
+        case 'RejeitadoDirecao':
+            return { label: 'Cancelamento rejeitado', tone: 'info' };
+        case 'AprovadoAutomatico':
+        case 'AprovadoDirecao':
+            return { label: 'Cancelada', tone: 'danger' };
+        default:
+            return { label: 'Ativa', tone: 'success' };
+    }
 };
 
 const GuardianLessons = () => {
-    const { notify, refreshSnapshot } = useNotifications();
-    const [lessons, setLessons] = useState([]);
     const [students, setStudents] = useState([]);
-    const [bookings, setBookings] = useState([]);
     const [selectedStudentId, setSelectedStudentId] = useState('');
-    const [selectedDate, setSelectedDate] = useState('');
-    const [selectedLesson, setSelectedLesson] = useState(null);
+    const [bookings, setBookings] = useState([]);
+    const [selectedBooking, setSelectedBooking] = useState(null);
+    const [cancelReason, setCancelReason] = useState('');
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [feedback, setFeedback] = useState('');
 
-    const loadBaseData = async () => {
+    const loadStudents = async () => {
         setLoading(true);
         setError('');
 
         try {
-            const [aulasData, studentsData] = await Promise.all([
-                getAulas(),
-                getAlunosEncarregado()
-            ]);
-
-            const availableLessons = (aulasData || [])
-                .filter((lesson) => isAvailableGuardianLesson(lesson))
-                .sort((left, right) => {
-                    const leftDate = new Date(`${formatDateKey(left.Data)}T${formatTime(left.HoraInicio)}`);
-                    const rightDate = new Date(`${formatDateKey(right.Data)}T${formatTime(right.HoraInicio)}`);
-                    return leftDate - rightDate;
-                });
-
-            setLessons(availableLessons);
-            setStudents(studentsData || []);
-
-            if ((studentsData || []).length > 0) {
-                setSelectedStudentId((current) => current || studentsData[0].IdAluno);
-            }
-
-            const dates = [...new Set(availableLessons.map((lesson) => formatDateKey(lesson.Data)))];
-            if (dates.length > 0) {
-                setSelectedDate((current) => current || dates[0]);
+            const data = await getAlunosEncarregado();
+            setStudents(data || []);
+            if ((data || []).length > 0) {
+                setSelectedStudentId((current) => current || data[0].IdAluno);
             }
         } catch (err) {
-            setError(err.message || 'Nao foi possivel carregar as aulas.');
+            setError(err.message || 'Nao foi possivel carregar os educandos.');
         } finally {
             setLoading(false);
         }
@@ -94,138 +88,49 @@ const GuardianLessons = () => {
 
         try {
             const data = await getMarcacoesEncarregado(idAluno);
-            setBookings(data || []);
+            const futureBookings = (data || [])
+                .filter(isFutureBooking)
+                .sort((left, right) => buildLessonDate(left) - buildLessonDate(right));
+            setBookings(futureBookings);
         } catch (err) {
-            setError(err.message || 'Nao foi possivel carregar as inscricoes.');
+            setError(err.message || 'Nao foi possivel carregar as aulas do educando.');
         }
     };
 
     useEffect(() => {
-        loadBaseData();
+        loadStudents();
     }, []);
 
     useEffect(() => {
         loadBookings(selectedStudentId);
     }, [selectedStudentId]);
 
-    const availableDates = useMemo(() => (
-        [...new Set(lessons.map((lesson) => formatDateKey(lesson.Data)))]
-    ), [lessons]);
+    const selectedStudent = useMemo(
+        () => students.find((student) => student.IdAluno === selectedStudentId),
+        [students, selectedStudentId]
+    );
 
-    const selectedDateIndex = availableDates.indexOf(selectedDate);
-
-    const bookingsByLesson = useMemo(() => {
-        const map = new Map();
-        bookings
-            .filter((booking) => booking.EstaAtivo !== false)
-            .forEach((booking) => {
-                map.set(booking.IdAula, booking);
-            });
-        return map;
-    }, [bookings]);
-
-    const dayLessons = useMemo(() => (
-        lessons
-            .filter((lesson) => formatDateKey(lesson.Data) === selectedDate)
-            .map((lesson) => {
-                const activeEnrollments = (lesson.Marcacao || []).filter((booking) => booking.EstaAtivo !== false).length;
-                const booking = bookingsByLesson.get(lesson.IdAula);
-
-                return {
-                    id: lesson.IdAula,
-                    date: lesson.Data,
-                    time: formatTime(lesson.HoraInicio),
-                    studio: getStudioLabel(lesson),
-                    teacher: lesson.Professor?.Utilizador?.NomeCompleto || 'Professor por definir',
-                    style: lesson.EstiloDanca?.Nome || 'Estilo por definir',
-                    capacity: Number(lesson.CapacidadeMaxima || 0),
-                    enrolled: activeEnrollments,
-                    isEnrolled: Boolean(booking),
-                    bookingId: booking?.IdMarcacao || null
-                };
-            })
-    ), [bookingsByLesson, lessons, selectedDate]);
-
-    const lessonsByStudio = useMemo(() => (
-        dayLessons.reduce((accumulator, lesson) => {
-            if (!accumulator[lesson.studio]) {
-                accumulator[lesson.studio] = [];
-            }
-            accumulator[lesson.studio].push(lesson);
-            return accumulator;
-        }, {})
-    ), [dayLessons]);
-
-    const selectedStudent = students.find((student) => student.IdAluno === selectedStudentId);
-    const formattedDay = selectedDate
-        ? new Date(selectedDate).toLocaleDateString('pt-PT', { weekday: 'long' })
-        : '';
-    const formattedDate = selectedDate
-        ? new Date(selectedDate).toLocaleDateString('pt-PT', { day: 'numeric', month: 'long', year: 'numeric' })
-        : '';
-
-    const prevDate = () => {
-        if (selectedDateIndex > 0) {
-            setSelectedDate(availableDates[selectedDateIndex - 1]);
-        }
+    const openCancellationModal = (booking) => {
+        setSelectedBooking(booking);
+        setCancelReason('');
+        setError('');
+        setFeedback('');
     };
 
-    const nextDate = () => {
-        if (selectedDateIndex >= 0 && selectedDateIndex < availableDates.length - 1) {
-            setSelectedDate(availableDates[selectedDateIndex + 1]);
-        }
-    };
-
-    const handleEnroll = async () => {
-        if (!selectedLesson || !selectedStudentId) return;
+    const handleRequestCancellation = async () => {
+        if (!selectedBooking) return;
 
         setSubmitting(true);
         setError('');
         setFeedback('');
 
         try {
-            await criarMarcacaoEncarregado({
-                IdAluno: selectedStudentId,
-                IdAula: selectedLesson.id
-            });
+            const result = await cancelarMarcacaoEncarregado(selectedBooking.IdMarcacao, cancelReason);
+            setFeedback(result?.mensagem || 'Pedido de cancelamento enviado.');
+            setSelectedBooking(null);
             await loadBookings(selectedStudentId);
-            await loadBaseData();
-            await refreshSnapshot();
-            notify({
-                title: 'Inscricao concluida',
-                message: `${selectedLesson.style} foi adicionada ao horario do educando.`,
-                tone: 'success'
-            });
-            setFeedback('Inscricao realizada com sucesso.');
-            setSelectedLesson(null);
         } catch (err) {
-            setError(err.message || 'Nao foi possivel concluir a inscricao.');
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    const handleUnenroll = async () => {
-        if (!selectedLesson?.bookingId) return;
-
-        setSubmitting(true);
-        setError('');
-        setFeedback('');
-
-        try {
-            const result = await cancelarMarcacaoEncarregado(selectedLesson.bookingId);
-            await loadBookings(selectedStudentId);
-            await loadBaseData();
-            await refreshSnapshot();
-            notify({
-                title: 'Inscricao cancelada',
-                message: `${selectedLesson.style} foi removida da agenda do educando.`,
-                tone: 'info'
-            });
-            setFeedback(result?.mensagem || 'Inscricao cancelada com sucesso.');
-            setSelectedLesson(null);
-        } catch (err) {
-            setError(err.message || 'Nao foi possivel cancelar a inscricao.');
+            setError(err.message || 'Nao foi possivel processar o cancelamento.');
         } finally {
             setSubmitting(false);
         }
@@ -236,9 +141,9 @@ const GuardianLessons = () => {
             <div className="guardian-lessons-header">
                 <div>
                     <p className="guardian-lessons-eyebrow">Encarregado</p>
-                    <h1>Inscricao em Aulas</h1>
+                    <h1>Aulas e Cancelamentos</h1>
                     <p className="guardian-lessons-subtitle">
-                        Consulte as aulas normais ja programadas e inscreva o educando nas vagas disponiveis.
+                        Consulte as proximas aulas do educando e envie pedidos de cancelamento quando necessario.
                     </p>
                 </div>
             </div>
@@ -276,175 +181,129 @@ const GuardianLessons = () => {
 
             {loading ? (
                 <section className="guardian-lessons-card guardian-lessons-empty">
-                    <p>A carregar aulas...</p>
+                    <p>A carregar dados...</p>
                 </section>
-            ) : availableDates.length === 0 ? (
+            ) : bookings.length === 0 ? (
                 <section className="guardian-lessons-card guardian-lessons-empty">
-                    <p className="guardian-lessons-empty-title">Sem aulas disponiveis</p>
-                    <p>Nao existem aulas programadas para inscricao neste momento.</p>
+                    <p className="guardian-lessons-empty-title">Sem aulas futuras</p>
+                    <p>Quando existirem aulas agendadas para o educando, vao aparecer aqui.</p>
                 </section>
             ) : (
-                <>
-                    <section className="guardian-lessons-card guardian-lessons-date-nav">
-                        <button
-                            type="button"
-                            className="inventory-secondary-button"
-                            onClick={prevDate}
-                            disabled={selectedDateIndex <= 0}
-                        >
-                            Dia anterior
-                        </button>
+                <section className="guardian-lessons-card guardian-lessons-list">
+                    <div className="guardian-lessons-grid">
+                        {bookings.map((booking) => {
+                            const lesson = booking.Aula;
+                            const status = getStatusMeta(booking);
+                            const canCancel = booking.EstaAtivo !== false && booking.EstadoCancelamento !== 'Pendente';
 
-                        <div className="guardian-lessons-date-copy">
-                            <p>{formattedDay}</p>
-                            <h2>{formattedDate}</h2>
-                        </div>
-
-                        <button
-                            type="button"
-                            className="inventory-secondary-button"
-                            onClick={nextDate}
-                            disabled={selectedDateIndex >= availableDates.length - 1}
-                        >
-                            Dia seguinte
-                        </button>
-                    </section>
-
-                    <section className="guardian-lessons-card guardian-lessons-list">
-                        {Object.keys(lessonsByStudio).length === 0 ? (
-                            <div className="guardian-lessons-empty">
-                                <p className="guardian-lessons-empty-title">Sem aulas neste dia</p>
-                                <p>Escolha outra data para consultar mais opcoes.</p>
-                            </div>
-                        ) : (
-                            Object.entries(lessonsByStudio).map(([studio, studioLessons]) => (
-                                <div key={studio} className="guardian-lessons-studio">
-                                    <h3>{studio}</h3>
-                                    <div className="guardian-lessons-grid">
-                                        {studioLessons.map((lesson) => {
-                                            const isFull = lesson.enrolled >= lesson.capacity;
-
-                                            return (
-                                                <button
-                                                    key={lesson.id}
-                                                    type="button"
-                                                    className="guardian-lessons-item"
-                                                    onClick={() => setSelectedLesson(lesson)}
-                                                >
-                                                    <div className="guardian-lessons-item-top">
-                                                        <strong>{lesson.time}</strong>
-                                                        <span className={`guardian-lessons-badge ${
-                                                            lesson.isEnrolled
-                                                                ? 'guardian-lessons-badge--success'
-                                                                : isFull
-                                                                    ? 'guardian-lessons-badge--danger'
-                                                                    : 'guardian-lessons-badge--info'
-                                                        }`}
-                                                        >
-                                                            {lesson.isEnrolled ? 'Inscrito' : isFull ? 'Lotada' : 'Vagas disponiveis'}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="guardian-lessons-item-grid">
-                                                        <div>
-                                                            <span>Professor</span>
-                                                            <p>{lesson.teacher}</p>
-                                                        </div>
-                                                        <div>
-                                                            <span>Estilo</span>
-                                                            <p>{lesson.style}</p>
-                                                        </div>
-                                                        <div>
-                                                            <span>Vagas</span>
-                                                            <p>{lesson.enrolled}/{lesson.capacity}</p>
-                                                        </div>
-                                                    </div>
-                                                </button>
-                                            );
-                                        })}
+                            return (
+                                <article key={booking.IdMarcacao} className="guardian-lessons-item">
+                                    <div className="guardian-lessons-item-top">
+                                        <strong>{lesson?.EstiloDanca?.Nome || 'Aula'}</strong>
+                                        <span className={`guardian-lessons-badge guardian-lessons-badge--${status.tone}`}>
+                                            {status.label}
+                                        </span>
                                     </div>
-                                </div>
-                            ))
-                        )}
-                    </section>
-                </>
+
+                                    <div className="guardian-lessons-item-grid">
+                                        <div>
+                                            <span>Data</span>
+                                            <p>{formatDate(lesson?.Data)}</p>
+                                        </div>
+                                        <div>
+                                            <span>Horario</span>
+                                            <p>{extractTime(lesson?.HoraInicio)} - {extractTime(lesson?.HoraFim)}</p>
+                                        </div>
+                                        <div>
+                                            <span>Professor</span>
+                                            <p>{lesson?.Professor?.Utilizador?.NomeCompleto || 'Professor por definir'}</p>
+                                        </div>
+                                        <div>
+                                            <span>Local</span>
+                                            <p>{lesson?.Estudio?.Numero ? `Estudio ${lesson.Estudio.Numero}` : 'Estudio'}</p>
+                                        </div>
+                                    </div>
+
+                                    {booking.MotivoCancelamento && (
+                                        <p className="guardian-lessons-subtitle">
+                                            Motivo registado: {booking.MotivoCancelamento}
+                                        </p>
+                                    )}
+
+                                    {canCancel && (
+                                        <button
+                                            type="button"
+                                            className="inventory-secondary-button"
+                                            onClick={() => openCancellationModal(booking)}
+                                        >
+                                            {isWithin24Hours(booking) ? 'Pedir Cancelamento' : 'Cancelar Aula'}
+                                        </button>
+                                    )}
+                                </article>
+                            );
+                        })}
+                    </div>
+                </section>
             )}
 
-            {selectedLesson && (
-                <div className="guardian-lessons-modal-backdrop" onClick={() => setSelectedLesson(null)}>
+            {selectedBooking && (
+                <div className="guardian-lessons-modal-backdrop" onClick={() => setSelectedBooking(null)}>
                     <section className="guardian-lessons-modal" onClick={(event) => event.stopPropagation()}>
                         <div className="guardian-lessons-modal-header">
                             <div>
-                                <p className="guardian-lessons-eyebrow">Detalhes da Aula</p>
-                                <h2>{selectedLesson.style}</h2>
+                                <p className="guardian-lessons-eyebrow">Cancelar Aula</p>
+                                <h2>{selectedBooking.Aula?.EstiloDanca?.Nome || 'Aula'}</h2>
                             </div>
-                            <button type="button" className="inventory-secondary-button" onClick={() => setSelectedLesson(null)}>
+                            <button type="button" className="inventory-secondary-button" onClick={() => setSelectedBooking(null)}>
                                 Fechar
                             </button>
                         </div>
 
                         <div className="guardian-lessons-detail-grid">
                             <div>
-                                <span>Educando</span>
-                                <p>{selectedStudent?.Nome || '-'}</p>
-                            </div>
-                            <div>
                                 <span>Data</span>
-                                <p>{formattedDate}</p>
+                                <p>{formatDate(selectedBooking.Aula?.Data)}</p>
                             </div>
                             <div>
                                 <span>Horario</span>
-                                <p>{selectedLesson.time}</p>
-                            </div>
-                            <div>
-                                <span>Local</span>
-                                <p>{selectedLesson.studio}</p>
+                                <p>{extractTime(selectedBooking.Aula?.HoraInicio)} - {extractTime(selectedBooking.Aula?.HoraFim)}</p>
                             </div>
                             <div>
                                 <span>Professor</span>
-                                <p>{selectedLesson.teacher}</p>
+                                <p>{selectedBooking.Aula?.Professor?.Utilizador?.NomeCompleto || 'Professor por definir'}</p>
                             </div>
                             <div>
-                                <span>Vagas</span>
-                                <p>{selectedLesson.enrolled}/{selectedLesson.capacity}</p>
+                                <span>Regra</span>
+                                <p>
+                                    {isWithin24Hours(selectedBooking)
+                                        ? 'Faltam menos de 24h: a Direcao tera de validar.'
+                                        : 'Com 24h ou mais, o cancelamento e aprovado automaticamente.'}
+                                </p>
                             </div>
                         </div>
 
-                        <div className={`guardian-lessons-status ${
-                            selectedLesson.isEnrolled
-                                ? 'guardian-lessons-status--success'
-                                : selectedLesson.enrolled >= selectedLesson.capacity
-                                    ? 'guardian-lessons-status--danger'
-                                    : 'guardian-lessons-status--info'
-                        }`}
-                        >
-                            {selectedLesson.isEnrolled
-                                ? 'O educando ja esta inscrito nesta aula.'
-                                : selectedLesson.enrolled >= selectedLesson.capacity
-                                    ? 'Esta aula esta lotada.'
-                                    : `Existem ${selectedLesson.capacity - selectedLesson.enrolled} vaga(s) disponivel(eis).`}
-                        </div>
+                        <label className="guardian-lessons-field">
+                            <span>Motivo do cancelamento</span>
+                            <textarea
+                                rows="4"
+                                value={cancelReason}
+                                placeholder="Explique brevemente o motivo do cancelamento..."
+                                onChange={(event) => setCancelReason(event.target.value)}
+                            />
+                        </label>
 
                         <div className="guardian-lessons-actions">
-                            {selectedLesson.isEnrolled ? (
-                                <button
-                                    type="button"
-                                    className="inventory-secondary-button"
-                                    onClick={handleUnenroll}
-                                    disabled={submitting}
-                                >
-                                    {submitting ? 'A cancelar...' : 'Cancelar Inscricao'}
-                                </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    className="inventory-primary-button"
-                                    onClick={handleEnroll}
-                                    disabled={submitting || selectedLesson.enrolled >= selectedLesson.capacity || !selectedStudentId}
-                                >
-                                    {submitting ? 'A inscrever...' : 'Inscrever'}
-                                </button>
-                            )}
+                            <button type="button" className="inventory-secondary-button" onClick={() => setSelectedBooking(null)}>
+                                Fechar
+                            </button>
+                            <button
+                                type="button"
+                                className="inventory-primary-button"
+                                onClick={handleRequestCancellation}
+                                disabled={submitting}
+                            >
+                                {submitting ? 'A processar...' : 'Confirmar'}
+                            </button>
                         </div>
                     </section>
                 </div>

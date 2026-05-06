@@ -42,7 +42,18 @@ const classRepository = {
         return await prisma.aula.findMany({
             where: {
                 IdEstudio: idEstudio,
-                Data: new Date(data)
+                Data: new Date(data),
+                EstaAtivo: true
+            }
+        });
+    },
+
+    findProfessorClassesByDate: async (idProfessor, data) => {
+        return await prisma.aula.findMany({
+            where: {
+                IdProfessor: idProfessor,
+                Data: new Date(data),
+                EstaAtivo: true
             }
         });
     },
@@ -71,6 +82,7 @@ const classRepository = {
                 ValidacaoDirecao: false,
                 EstaAtivo: true,
                 TipoAula: dados.TipoAula || 'Regular',
+                OrigemAula: dados.OrigemAula || 'Direcao',
                 IdProfessor: dados.IdProfessor,
                 IdEstudio: dados.IdEstudio,
                 IdEstiloDanca: dados.IdEstiloDanca

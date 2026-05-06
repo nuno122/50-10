@@ -1,21 +1,75 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+const ESTADOS_CANCELAMENTO = {
+    SEM_PEDIDO: 'SemPedido',
+    PENDENTE: 'Pendente',
+    APROVADO_AUTOMATICO: 'AprovadoAutomatico',
+    APROVADO_DIRECAO: 'AprovadoDirecao',
+    REJEITADO_DIRECAO: 'RejeitadoDirecao'
+};
+
+const utilizadorResumoSelect = {
+    IdUtilizador: true,
+    NomeCompleto: true,
+    Email: true,
+    Permissoes: true
+};
+
+const aulaResumoInclude = {
+    EstiloDanca: true,
+    Estudio: true,
+    Professor: {
+        include: {
+            Utilizador: {
+                select: utilizadorResumoSelect
+            }
+        }
+    }
+};
+
+const marcacaoDetalhadaInclude = {
+    Aluno: {
+        include: {
+            Utilizador: {
+                select: utilizadorResumoSelect
+            }
+        }
+    },
+    Aula: {
+        include: aulaResumoInclude
+    },
+    Pagamento: true,
+    DiretorCancelamento: {
+        select: {
+            IdUtilizador: true,
+            NomeCompleto: true
+        }
+    }
+};
+
 const create = async (idAluno, idAula) => {
     return await prisma.marcacao.create({
         data: {
             Aluno: { connect: { IdUtilizador: idAluno } },
             Aula: { connect: { IdAula: idAula } },
             EstaAtivo: true,
-            PresencaConfirmada: false
+            PresencaConfirmada: false,
+            EstadoCancelamento: ESTADOS_CANCELAMENTO.SEM_PEDIDO
         }
     });
 };
 
 const bookingRepository = {
+    ESTADOS_CANCELAMENTO,
+
     findAll: async () => {
         return await prisma.marcacao.findMany({
-            include: { Aluno: true, Aula: true }
+            include: marcacaoDetalhadaInclude,
+            orderBy: [
+                { Aula: { Data: 'desc' } },
+                { IdMarcacao: 'desc' }
+            ]
         });
     },
 
@@ -28,7 +82,9 @@ const bookingRepository = {
     findAulaWithMarcacoes: async (idAula) => {
         return await prisma.aula.findUnique({
             where: { IdAula: idAula },
-            include: { Marcacao: true }
+            include: {
+                Marcacao: true
+            }
         });
     },
 
@@ -51,9 +107,7 @@ const bookingRepository = {
     findByIdComAula: async (idMarcacao) => {
         return await prisma.marcacao.findUnique({
             where: { IdMarcacao: idMarcacao },
-            include: {
-                Aula: true
-            }
+            include: marcacaoDetalhadaInclude
         });
     },
 
@@ -62,14 +116,20 @@ const bookingRepository = {
             where: { IdAluno: idAluno },
             include: {
                 Aula: {
-                    include: {
-                        EstiloDanca: true,
-                        Estudio: true
-                    }
+                    include: aulaResumoInclude
                 },
-                Pagamento: true
+                Pagamento: true,
+                DiretorCancelamento: {
+                    select: {
+                        IdUtilizador: true,
+                        NomeCompleto: true
+                    }
+                }
             },
-            orderBy: { Aula: { Data: 'desc' } }
+            orderBy: [
+                { Aula: { Data: 'desc' } },
+                { IdMarcacao: 'desc' }
+            ]
         });
     },
 
@@ -79,24 +139,44 @@ const bookingRepository = {
             include: {
                 Aluno: {
                     include: {
-                        Utilizador: true
+                        Utilizador: {
+                            select: utilizadorResumoSelect
+                        }
                     }
                 }
             }
         });
     },
 
+    findPendingCancellationRequests: async () => {
+        return await prisma.marcacao.findMany({
+            where: {
+                EstadoCancelamento: ESTADOS_CANCELAMENTO.PENDENTE
+            },
+            include: marcacaoDetalhadaInclude,
+            orderBy: [
+                { DataPedidoCancelamento: 'desc' },
+                { IdMarcacao: 'desc' }
+            ]
+        });
+    },
+
     create,
 
-    cancelar: async (idMarcacao, motivoOuEstado) => {
+    cancelar: async (idMarcacao, motivo, estadoCancelamento = ESTADOS_CANCELAMENTO.APROVADO_AUTOMATICO) => {
         return await prisma.marcacao.update({
             where: { IdMarcacao: idMarcacao },
             data: {
                 EstaAtivo: false,
-                MotivoCancelamento: motivoOuEstado === 'Pendente_Cancelamento'
-                    ? 'Pedido pelo aluno'
-                    : (motivoOuEstado ?? 'Cancelado pelo aluno')
-            }
+                MotivoCancelamento: motivo ?? 'Cancelado pelo aluno',
+                EstadoCancelamento: estadoCancelamento,
+                DataPedidoCancelamento: new Date(),
+                DataDecisaoCancelamento: new Date(),
+                ObservacaoDirecaoCancelamento: estadoCancelamento === ESTADOS_CANCELAMENTO.APROVADO_AUTOMATICO
+                    ? 'Cancelamento processado automaticamente com antecedencia minima de 24h.'
+                    : null
+            },
+            include: marcacaoDetalhadaInclude
         });
     },
 
@@ -111,13 +191,47 @@ const bookingRepository = {
         });
     },
 
-    RegistarPedidoCancelamento: async (idMarcacao, aprovado = false) => {
+    RegistarPedidoCancelamento: async (idMarcacao, motivo) => {
         return await prisma.marcacao.update({
             where: { IdMarcacao: idMarcacao },
             data: {
-                EstaAtivo: aprovado,
-                MotivoCancelamento: aprovado ? null : 'Pedido pelo aluno'
-            }
+                EstaAtivo: true,
+                MotivoCancelamento: motivo ?? 'Pedido pelo encarregado/aluno',
+                EstadoCancelamento: ESTADOS_CANCELAMENTO.PENDENTE,
+                DataPedidoCancelamento: new Date(),
+                DataDecisaoCancelamento: null,
+                ObservacaoDirecaoCancelamento: null,
+                IdDiretorCancelamento: null
+            },
+            include: marcacaoDetalhadaInclude
+        });
+    },
+
+    aprovarPedidoCancelamento: async (idMarcacao, idDiretor, observacao) => {
+        return await prisma.marcacao.update({
+            where: { IdMarcacao: idMarcacao },
+            data: {
+                EstaAtivo: false,
+                EstadoCancelamento: ESTADOS_CANCELAMENTO.APROVADO_DIRECAO,
+                DataDecisaoCancelamento: new Date(),
+                ObservacaoDirecaoCancelamento: observacao ?? null,
+                IdDiretorCancelamento: idDiretor
+            },
+            include: marcacaoDetalhadaInclude
+        });
+    },
+
+    rejeitarPedidoCancelamento: async (idMarcacao, idDiretor, observacao) => {
+        return await prisma.marcacao.update({
+            where: { IdMarcacao: idMarcacao },
+            data: {
+                EstaAtivo: true,
+                EstadoCancelamento: ESTADOS_CANCELAMENTO.REJEITADO_DIRECAO,
+                DataDecisaoCancelamento: new Date(),
+                ObservacaoDirecaoCancelamento: observacao ?? null,
+                IdDiretorCancelamento: idDiretor
+            },
+            include: marcacaoDetalhadaInclude
         });
     }
 };

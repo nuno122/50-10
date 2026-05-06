@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { PERMISSOES } from '../utils/permissions';
 import {
     avaliarPedidoExtensao,
     criarAluguer,
@@ -9,6 +8,7 @@ import {
     getUtilizadores,
     registarDevolucaoAluguer
 } from '../services/api';
+import { PERMISSOES } from '../utils/permissions';
 
 const roleLabel = (permission) => {
     switch (permission) {
@@ -41,7 +41,7 @@ const normalizeStatus = (status) => String(status || '').trim().toLowerCase();
 
 const isCompletedRental = (rental) => {
     const status = normalizeStatus(rental.EstadoAluguer);
-    return ['entregue', 'concluido', 'concluído', 'cancelado', 'devolvido'].some((value) => status.includes(value));
+    return ['entregue', 'concluido', 'cancelado', 'devolvido'].some((value) => status.includes(value));
 };
 
 const toFilterStatus = (rental) => (isCompletedRental(rental) ? 'completed' : 'active');
@@ -150,6 +150,14 @@ const RequestValidation = ({ embedded = false }) => {
 
     const activeCount = useMemo(() => rentals.filter((rental) => toFilterStatus(rental) === 'active').length, [rentals]);
     const completedCount = useMemo(() => rentals.filter((rental) => toFilterStatus(rental) === 'completed').length, [rentals]);
+    const pendingExtensionCount = useMemo(
+        () => rentals.filter((rental) => Boolean(getPendingExtension(rental))).length,
+        [rentals]
+    );
+    const pendingFinesCount = useMemo(
+        () => rentals.filter((rental) => Boolean(getPendingFine(rental))).length,
+        [rentals]
+    );
 
     const handleSort = (field) => {
         if (sortField === field) {
@@ -271,9 +279,9 @@ const RequestValidation = ({ embedded = false }) => {
                 <header className="rental-header">
                     <div>
                         <p className="rental-eyebrow">Direcao</p>
-                        <h1>Gestao de Requisicoes / Alugueres</h1>
+                        <h1>Registo e Validacao de Alugueres</h1>
                         <p className="rental-subtitle">
-                            Gira entregas, devolucoes e pedidos de extensao.
+                            Gira novos alugueres, devolucoes e pedidos de extensao num espaco proprio.
                         </p>
                     </div>
 
@@ -308,6 +316,22 @@ const RequestValidation = ({ embedded = false }) => {
                                     <strong>{completedCount}</strong>
                                 </div>
                                 <span>OK</span>
+                            </article>
+
+                            <article className="rental-card rental-stat-card">
+                                <div>
+                                    <p>Extensoes Pendentes</p>
+                                    <strong>{pendingExtensionCount}</strong>
+                                </div>
+                                <span>EX</span>
+                            </article>
+
+                            <article className="rental-card rental-stat-card">
+                                <div>
+                                    <p>Multas Pendentes</p>
+                                    <strong>{pendingFinesCount}</strong>
+                                </div>
+                                <span>ML</span>
                             </article>
                         </div>
 
@@ -406,7 +430,7 @@ const RequestValidation = ({ embedded = false }) => {
                                                     <div className="rental-chip-list">
                                                         {getRentalItems(rental).map((item) => (
                                                             <span key={item.id} className="rental-chip">
-                                                                {item.name} ({item.size}) · Qtd. {item.quantity}
+                                                                {item.name} ({item.size}) - Qtd. {item.quantity}
                                                             </span>
                                                         ))}
                                                     </div>
@@ -492,7 +516,7 @@ const RequestValidation = ({ embedded = false }) => {
                                         <option value="">Selecione o artigo</option>
                                         {selectableSizes.map((size) => (
                                             <option key={size.IdTamanhoArtigo} value={size.IdTamanhoArtigo}>
-                                                {buildItemLabel(size)} · Stock {size.Quantidade}
+                                                {buildItemLabel(size)} - Stock {size.Quantidade}
                                             </option>
                                         ))}
                                     </select>
@@ -535,11 +559,11 @@ const RequestValidation = ({ embedded = false }) => {
                             </button>
                         </div>
 
-                            <div className="rental-summary">
-                                <div className="rental-summary-row">
-                                    <span>Utilizador</span>
-                                    <strong>{returnRental.Utilizador?.NomeCompleto || 'Utilizador'}</strong>
-                                </div>
+                        <div className="rental-summary">
+                            <div className="rental-summary-row">
+                                <span>Utilizador</span>
+                                <strong>{returnRental.Utilizador?.NomeCompleto || 'Utilizador'}</strong>
+                            </div>
                             <div className="rental-summary-row">
                                 <span>Artigo(s)</span>
                                 <strong>{getRentalItems(returnRental).map((item) => `${item.name} (${item.size})`).join(', ')}</strong>

@@ -4,7 +4,8 @@ const bookingService = require('../../backend/src/services/bookingService');
 jest.mock('../../backend/src/services/bookingService');
 
 describe('Booking Controller', () => {
-    let req, res;
+    let req;
+    let res;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -30,7 +31,7 @@ describe('Booking Controller', () => {
             expect(res.json).toHaveBeenCalledWith({ mensagem: 'Sucesso' });
         });
 
-        it('deve retornar erro 400 se faltarem parâmetros', async () => {
+        it('deve retornar erro 400 se faltarem parametros', async () => {
             req.body = {};
             const mockErro = new Error('Erro mock');
             mockErro.statusCode = 400;
@@ -49,29 +50,32 @@ describe('Booking Controller', () => {
             req.body = { Motivo: 'Gripe' };
             req.utilizador = { IdUtilizador: 2 };
 
-            bookingService.cancelarMarcacao.mockResolvedValue({ sucesso: true });
+            bookingService.cancelarMarcacao.mockResolvedValue({
+                sucesso: true,
+                mensagem: 'Cancelamento aprovado automaticamente.'
+            });
 
             await bookingController.cancelarMarcacao(req, res);
 
             expect(res.status).toHaveBeenCalledWith(200);
             expect(bookingService.cancelarMarcacao).toHaveBeenCalledWith(1, 2, 'Gripe');
-            expect(res.json).toHaveBeenCalledWith({ 
-                mensagem: 'Marcação cancelada com sucesso.',
-                marcacao: { sucesso: true }
+            expect(res.json).toHaveBeenCalledWith({
+                sucesso: true,
+                mensagem: 'Cancelamento aprovado automaticamente.'
             });
         });
 
-        it('deve retornar erro (ex 403) quando não autorizado', async () => {
+        it('deve retornar erro 403 quando nao autorizado', async () => {
             req.params.idMarcacao = 1;
             req.utilizador = { IdUtilizador: 2 };
-            const erroMock = new Error('Não tens permissão');
+            const erroMock = new Error('Nao tens permissao');
             erroMock.statusCode = 403;
             bookingService.cancelarMarcacao.mockRejectedValue(erroMock);
 
             await bookingController.cancelarMarcacao(req, res);
 
             expect(res.status).toHaveBeenCalledWith(403);
-            expect(res.json).toHaveBeenCalledWith({ erro: 'Não tens permissão' });
+            expect(res.json).toHaveBeenCalledWith({ erro: 'Nao tens permissao' });
         });
     });
 });

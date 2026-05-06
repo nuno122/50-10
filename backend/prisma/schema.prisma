@@ -26,6 +26,7 @@ model Aluno {
   Utilizador       Utilizador         @relation(fields: [IdUtilizador], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Aluno__IdUtiliza__60A75C0F")
   EncarregadoAluno EncarregadoAluno[]
   Marcacao         Marcacao[]
+  PedidoAula       PedidoAula[]
 }
 
 model Artigo {
@@ -62,10 +63,12 @@ model Aula {
   EstaAtivo            Boolean     @default(true, map: "DF__Aula__EstaAtivo__02084FDA")
   CapacidadeMaxima     Int
   TipoAula             String      @default("Regular", map: "DF_Aula_TipoAula") @db.NVarChar(50)
+  OrigemAula           String      @default("Direcao") @db.NVarChar(50)
   EstiloDanca          EstiloDanca @relation(fields: [IdEstiloDanca], references: [IdEstiloDanca], onUpdate: NoAction, map: "FK__Aula__IdEstiloDa__04E4BC85")
   Estudio              Estudio     @relation(fields: [IdEstudio], references: [IdEstudio], onUpdate: NoAction, map: "FK__Aula__IdEstudio__03F0984C")
   Professor            Professor   @relation(fields: [IdProfessor], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Aula__IdProfesso__02FC7413")
   Marcacao             Marcacao[]
+  PedidoAulaOrigem     PedidoAula? @relation("PedidoAulaParaAula")
 }
 
 model Cidade {
@@ -108,6 +111,7 @@ model Encarregado {
   IdUtilizador     String             @id(map: "PK__Encarreg__7A170D7422D1B127") @db.UniqueIdentifier
   Utilizador       Utilizador         @relation(fields: [IdUtilizador], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Encarrega__IdUti__6383C8BA")
   EncarregadoAluno EncarregadoAluno[]
+  PedidoAula       PedidoAula[]
 }
 
 model EncarregadoAluno {
@@ -126,6 +130,7 @@ model EstiloDanca {
   Aula            Aula[]
   EstiloProfessor EstiloProfessor[]
   EstudioEstilo   EstudioEstilo[]
+  PedidoAula      PedidoAula[]
 }
 
 model EstiloProfessor {
@@ -155,15 +160,48 @@ model EstudioEstilo {
 }
 
 model Marcacao {
-  IdMarcacao         String      @id(map: "PK__Marcacao__0FFD43310A4D8F8C") @default(dbgenerated("newsequentialid()"), map: "DF__Marcacao__IdMarc__08B54D69") @db.UniqueIdentifier
-  IdAluno            String      @db.UniqueIdentifier
-  IdAula             String      @db.UniqueIdentifier
-  EstaAtivo          Boolean     @default(true, map: "DF__Marcacao__EstaAt__09A971A2")
-  PresencaConfirmada Boolean     @default(false, map: "DF__Marcacao__Presen__0A9D95DB")
-  MotivoCancelamento String?     @db.NVarChar(Max)
-  Aluno              Aluno       @relation(fields: [IdAluno], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Marcacao__IdAlun__0B91BA14")
-  Aula               Aula        @relation(fields: [IdAula], references: [IdAula], onUpdate: NoAction, map: "FK__Marcacao__IdAula__0C85DE4D")
-  Pagamento          Pagamento[]
+  IdMarcacao                    String      @id(map: "PK__Marcacao__0FFD43310A4D8F8C") @default(dbgenerated("newsequentialid()"), map: "DF__Marcacao__IdMarc__08B54D69") @db.UniqueIdentifier
+  IdAluno                       String      @db.UniqueIdentifier
+  IdAula                        String      @db.UniqueIdentifier
+  IdDiretorCancelamento         String?     @db.UniqueIdentifier
+  EstaAtivo                     Boolean     @default(true, map: "DF__Marcacao__EstaAt__09A971A2")
+  PresencaConfirmada            Boolean     @default(false, map: "DF__Marcacao__Presen__0A9D95DB")
+  MotivoCancelamento            String?     @db.NVarChar(Max)
+  EstadoCancelamento            String      @default("SemPedido") @db.NVarChar(50)
+  DataPedidoCancelamento        DateTime?
+  DataDecisaoCancelamento       DateTime?
+  ObservacaoDirecaoCancelamento String?     @db.NVarChar(Max)
+  Aluno                         Aluno       @relation(fields: [IdAluno], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Marcacao__IdAlun__0B91BA14")
+  Aula                          Aula        @relation(fields: [IdAula], references: [IdAula], onUpdate: NoAction, map: "FK__Marcacao__IdAula__0C85DE4D")
+  DiretorCancelamento           Utilizador? @relation("MarcacaoCancelamentoDiretor", fields: [IdDiretorCancelamento], references: [IdUtilizador], onUpdate: NoAction)
+  Pagamento                     Pagamento[]
+}
+
+model PedidoAula {
+  IdPedidoAulaPrivada  String      @id @default(dbgenerated("newsequentialid()")) @db.UniqueIdentifier
+  IdEncarregado        String      @db.UniqueIdentifier
+  IdAluno              String      @db.UniqueIdentifier
+  IdEstiloDanca        String      @db.UniqueIdentifier
+  IdAulaCriada         String?     @unique @db.UniqueIdentifier
+  IdDiretorDecisao     String?     @db.UniqueIdentifier
+  DataPretendida       DateTime    @db.Date
+  HoraPretendida       DateTime    @db.Time
+  DuracaoMinutos       Int
+  CapacidadePretendida Int         @default(1)
+  Observacoes          String?     @db.NVarChar(Max)
+  EstadoPedido         String      @default("Pendente") @db.NVarChar(50)
+  ObservacaoDirecao    String?     @db.NVarChar(Max)
+  DataPedido           DateTime    @default(now())
+  DataDecisao          DateTime?
+  Aluno                Aluno       @relation(fields: [IdAluno], references: [IdUtilizador], onUpdate: NoAction)
+  AulaCriada           Aula?       @relation("PedidoAulaParaAula", fields: [IdAulaCriada], references: [IdAula], onUpdate: NoAction)
+  DiretorDecisao       Utilizador? @relation("PedidoAulaDiretor", fields: [IdDiretorDecisao], references: [IdUtilizador], onUpdate: NoAction)
+  Encarregado          Encarregado @relation(fields: [IdEncarregado], references: [IdUtilizador], onUpdate: NoAction)
+  EstiloDanca          EstiloDanca @relation(fields: [IdEstiloDanca], references: [IdEstiloDanca], onUpdate: NoAction)
+
+  @@index([EstadoPedido, DataPedido])
+  @@index([IdEncarregado, DataPedido])
+  @@index([IdAluno, DataPedido])
 }
 
 model Pagamento {
@@ -241,6 +279,8 @@ model Utilizador {
   Aluguer                                            Aluguer[]
   Aluno                                              Aluno?
   Encarregado                                        Encarregado?
+  MarcacaoCancelamentoDiretor                        Marcacao[]   @relation("MarcacaoCancelamentoDiretor")
+  PedidoAulaDiretor                                  PedidoAula[] @relation("PedidoAulaDiretor")
   Professor                                          Professor?
   CodigoPostal_Utilizador_CodigoPostalToCodigoPostal CodigoPostal @relation("Utilizador_CodigoPostalToCodigoPostal", fields: [CodigoPostal], references: [CodigoPostal], onUpdate: NoAction, map: "FK__Utilizado__Codig__5DCAEF64")
 }

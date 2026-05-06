@@ -16,9 +16,11 @@ describe('Class Service', () => {
             });
             classRepo.findEstudioById.mockResolvedValue({
                 IdEstudio: 2,
+                Capacidade: 30,
                 EstudioEstilo: [{ IdEstiloDanca: 3 }]
             });
             classRepo.findEstiloById.mockResolvedValue({ IdEstiloDanca: 3 });
+            classRepo.findProfessorClassesByDate.mockResolvedValue([]);
             classRepo.findProfessorAvailabilityByDate.mockResolvedValue([
                 {
                     HoraInicio: '2026-05-01T08:00:00.000Z',
@@ -97,6 +99,7 @@ describe('Class Service', () => {
 
             classRepo.findEstudioById.mockResolvedValue({
                 IdEstudio: 2,
+                Capacidade: 30,
                 EstudioEstilo: [{ IdEstiloDanca: 9 }]
             });
 
@@ -118,6 +121,7 @@ describe('Class Service', () => {
             };
 
             classRepo.findOverlapping.mockResolvedValue([]);
+            classRepo.findProfessorClassesByDate.mockResolvedValue([]);
             classRepo.findProfessorAvailabilityByDate.mockResolvedValue([
                 {
                     HoraInicio: '2026-05-01T08:00:00.000Z',
@@ -143,6 +147,7 @@ describe('Class Service', () => {
             };
 
             classRepo.findOverlapping.mockResolvedValue([]);
+            classRepo.findProfessorClassesByDate.mockResolvedValue([]);
             classRepo.create.mockResolvedValue({ IdAula: 10, ...dadosValidos });
 
             const resultado = await classService.criarAula(dadosValidos);
@@ -151,7 +156,8 @@ describe('Class Service', () => {
             expect(resultado.aula.IdAula).toBe(10);
             expect(classRepo.create).toHaveBeenCalledWith({
                 ...dadosValidos,
-                TipoAula: 'Regular'
+                TipoAula: 'Regular',
+                OrigemAula: 'Direcao'
             });
         });
 
@@ -168,11 +174,54 @@ describe('Class Service', () => {
             };
 
             classRepo.findOverlapping.mockResolvedValue([]);
+            classRepo.findProfessorClassesByDate.mockResolvedValue([]);
             classRepo.create.mockRejectedValue(new Error('Prisma: Database connection timeout'));
 
             await expect(classService.criarAula(dadosValidos))
                 .rejects
                 .toThrow('Prisma: Database connection timeout');
+        });
+
+        it('deve emitir erro 400 quando o professor ja tiver outra aula no mesmo horario', async () => {
+            const dadosPreenchidos = {
+                Data: '2026-05-01',
+                HoraInicio: '2026-05-01T10:00:00.000Z',
+                HoraFim: '2026-05-01T11:00:00.000Z',
+                CapacidadeMaxima: 20,
+                Preco: 15,
+                IdProfessor: 1,
+                IdEstudio: 2,
+                IdEstiloDanca: 3
+            };
+
+            classRepo.findOverlapping.mockResolvedValue([]);
+            classRepo.findProfessorClassesByDate.mockResolvedValue([
+                {
+                    HoraInicio: '2026-05-01T10:30:00.000Z',
+                    HoraFim: '2026-05-01T11:30:00.000Z'
+                }
+            ]);
+
+            await expect(classService.criarAula(dadosPreenchidos))
+                .rejects
+                .toThrow('Conflito de horario! Professor ocupado.');
+        });
+
+        it('deve emitir erro 400 quando a capacidade exceder a do estudio', async () => {
+            const dadosPreenchidos = {
+                Data: '2026-05-01',
+                HoraInicio: '2026-05-01T10:00:00.000Z',
+                HoraFim: '2026-05-01T11:00:00.000Z',
+                CapacidadeMaxima: 40,
+                Preco: 15,
+                IdProfessor: 1,
+                IdEstudio: 2,
+                IdEstiloDanca: 3
+            };
+
+            await expect(classService.criarAula(dadosPreenchidos))
+                .rejects
+                .toThrow('A capacidade da aula excede a capacidade do estudio selecionado.');
         });
     });
 
@@ -184,9 +233,11 @@ describe('Class Service', () => {
             });
             classRepo.findEstudioById.mockResolvedValue({
                 IdEstudio: 2,
+                Capacidade: 30,
                 EstudioEstilo: [{ IdEstiloDanca: 3 }]
             });
             classRepo.findEstiloById.mockResolvedValue({ IdEstiloDanca: 3 });
+            classRepo.findProfessorClassesByDate.mockResolvedValue([]);
             classRepo.findProfessorAvailabilityByDate.mockResolvedValue([
                 {
                     HoraInicio: '2026-05-01T08:00:00.000Z',

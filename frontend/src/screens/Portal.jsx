@@ -6,6 +6,7 @@ import FinanceManagement from './FinanceManagement';
 import GuardianLessons from './GuardianLessons';
 import GuardianLessonRequest from './GuardianLessonRequest';
 import InventoryManagement from './InventoryManagement';
+import LessonValidation from './LessonValidation';
 import RoleInventory from './RoleInventory';
 import RequestValidation from './RequestValidation';
 import ScheduleManagement from './ScheduleManagement';
@@ -27,7 +28,8 @@ const Portal = () => {
                 { id: 'dashboard', label: 'Dashboard' },
                 { id: 'schedule', label: 'Gestao de Horarios' },
                 { id: 'users', label: 'Gestao de Utilizadores' },
-                { id: 'requests', label: 'Validacao de Pedidos' },
+                { id: 'rental-requests', label: 'Alugueres e Extensoes' },
+                { id: 'lesson-validations', label: 'Aulas e Cancelamentos' },
                 { id: 'finance', label: 'Financeiro' },
                 { id: 'inventory', label: 'Gestao de Inventario' }
             ]
@@ -37,28 +39,32 @@ const Portal = () => {
                     { id: 'teacher-schedule', label: 'Aulas e Disponibilidade' },
                     { id: 'inventory', label: 'Inventario e Aluguer' }
                 ]
-            : userIsEncarregado
-                ? [
-                    { id: 'dashboard', label: 'Dashboard' },
-                    { id: 'lesson-request', label: 'Requisicao de Aula' },
-                    { id: 'guardian-lessons', label: 'Inscricao em Aulas' },
-                    { id: 'finance', label: 'Pagamentos' },
-                    { id: 'inventory', label: 'Inventario e Aluguer' }
-                ]
-            : userIsAluno
-                ? [
-                    { id: 'dashboard', label: 'Dashboard' },
-                    { id: 'agenda', label: 'A Minha Agenda' }
-                ]
-            : [
-                { id: 'dashboard', label: 'Dashboard' },
-                { id: 'inventory', label: 'Inventario e Aluguer' }
-            ]
+                : userIsEncarregado
+                    ? [
+                        { id: 'dashboard', label: 'Dashboard' },
+                        { id: 'lesson-request', label: 'Pedido de Aula Privada' },
+                        { id: 'guardian-lessons', label: 'Aulas e Cancelamentos' },
+                        { id: 'finance', label: 'Pagamentos' },
+                        { id: 'inventory', label: 'Inventario e Aluguer' }
+                    ]
+                    : userIsAluno
+                        ? [
+                            { id: 'dashboard', label: 'Dashboard' },
+                            { id: 'agenda', label: 'A Minha Agenda' }
+                        ]
+                        : [
+                            { id: 'dashboard', label: 'Dashboard' },
+                            { id: 'inventory', label: 'Inventario e Aluguer' }
+                        ]
     ), [userIsAluno, userIsDirecao, userIsEncarregado, userIsProfessor]);
 
     const renderContent = () => {
-        if (activeView === 'requests' && userIsDirecao) {
+        if (activeView === 'rental-requests' && userIsDirecao) {
             return <RequestValidation embedded />;
+        }
+
+        if (activeView === 'lesson-validations' && userIsDirecao) {
+            return <LessonValidation embedded />;
         }
 
         if (activeView === 'schedule' && userIsDirecao) {
@@ -106,7 +112,7 @@ const Portal = () => {
                 <div>
                     <p className="portal-eyebrow">Ent'Artes</p>
                     <h1>Portal</h1>
-                    <p className="portal-user">{user?.Nome || 'Utilizador'} · {getRoleLabel(user?.Permissoes)}</p>
+                    <p className="portal-user">{user?.Nome || 'Utilizador'} - {getRoleLabel(user?.Permissoes)}</p>
                 </div>
 
                 <nav className="portal-nav">

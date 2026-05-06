@@ -2168,6 +2168,7 @@ button {
 .rental-modal-header h2,
 .rental-detail-items h3 {
   margin: 0;
+  line-height: 1.18;
 }
 
 .rental-subtitle,
@@ -2232,9 +2233,15 @@ button {
 .rental-stat-card {
   padding: 22px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  min-height: 118px;
+}
+
+.rental-stat-card > div {
+  flex: 1;
+  min-width: 0;
 }
 
 .rental-stat-card p,
@@ -2242,11 +2249,16 @@ button {
   margin: 0;
 }
 
+.rental-stat-card p {
+  line-height: 1.35;
+}
+
 .rental-stat-card strong {
   display: block;
   margin-top: 6px;
   font-size: 2rem;
   color: #2563eb;
+  line-height: 1.1;
 }
 
 .rental-stat-card span {
@@ -2258,6 +2270,7 @@ button {
   background: #dbeafe;
   color: #1d4f91;
   font-weight: 800;
+  flex-shrink: 0;
 }
 
 .rental-toolbar,
@@ -2316,6 +2329,15 @@ button {
 
 .rental-list-card {
   overflow: hidden;
+}
+
+.rental-list-card > .rental-form-header {
+  padding: 24px 24px 0;
+}
+
+.rental-list-card > .rental-form-header + .rental-list {
+  margin-top: 20px;
+  border-top: 1px solid #edf2f7;
 }
 
 .rental-list {

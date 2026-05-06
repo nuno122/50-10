@@ -5,6 +5,12 @@ const { verificarToken, verificarPermissao } = require('../authMiddleware');
 const PERMISSOES = require('../config/permissions');
 
 router.get('/', verificarToken, verificarPermissao(PERMISSOES.DIRECAO), bookingController.getMarcacoes);
+router.get(
+    '/cancelamentos/pendentes',
+    verificarToken,
+    verificarPermissao(PERMISSOES.DIRECAO),
+    bookingController.getPedidosCancelamentoPendentes
+);
 
 router.get('/minhas', verificarToken, verificarPermissao(PERMISSOES.ALUNO), bookingController.getMarcacoesDoAluno);
 router.get('/aluno/:idAluno', verificarToken, verificarPermissao(PERMISSOES.DIRECAO), bookingController.getMarcacoesDoAluno);
@@ -41,6 +47,18 @@ router.patch(
     bookingController.cancelarMarcacaoEncarregado
 );
 
-router.patch('/:id/cancelar', verificarToken, bookingController.cancelarMarcacao);
+router.patch(
+    '/:idMarcacao/cancelamentos/aprovar',
+    verificarToken,
+    verificarPermissao(PERMISSOES.DIRECAO),
+    bookingController.aprovarPedidoCancelamento
+);
+
+router.patch(
+    '/:idMarcacao/cancelamentos/rejeitar',
+    verificarToken,
+    verificarPermissao(PERMISSOES.DIRECAO),
+    bookingController.rejeitarPedidoCancelamento
+);
 
 module.exports = router;

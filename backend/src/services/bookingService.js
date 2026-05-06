@@ -1,6 +1,14 @@
 const bookingRepo = require('../repositories/bookingRepository');
 const classRepo = require('../repositories/classRepository');
 
+const ESTADOS_CANCELAMENTO = bookingRepo.ESTADOS_CANCELAMENTO || {
+    SEM_PEDIDO: 'SemPedido',
+    PENDENTE: 'Pendente',
+    APROVADO_AUTOMATICO: 'AprovadoAutomatico',
+    APROVADO_DIRECAO: 'AprovadoDirecao',
+    REJEITADO_DIRECAO: 'RejeitadoDirecao'
+};
+
 const criarErro = (mensagem, statusCode) => {
     const erro = new Error(mensagem);
     erro.statusCode = statusCode;
@@ -109,17 +117,33 @@ const isPrazoValido = (dataAulaCompleta) => {
     return diferencaHoras >= 24;
 };
 
-const ProcessarCancelamento = async (idMarcacao, aprovado, motivo) => {
-    if (aprovado) {
-        await bookingRepo.cancelar(idMarcacao, motivo || 'Cancelamento antecipado (>= 24h)');
-        return { sucesso: true, mensagem: 'Cancelamento aprovado automaticamente.' };
+const ProcessarCancelamento = async (idMarcacao, aprovadoAutomaticamente, motivo) => {
+    if (aprovadoAutomaticamente) {
+        const marcacao = await bookingRepo.cancelar(idMarcacao, motivo || 'Cancelamento antecipado (>= 24h)');
+        return {
+            sucesso: true,
+            mensagem: 'Cancelamento aprovado automaticamente.',
+            marcacao
+        };
     }
 
-    await bookingRepo.RegistarPedidoCancelamento(idMarcacao, false);
+    const marcacao = await bookingRepo.RegistarPedidoCancelamento(idMarcacao, motivo || 'Pedido de cancelamento com menos de 24h.');
     return {
         sucesso: false,
-        mensagem: 'Prazo de 24h expirou. O pedido foi enviado para aprovacao da Direcao.'
+        mensagem: 'Prazo de 24h expirou. O pedido foi enviado para aprovacao da Direcao.',
+        marcacao
     };
+};
+
+const construirDataAulaCompleta = (marcacao) => {
+    const dataAulaCompleta = new Date(marcacao.Aula.Data);
+    dataAulaCompleta.setHours(
+        marcacao.Aula.HoraInicio.getHours(),
+        marcacao.Aula.HoraInicio.getMinutes(),
+        0,
+        0
+    );
+    return dataAulaCompleta;
 };
 
 const CancelarMarcacao = async (idMarcacao, idAluno, motivo) => {
@@ -132,15 +156,11 @@ const CancelarMarcacao = async (idMarcacao, idAluno, motivo) => {
     if (!marcacao) throw criarErro('Marcacao nao encontrada.', 404);
     if (marcacao.IdAluno !== idAluno) throw criarErro('Nao tens permissao para cancelar esta marcacao.', 403);
     if (!marcacao.EstaAtivo) throw criarErro('Esta marcacao ja esta cancelada.', 400);
+    if (marcacao.EstadoCancelamento === ESTADOS_CANCELAMENTO.PENDENTE) {
+        throw criarErro('Ja existe um pedido de cancelamento pendente para esta marcacao.', 400);
+    }
 
-    const dataAulaCompleta = new Date(marcacao.Aula.Data);
-    dataAulaCompleta.setHours(
-        marcacao.Aula.HoraInicio.getHours(),
-        marcacao.Aula.HoraInicio.getMinutes(),
-        0,
-        0
-    );
-
+    const dataAulaCompleta = construirDataAulaCompleta(marcacao);
     return await ProcessarCancelamento(idMarcacao, isPrazoValido(dataAulaCompleta), motivo);
 };
 
@@ -150,6 +170,46 @@ const CancelarMarcacaoComoEncarregado = async (idMarcacao, idEncarregado, motivo
 
     await validarAlunoDoEncarregado(idEncarregado, marcacao.IdAluno);
     return await CancelarMarcacao(idMarcacao, marcacao.IdAluno, motivo);
+};
+
+const aprovarPedidoCancelamento = async (idMarcacao, idDiretor, observacao) => {
+    if (!idMarcacao || !idDiretor) {
+        throw criarErro('IdMarcacao e IdDiretor sao obrigatorios.', 400);
+    }
+
+    const marcacao = await bookingRepo.findByIdComAula(idMarcacao);
+
+    if (!marcacao) throw criarErro('Marcacao nao encontrada.', 404);
+    if (marcacao.EstadoCancelamento !== ESTADOS_CANCELAMENTO.PENDENTE) {
+        throw criarErro('Esta marcacao nao tem um pedido de cancelamento pendente.', 400);
+    }
+
+    const marcacaoAtualizada = await bookingRepo.aprovarPedidoCancelamento(idMarcacao, idDiretor, observacao);
+
+    return {
+        mensagem: 'Pedido de cancelamento aprovado pela Direcao.',
+        marcacao: marcacaoAtualizada
+    };
+};
+
+const rejeitarPedidoCancelamento = async (idMarcacao, idDiretor, observacao) => {
+    if (!idMarcacao || !idDiretor) {
+        throw criarErro('IdMarcacao e IdDiretor sao obrigatorios.', 400);
+    }
+
+    const marcacao = await bookingRepo.findByIdComAula(idMarcacao);
+
+    if (!marcacao) throw criarErro('Marcacao nao encontrada.', 404);
+    if (marcacao.EstadoCancelamento !== ESTADOS_CANCELAMENTO.PENDENTE) {
+        throw criarErro('Esta marcacao nao tem um pedido de cancelamento pendente.', 400);
+    }
+
+    const marcacaoAtualizada = await bookingRepo.rejeitarPedidoCancelamento(idMarcacao, idDiretor, observacao);
+
+    return {
+        mensagem: 'Pedido de cancelamento rejeitado pela Direcao.',
+        marcacao: marcacaoAtualizada
+    };
 };
 
 const listarMarcacoes = async () => {
@@ -166,7 +226,12 @@ const listarMarcacoesDoEncarregado = async (idEncarregado, idAluno) => {
     return await listarMarcacoesDoAluno(idAluno);
 };
 
+const listarPedidosCancelamentoPendentes = async () => {
+    return await bookingRepo.findPendingCancellationRequests();
+};
+
 module.exports = {
+    ESTADOS_CANCELAMENTO,
     ConsultarVagas,
     GetPreco,
     FazerMarcacao,
@@ -175,10 +240,13 @@ module.exports = {
     ProcessarCancelamento,
     CancelarMarcacao,
     CancelarMarcacaoComoEncarregado,
+    aprovarPedidoCancelamento,
+    rejeitarPedidoCancelamento,
     criarMarcacao: FazerMarcacao,
     cancelarMarcacao: CancelarMarcacao,
     listarMarcacoes,
     listarMarcacoesDoAluno,
     listarMarcacoesDoEncarregado,
-    listarAlunosDoEncarregado
+    listarAlunosDoEncarregado,
+    listarPedidosCancelamentoPendentes
 };

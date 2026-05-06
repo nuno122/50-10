@@ -100,6 +100,28 @@ export const editarArtigo = async (id, dados) =>
 
 export const getAulas = async () => request('/aulas');
 
+export const getPedidosAulaPrivada = async () => request('/pedidos-aula-privada');
+
+export const getPedidosAulaPrivadaEncarregado = async () => request('/pedidos-aula-privada/encarregado');
+
+export const criarPedidoAulaPrivada = async (dados) =>
+    request('/pedidos-aula-privada', {
+        method: 'POST',
+        body: JSON.stringify(dados)
+    });
+
+export const aprovarPedidoAulaPrivada = async (idPedidoAulaPrivada, dados) =>
+    request(`/pedidos-aula-privada/${idPedidoAulaPrivada}/aprovar`, {
+        method: 'PATCH',
+        body: JSON.stringify(dados)
+    });
+
+export const rejeitarPedidoAulaPrivada = async (idPedidoAulaPrivada, ObservacaoDirecao = '') =>
+    request(`/pedidos-aula-privada/${idPedidoAulaPrivada}/rejeitar`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ObservacaoDirecao })
+    });
+
 export const getMinhasDisponibilidades = async () => request('/disponibilidades/minhas');
 
 export const getDisponibilidades = async ({ from, to } = {}) => {
@@ -150,6 +172,8 @@ export const cancelarMarcacao = async (idMarcacao) =>
 
 export const getMarcacoes = async () => request('/marcacoes');
 
+export const getPedidosCancelamentoPendentes = async () => request('/marcacoes/cancelamentos/pendentes');
+
 export const getMinhasMarcacoes = async () => request('/marcacoes/minhas');
 
 export const getAlunosEncarregado = async () => request('/marcacoes/encarregado/alunos');
@@ -173,6 +197,18 @@ export const cancelarMarcacaoEncarregado = async (idMarcacao, Motivo) =>
     request(`/marcacoes/encarregado/${idMarcacao}/cancelar`, {
         method: 'PATCH',
         body: JSON.stringify({ Motivo })
+    });
+
+export const aprovarCancelamentoMarcacao = async (idMarcacao, ObservacaoDirecao = '') =>
+    request(`/marcacoes/${idMarcacao}/cancelamentos/aprovar`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ObservacaoDirecao })
+    });
+
+export const rejeitarCancelamentoMarcacao = async (idMarcacao, ObservacaoDirecao = '') =>
+    request(`/marcacoes/${idMarcacao}/cancelamentos/rejeitar`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ObservacaoDirecao })
     });
 
 export const getAlugueres = async () => request('/alugueres');

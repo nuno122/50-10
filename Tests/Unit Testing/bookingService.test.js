@@ -137,6 +137,7 @@ describe('Booking Service', () => {
                 IdMarcacao: 1,
                 IdAluno: 1,
                 EstaAtivo: true,
+                EstadoCancelamento: 'SemPedido',
                 Aula: {
                     Data: dataAulaLonga,
                     HoraInicio: new Date(dataAulaLonga.setHours(10, 0, 0, 0))
@@ -157,18 +158,19 @@ describe('Booking Service', () => {
                 IdMarcacao: 1,
                 IdAluno: 1,
                 EstaAtivo: true,
+                EstadoCancelamento: 'SemPedido',
                 Aula: {
                     Data: dataAulaCurta,
                     HoraInicio: new Date(dataAulaCurta.setHours(10, 0, 0, 0))
                 }
             });
-            bookingRepo.cancelar.mockResolvedValue({});
+            bookingRepo.RegistarPedidoCancelamento.mockResolvedValue({});
 
             const resultado = await bookingService.cancelarMarcacao(1, 1, 'Imprevisto');
 
             expect(resultado.sucesso).toBe(false);
             expect(resultado.mensagem).toMatch(/Prazo de 24h expirou/);
-            expect(bookingRepo.RegistarPedidoCancelamento).toHaveBeenCalledWith(1, false);
+            expect(bookingRepo.RegistarPedidoCancelamento).toHaveBeenCalledWith(1, 'Imprevisto');
         });
     });
 });

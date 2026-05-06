@@ -87,6 +87,10 @@ const criarAula = async (dados) => {
         throw criarErro('O estilo de danca selecionado nao existe.', 400);
     }
 
+    if (Number(dados.CapacidadeMaxima) > Number(estudio.Capacidade || 0)) {
+        throw criarErro('A capacidade da aula excede a capacidade do estudio selecionado.', 400);
+    }
+
     const novaHoraInicio = new Date(dados.HoraInicio).getTime();
     const novaHoraFim = new Date(dados.HoraFim).getTime();
 
@@ -94,8 +98,9 @@ const criarAula = async (dados) => {
         throw criarErro('A hora de fim tem de ser posterior a hora de inicio.', 400);
     }
 
-    const [aulasNoDia, disponibilidadesProfessor] = await Promise.all([
+    const [aulasNoEstudio, aulasDoProfessorNoDia, disponibilidadesProfessor] = await Promise.all([
         classRepo.findOverlapping(dados.IdEstudio, dados.Data),
+        classRepo.findProfessorClassesByDate(dados.IdProfessor, dados.Data),
         classRepo.findProfessorAvailabilityByDate(dados.IdProfessor, dados.Data)
     ]);
 
@@ -103,19 +108,30 @@ const criarAula = async (dados) => {
         throw criarErro('O professor nao tem disponibilidade registada para este horario.', 400);
     }
 
-    const aulaSobreposta = aulasNoDia.find((aulaExistente) => {
+    const aulaSobrepostaNoEstudio = aulasNoEstudio.find((aulaExistente) => {
         const existenteInicio = new Date(aulaExistente.HoraInicio).getTime();
         const existenteFim = new Date(aulaExistente.HoraFim).getTime();
         return novaHoraInicio < existenteFim && novaHoraFim > existenteInicio;
     });
 
-    if (aulaSobreposta) {
+    if (aulaSobrepostaNoEstudio) {
         throw criarErro('Conflito de horario! Estudio ocupado.', 400);
+    }
+
+    const aulaSobrepostaDoProfessor = aulasDoProfessorNoDia.find((aulaExistente) => {
+        const existenteInicio = new Date(aulaExistente.HoraInicio).getTime();
+        const existenteFim = new Date(aulaExistente.HoraFim).getTime();
+        return novaHoraInicio < existenteFim && novaHoraFim > existenteInicio;
+    });
+
+    if (aulaSobrepostaDoProfessor) {
+        throw criarErro('Conflito de horario! Professor ocupado.', 400);
     }
 
     const novaAula = await classRepo.create({
         ...dados,
-        TipoAula: tipoAula
+        TipoAula: tipoAula,
+        OrigemAula: dados.OrigemAula || 'Direcao'
     });
 
     return {
