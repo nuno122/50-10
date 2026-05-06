@@ -18,11 +18,32 @@ router.get(
     privateLessonRequestController.getPedidosDoEncarregado
 );
 
+router.get(
+    '/professor',
+    verificarToken,
+    verificarPermissao(PERMISSOES.PROFESSOR),
+    privateLessonRequestController.getPedidosDoProfessor
+);
+
 router.post(
     '/',
     verificarToken,
     verificarPermissao(PERMISSOES.ENCARREGADO),
     privateLessonRequestController.criarPedido
+);
+
+router.patch(
+    '/:idPedidoAulaPrivada/confirmar-professor',
+    verificarToken,
+    verificarPermissao(PERMISSOES.PROFESSOR),
+    privateLessonRequestController.confirmarPedidoProfessor
+);
+
+router.patch(
+    '/:idPedidoAulaPrivada/rejeitar-professor',
+    verificarToken,
+    verificarPermissao(PERMISSOES.PROFESSOR),
+    privateLessonRequestController.rejeitarPedidoProfessor
 );
 
 router.patch(

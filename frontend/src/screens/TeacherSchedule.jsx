@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
     cancelarAulaProfessor,
+    confirmarPedidoAulaPrivadaProfessor,
     confirmarAulaProfessor,
     getAulas,
+    getPedidosAulaPrivadaProfessor,
     getMinhasDisponibilidades,
+    rejeitarPedidoAulaPrivadaProfessor,
     guardarMinhasDisponibilidades
 } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -489,6 +492,7 @@ const TeacherSchedule = () => {
     const [activeTab, setActiveTab] = useState('lessons');
     const [availabilityMode, setAvailabilityMode] = useState('calendar');
     const [lessons, setLessons] = useState([]);
+    const [privateRequests, setPrivateRequests] = useState([]);
     const [savedAvailability, setSavedAvailability] = useState([]);
     const [monthlyMonth, setMonthlyMonth] = useState(getMonthInputValue(new Date()));
     const [monthlyDraft, setMonthlyDraft] = useState([]);
@@ -517,9 +521,10 @@ const TeacherSchedule = () => {
         setError('');
 
         try {
-            const [aulas, disponibilidades] = await Promise.all([
+            const [aulas, disponibilidades, pedidosPrivados] = await Promise.all([
                 getAulas(),
-                getMinhasDisponibilidades()
+                getMinhasDisponibilidades(),
+                getPedidosAulaPrivadaProfessor()
             ]);
 
             const ownLessons = aulas
@@ -546,6 +551,7 @@ const TeacherSchedule = () => {
 
             setLessons(ownLessons);
             setSavedAvailability(availabilityView);
+            setPrivateRequests(pedidosPrivados || []);
         } catch (err) {
             setError(err.message || 'Nao foi possivel carregar os dados do professor.');
         } finally {
@@ -569,6 +575,10 @@ const TeacherSchedule = () => {
             lesson.studio.toLowerCase().includes(term)
         ));
     }, [lessons, searchQuery]);
+
+    const pendingPrivateRequests = useMemo(() => (
+        privateRequests.filter((request) => request.EstadoPedido === 'PendenteProfessor')
+    ), [privateRequests]);
 
     const monthlyDraftWithSelection = useMemo(() => {
         try {
@@ -658,6 +668,36 @@ const TeacherSchedule = () => {
             await loadData();
         } catch (err) {
             setError(err.message || 'Nao foi possivel confirmar a aula.');
+        } finally {
+            setSavingLesson(false);
+        }
+    };
+
+    const handleConfirmPrivateRequest = async (request) => {
+        setSavingLesson(true);
+        setError('');
+
+        try {
+            await confirmarPedidoAulaPrivadaProfessor(request.IdPedidoAulaPrivada);
+            setFeedback('Disponibilidade confirmada. O pedido segue para a Direcao validar o estudio.');
+            await loadData();
+        } catch (err) {
+            setError(err.message || 'Nao foi possivel confirmar o pedido de aula privada.');
+        } finally {
+            setSavingLesson(false);
+        }
+    };
+
+    const handleRejectPrivateRequest = async (request) => {
+        setSavingLesson(true);
+        setError('');
+
+        try {
+            await rejeitarPedidoAulaPrivadaProfessor(request.IdPedidoAulaPrivada, 'Professor indisponivel no horario pedido.');
+            setFeedback('Pedido de aula privada rejeitado.');
+            await loadData();
+        } catch (err) {
+            setError(err.message || 'Nao foi possivel rejeitar o pedido de aula privada.');
         } finally {
             setSavingLesson(false);
         }
@@ -1044,6 +1084,13 @@ const TeacherSchedule = () => {
                 >
                     Disponibilidade
                 </button>
+                <button
+                    type="button"
+                    className={`teacher-tab ${activeTab === 'privateRequests' ? 'teacher-tab--active' : ''}`}
+                    onClick={() => setActiveTab('privateRequests')}
+                >
+                    Pedidos Privados
+                </button>
             </div>
 
             {activeTab === 'lessons' && (
@@ -1124,6 +1171,56 @@ const TeacherSchedule = () => {
                                     <div className="teacher-card-body">
                                         <p>{lesson.date}</p>
                                         <p>{lesson.time}</p>
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {activeTab === 'privateRequests' && (
+                <div className="teacher-section">
+                    {loading ? (
+                        <div className="teacher-empty">
+                            <p className="teacher-empty-title">A carregar pedidos...</p>
+                        </div>
+                    ) : pendingPrivateRequests.length === 0 ? (
+                        <div className="teacher-empty">
+                            <p className="teacher-empty-title">Sem pedidos privados pendentes</p>
+                            <p>Quando um encarregado pedir uma aula contigo, aparece aqui para confirmares a disponibilidade.</p>
+                        </div>
+                    ) : (
+                        <div className="teacher-grid">
+                            {pendingPrivateRequests.map((request) => (
+                                <article key={request.IdPedidoAulaPrivada} className="teacher-card">
+                                    <div className="teacher-card-header">
+                                        <span className="teacher-badge teacher-badge--primary">A confirmar</span>
+                                        <h2>{request.EstiloDanca?.Nome || 'Aula privada'}</h2>
+                                    </div>
+                                    <div className="teacher-card-body">
+                                        <p>{formatDate(request.DataPretendida)} - {extractTime(request.HoraPretendida)}</p>
+                                        <p>{request.DuracaoMinutos} min - {request.CapacidadePretendida} participante(s)</p>
+                                        <p>{request.Aluno?.Utilizador?.NomeCompleto || 'Aluno'}</p>
+                                        {request.Observacoes && <p>{request.Observacoes}</p>}
+                                    </div>
+                                    <div className="teacher-card-actions">
+                                        <button
+                                            type="button"
+                                            className="teacher-button teacher-button--ghost"
+                                            onClick={() => handleRejectPrivateRequest(request)}
+                                            disabled={savingLesson}
+                                        >
+                                            Rejeitar
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="teacher-button teacher-button--primary"
+                                            onClick={() => handleConfirmPrivateRequest(request)}
+                                            disabled={savingLesson}
+                                        >
+                                            Confirmar Disponibilidade
+                                        </button>
                                     </div>
                                 </article>
                             ))}

@@ -56,7 +56,7 @@ const buildDefaultForm = (request) => ({
     HoraPretendida: formatTimeInput(request.HoraPretendida),
     DuracaoMinutos: String(request.DuracaoMinutos || 60),
     CapacidadeMaxima: String(request.CapacidadePretendida || 1),
-    IdProfessor: '',
+    IdProfessor: request.IdProfessorConfirmado || '',
     IdEstudio: '',
     Preco: '0',
     ObservacaoDirecao: ''
@@ -174,7 +174,7 @@ const PrivateLessonValidationPanel = ({
     formatDate,
     formatTime
 }) => {
-    const pendingRequests = (requests || []).filter((request) => request.EstadoPedido === 'Pendente');
+    const pendingRequests = (requests || []).filter((request) => request.EstadoPedido === 'PendenteDirecao');
 
     return (
         <section className="rental-card rental-list-card">
@@ -195,7 +195,7 @@ const PrivateLessonValidationPanel = ({
                             ...buildDefaultForm(request),
                             ...(forms[request.IdPedidoAulaPrivada] || {})
                         };
-                        const teacherOptions = getTeacherOptions(users, request, form, disponibilidades, aulas);
+                        const confirmedTeacher = (users || []).find((user) => user.IdUtilizador === request.IdProfessorConfirmado);
                         const studioOptions = getStudioOptions(studios, request, form, aulas);
 
                         return (
@@ -203,7 +203,7 @@ const PrivateLessonValidationPanel = ({
                                 <div className="rental-item-main">
                                     <div className="rental-item-top">
                                         <div className="rental-badges">
-                                            <span className="rental-badge rental-badge--warning">Pendente</span>
+                                            <span className="rental-badge rental-badge--warning">Confirmado pelo professor</span>
                                             <span className="rental-badge rental-badge--muted">{request.EstiloDanca?.Nome || 'Estilo'}</span>
                                         </div>
                                     </div>
@@ -280,19 +280,11 @@ const PrivateLessonValidationPanel = ({
 
                                         <label>
                                             <span>Professor</span>
-                                            <select
-                                                value={form.IdProfessor}
-                                                onChange={(event) => onChangeForm(request.IdPedidoAulaPrivada, 'IdProfessor', event.target.value)}
-                                            >
-                                                <option value="">
-                                                    {teacherOptions.length === 0 ? 'Sem professores disponiveis' : 'Selecione o professor'}
-                                                </option>
-                                                {teacherOptions.map((teacher) => (
-                                                    <option key={teacher.IdUtilizador} value={teacher.IdUtilizador}>
-                                                        {teacher.NomeCompleto}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                            <input
+                                                value={confirmedTeacher?.NomeCompleto || form.IdProfessor}
+                                                readOnly
+                                                title={confirmedTeacher?.NomeCompleto || 'Professor confirmado'}
+                                            />
                                         </label>
 
                                         <label>

@@ -104,10 +104,24 @@ export const getPedidosAulaPrivada = async () => request('/pedidos-aula-privada'
 
 export const getPedidosAulaPrivadaEncarregado = async () => request('/pedidos-aula-privada/encarregado');
 
+export const getPedidosAulaPrivadaProfessor = async () => request('/pedidos-aula-privada/professor');
+
 export const criarPedidoAulaPrivada = async (dados) =>
     request('/pedidos-aula-privada', {
         method: 'POST',
         body: JSON.stringify(dados)
+    });
+
+export const confirmarPedidoAulaPrivadaProfessor = async (idPedidoAulaPrivada, dados = {}) =>
+    request(`/pedidos-aula-privada/${idPedidoAulaPrivada}/confirmar-professor`, {
+        method: 'PATCH',
+        body: JSON.stringify(dados)
+    });
+
+export const rejeitarPedidoAulaPrivadaProfessor = async (idPedidoAulaPrivada, ObservacaoProfessor = '') =>
+    request(`/pedidos-aula-privada/${idPedidoAulaPrivada}/rejeitar-professor`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ObservacaoProfessor })
     });
 
 export const aprovarPedidoAulaPrivada = async (idPedidoAulaPrivada, dados) =>
@@ -124,10 +138,11 @@ export const rejeitarPedidoAulaPrivada = async (idPedidoAulaPrivada, ObservacaoD
 
 export const getMinhasDisponibilidades = async () => request('/disponibilidades/minhas');
 
-export const getDisponibilidades = async ({ from, to } = {}) => {
+export const getDisponibilidades = async ({ from, to, idProfessor } = {}) => {
     const params = new URLSearchParams();
     if (from) params.set('from', from);
     if (to) params.set('to', to);
+    if (idProfessor) params.set('idProfessor', idProfessor);
     const query = params.toString();
     return request(`/disponibilidades${query ? `?${query}` : ''}`);
 };
@@ -240,5 +255,7 @@ export const registarDevolucaoAluguer = async (idAluguer, EstadoEntrega, Multa =
 export const getEstudios = async () => request('/master/estudios');
 
 export const getEstilos = async () => request('/master/estilos');
+
+export const getProfessores = async () => request('/master/professores');
 
 export const getGeografia = async () => request('/master/geografia');

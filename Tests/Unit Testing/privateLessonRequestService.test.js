@@ -16,6 +16,18 @@ describe('Private Lesson Request Service', () => {
             { IdAluno: 'aluno-1', Nome: 'Educando Teste' }
         ]);
         classRepo.findEstiloById.mockResolvedValue({ IdEstiloDanca: 'estilo-1' });
+        classRepo.findProfessorById.mockResolvedValue({
+            IdUtilizador: 'prof-1',
+            EstiloProfessor: [{ IdEstiloDanca: 'estilo-1' }]
+        });
+        classRepo.findProfessorClassesByDate.mockResolvedValue([]);
+        classRepo.findProfessorAvailabilityByDate.mockResolvedValue([
+            {
+                HoraInicio: '09:00',
+                HoraFim: '14:00'
+            }
+        ]);
+        privateLessonRequestRepo.findProfessorPendingApprovalByDate.mockResolvedValue([]);
     });
 
     describe('criarPedido', () => {
@@ -25,6 +37,7 @@ describe('Private Lesson Request Service', () => {
             const resultado = await privateLessonRequestService.criarPedido({
                 IdAluno: 'aluno-1',
                 IdEstiloDanca: 'estilo-1',
+                IdProfessorSolicitado: 'prof-1',
                 DataPretendida: '2028-01-15',
                 HoraPretendida: '10:30',
                 DuracaoMinutos: 60,
@@ -42,6 +55,7 @@ describe('Private Lesson Request Service', () => {
             await expect(privateLessonRequestService.criarPedido({
                 IdAluno: 'aluno-2',
                 IdEstiloDanca: 'estilo-1',
+                IdProfessorSolicitado: 'prof-1',
                 DataPretendida: '2028-01-15',
                 HoraPretendida: '10:30',
                 DuracaoMinutos: 60
@@ -55,7 +69,8 @@ describe('Private Lesson Request Service', () => {
                 IdPedidoAulaPrivada: 'pedido-1',
                 IdAluno: 'aluno-1',
                 IdEstiloDanca: 'estilo-1',
-                EstadoPedido: 'Pendente',
+                IdProfessorConfirmado: 'prof-1',
+                EstadoPedido: 'PendenteDirecao',
                 DataPretendida: new Date('2028-01-15T00:00:00.000Z'),
                 HoraPretendida: new Date('1970-01-01T10:30:00.000Z'),
                 DuracaoMinutos: 60,
@@ -73,7 +88,6 @@ describe('Private Lesson Request Service', () => {
             });
 
             const resultado = await privateLessonRequestService.aprovarPedido('pedido-1', {
-                IdProfessor: 'prof-1',
                 IdEstudio: 'est-1',
                 Preco: 25,
                 ObservacaoDirecao: 'Aprovado com professor disponivel'
@@ -98,7 +112,38 @@ describe('Private Lesson Request Service', () => {
 
             await expect(privateLessonRequestService.aprovarPedido('pedido-1', {}, 'dir-1'))
                 .rejects
-                .toThrow('Apenas pedidos pendentes podem ser aprovados.');
+                .toThrow('Apenas pedidos confirmados pelo professor podem ser aprovados pela Direcao.');
+        });
+    });
+
+    describe('confirmarPedidoProfessor', () => {
+        it('deve confirmar a disponibilidade e enviar para a direcao', async () => {
+            privateLessonRequestRepo.findById.mockResolvedValue({
+                IdPedidoAulaPrivada: 'pedido-1',
+                IdProfessorSolicitado: 'prof-1',
+                EstadoPedido: 'PendenteProfessor',
+                EstiloDanca: { IdEstiloDanca: 'estilo-1' },
+                DataPretendida: new Date('2028-01-15T00:00:00.000Z'),
+                HoraPretendida: new Date('1970-01-01T10:30:00.000Z'),
+                DuracaoMinutos: 60
+            });
+            privateLessonRequestRepo.update.mockResolvedValue({
+                IdPedidoAulaPrivada: 'pedido-1',
+                EstadoPedido: 'PendenteDirecao',
+                IdProfessorConfirmado: 'prof-1'
+            });
+
+            const resultado = await privateLessonRequestService.confirmarPedidoProfessor(
+                'pedido-1',
+                { ObservacaoProfessor: 'Disponivel' },
+                'prof-1'
+            );
+
+            expect(resultado.pedido.EstadoPedido).toBe('PendenteDirecao');
+            expect(privateLessonRequestRepo.update).toHaveBeenCalledWith('pedido-1', expect.objectContaining({
+                EstadoPedido: 'PendenteDirecao',
+                IdProfessorConfirmado: 'prof-1'
+            }));
         });
     });
 
@@ -106,16 +151,16 @@ describe('Private Lesson Request Service', () => {
         it('deve rejeitar um pedido pendente', async () => {
             privateLessonRequestRepo.findById.mockResolvedValue({
                 IdPedidoAulaPrivada: 'pedido-1',
-                EstadoPedido: 'Pendente'
+                EstadoPedido: 'PendenteDirecao'
             });
             privateLessonRequestRepo.update.mockResolvedValue({
                 IdPedidoAulaPrivada: 'pedido-1',
-                EstadoPedido: 'Rejeitado'
+                EstadoPedido: 'RejeitadoDirecao'
             });
 
             const resultado = await privateLessonRequestService.rejeitarPedido('pedido-1', 'Sem vaga neste horario', 'dir-1');
 
-            expect(resultado.pedido.EstadoPedido).toBe('Rejeitado');
+            expect(resultado.pedido.EstadoPedido).toBe('RejeitadoDirecao');
             expect(privateLessonRequestRepo.update).toHaveBeenCalled();
         });
     });

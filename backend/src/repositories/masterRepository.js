@@ -17,6 +17,26 @@ const findAllEstilos = async () => {
     return await prisma.estiloDanca.findMany();
 };
 
+const findAllProfessores = async () => {
+    return await prisma.professor.findMany({
+        include: {
+            Utilizador: {
+                select: {
+                    IdUtilizador: true,
+                    NomeCompleto: true,
+                    Email: true,
+                    EstaAtivo: true
+                }
+            },
+            EstiloProfessor: {
+                include: {
+                    EstiloDanca: true
+                }
+            }
+        }
+    });
+};
+
 const findAllPaises = async () => {
     return await prisma.pais.findMany();
 };
@@ -30,6 +50,7 @@ const findAllDistritos = async () => {
 module.exports = {
     findAllEstudios,
     findAllEstilos,
+    findAllProfessores,
     findAllPaises,
     findAllDistritos
 };

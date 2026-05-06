@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { criarPedidoAulaPrivada, getAlunosEncarregado, getEstilos, getPedidosAulaPrivadaEncarregado } from '../services/api';
+import { criarPedidoAulaPrivada, getAlunosEncarregado, getDisponibilidades, getEstilos, getPedidosAulaPrivadaEncarregado, getProfessores } from '../services/api';
 
 const emptyForm = {
     studentId: '',
@@ -8,6 +8,7 @@ const emptyForm = {
     duration: '60',
     capacity: '1',
     styleId: '',
+    teacherId: '',
     notes: ''
 };
 
@@ -42,8 +43,11 @@ const getStatusTone = (status) => {
 const GuardianLessonRequest = () => {
     const [formData, setFormData] = useState(emptyForm);
     const [styles, setStyles] = useState([]);
+    const [teachers, setTeachers] = useState([]);
     const [students, setStudents] = useState([]);
     const [requests, setRequests] = useState([]);
+    const [teacherAvailability, setTeacherAvailability] = useState([]);
+    const [availabilityLoading, setAvailabilityLoading] = useState(false);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
@@ -54,13 +58,15 @@ const GuardianLessonRequest = () => {
         setError('');
 
         try {
-            const [stylesData, studentsData, requestsData] = await Promise.all([
+            const [stylesData, teachersData, studentsData, requestsData] = await Promise.all([
                 getEstilos(),
+                getProfessores(),
                 getAlunosEncarregado(),
                 getPedidosAulaPrivadaEncarregado()
             ]);
 
             setStyles(stylesData || []);
+            setTeachers((teachersData || []).filter((teacher) => teacher.Utilizador?.EstaAtivo !== false));
             setStudents(studentsData || []);
             setRequests(requestsData || []);
 
@@ -81,6 +87,32 @@ const GuardianLessonRequest = () => {
         loadData();
     }, []);
 
+    useEffect(() => {
+        const loadTeacherAvailability = async () => {
+            if (!formData.teacherId || !formData.date) {
+                setTeacherAvailability([]);
+                return;
+            }
+
+            setAvailabilityLoading(true);
+
+            try {
+                const data = await getDisponibilidades({
+                    idProfessor: formData.teacherId,
+                    from: formData.date,
+                    to: formData.date
+                });
+                setTeacherAvailability(data || []);
+            } catch {
+                setTeacherAvailability([]);
+            } finally {
+                setAvailabilityLoading(false);
+            }
+        };
+
+        loadTeacherAvailability();
+    }, [formData.teacherId, formData.date]);
+
     const styleOptions = useMemo(() => (
         styles
             .map((style) => ({
@@ -94,6 +126,26 @@ const GuardianLessonRequest = () => {
         new Map(students.map((student) => [student.IdAluno, student]))
     ), [students]);
 
+    const teacherOptions = useMemo(() => (
+        teachers
+            .filter((teacher) => {
+                if (!formData.styleId) {
+                    return true;
+                }
+
+                return (teacher.EstiloProfessor || []).some((item) => item.IdEstiloDanca === formData.styleId);
+            })
+            .map((teacher) => ({
+                id: teacher.IdUtilizador,
+                name: teacher.Utilizador?.NomeCompleto || 'Professor'
+            }))
+            .sort((left, right) => left.name.localeCompare(right.name, 'pt'))
+    ), [teachers, formData.styleId]);
+
+    const selectedTeacherName = useMemo(() => (
+        teacherOptions.find((teacher) => teacher.id === formData.teacherId)?.name || 'Professor selecionado'
+    ), [teacherOptions, formData.teacherId]);
+
     const resetForm = () => {
         setFormData((current) => ({
             ...emptyForm,
@@ -106,7 +158,7 @@ const GuardianLessonRequest = () => {
     const handleSubmit = async (event) => {
         event.preventDefault();
 
-        if (!formData.studentId || !formData.date || !formData.time || !formData.styleId) {
+        if (!formData.studentId || !formData.date || !formData.time || !formData.styleId || !formData.teacherId) {
             setError('Por favor, preencha todos os campos obrigatorios.');
             setFeedback('');
             return;
@@ -120,6 +172,7 @@ const GuardianLessonRequest = () => {
             await criarPedidoAulaPrivada({
                 IdAluno: formData.studentId,
                 IdEstiloDanca: formData.styleId,
+                IdProfessorSolicitado: formData.teacherId,
                 DataPretendida: formData.date,
                 HoraPretendida: formData.time,
                 DuracaoMinutos: Number(formData.duration),
@@ -127,7 +180,7 @@ const GuardianLessonRequest = () => {
                 Observacoes: formData.notes
             });
 
-            setFeedback('Pedido de aula privada enviado com sucesso para validacao da Direcao.');
+            setFeedback('Pedido de aula privada enviado com sucesso para confirmacao do professor.');
             resetForm();
             await loadData();
         } catch (err) {
@@ -218,7 +271,7 @@ const GuardianLessonRequest = () => {
                                     <span>Estilo de Danca *</span>
                                     <select
                                         value={formData.styleId}
-                                        onChange={(event) => setFormData((current) => ({ ...current, styleId: event.target.value }))}
+                                        onChange={(event) => setFormData((current) => ({ ...current, styleId: event.target.value, teacherId: '' }))}
                                     >
                                         <option value="">Selecione o estilo</option>
                                         {styleOptions.map((style) => (
@@ -243,6 +296,21 @@ const GuardianLessonRequest = () => {
 
                             <div className="guardian-request-form-grid">
                                 <label>
+                                    <span>Professor *</span>
+                                    <select
+                                        value={formData.teacherId}
+                                        onChange={(event) => setFormData((current) => ({ ...current, teacherId: event.target.value }))}
+                                    >
+                                        <option value="">
+                                            {teacherOptions.length === 0 ? 'Sem professores para este estilo' : 'Selecione o professor'}
+                                        </option>
+                                        {teacherOptions.map((teacher) => (
+                                            <option key={teacher.id} value={teacher.id}>{teacher.name}</option>
+                                        ))}
+                                    </select>
+                                </label>
+
+                                <label>
                                     <span>Capacidade</span>
                                     <select
                                         value={formData.capacity}
@@ -254,8 +322,35 @@ const GuardianLessonRequest = () => {
                                         <option value="4">4 participantes</option>
                                     </select>
                                 </label>
+                            </div>
 
-                                <div />
+                            <div className="guardian-request-note">
+                                <p className="guardian-request-note-title">Disponibilidade do Professor</p>
+                                {!formData.teacherId || !formData.date ? (
+                                    <p>Selecione professor e data para ver os blocos disponiveis.</p>
+                                ) : availabilityLoading ? (
+                                    <p>A carregar disponibilidade...</p>
+                                ) : teacherAvailability.length === 0 ? (
+                                    <p>{selectedTeacherName} nao tem disponibilidade registada neste dia.</p>
+                                ) : (
+                                    <div className="guardian-availability-slots">
+                                        {teacherAvailability.map((slot) => {
+                                            const startTime = formatTime(slot.HoraInicio);
+                                            const endTime = formatTime(slot.HoraFim);
+
+                                            return (
+                                                <button
+                                                    key={slot.IdDisponibilidade}
+                                                    type="button"
+                                                    className={`guardian-availability-slot ${formData.time === startTime ? 'guardian-availability-slot--selected' : ''}`}
+                                                    onClick={() => setFormData((current) => ({ ...current, time: startTime }))}
+                                                >
+                                                    {startTime} - {endTime}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
 
                             <label>
@@ -271,8 +366,8 @@ const GuardianLessonRequest = () => {
                             <div className="guardian-request-note">
                                 <p className="guardian-request-note-title">Como funciona</p>
                                 <ul>
-                                    <li>O pedido entra na area de validacao da Direcao.</li>
-                                    <li>A Direcao pode aprovar, escolher professor e estudio, ou rejeitar.</li>
+                                    <li>O pedido entra primeiro para confirmacao do professor escolhido.</li>
+                                    <li>Depois de confirmado pelo professor, a Direcao valida o estudio e aprova ou rejeita.</li>
                                     <li>Quando aprovado, o pedido passa a uma aula particular real com marcacao do educando.</li>
                                 </ul>
                             </div>

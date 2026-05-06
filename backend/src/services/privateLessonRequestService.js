@@ -3,6 +3,14 @@ const classRepo = require('../repositories/classRepository');
 const classService = require('./classService');
 const privateLessonRequestRepo = require('../repositories/privateLessonRequestRepository');
 
+const ESTADOS_PEDIDO = {
+    PENDENTE_PROFESSOR: 'PendenteProfessor',
+    PENDENTE_DIRECAO: 'PendenteDirecao',
+    APROVADO: 'Aprovado',
+    REJEITADO_PROFESSOR: 'RejeitadoProfessor',
+    REJEITADO_DIRECAO: 'RejeitadoDirecao'
+};
+
 const criarErro = (mensagem, statusCode) => {
     const erro = new Error(mensagem);
     erro.statusCode = statusCode;
@@ -53,6 +61,64 @@ const construirFim = (inicio, duracaoMinutos) => {
     return fim;
 };
 
+const toMinutes = (value) => {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+        return (date.getUTCHours() * 60) + date.getUTCMinutes();
+    }
+
+    const match = String(value || '').match(/(\d{2}):(\d{2})/);
+    if (!match) {
+        return null;
+    }
+
+    return (Number(match[1]) * 60) + Number(match[2]);
+};
+
+const horariosSobrepostos = (inicioA, fimA, inicioB, fimB) => {
+    const aInicio = toMinutes(inicioA);
+    const aFim = toMinutes(fimA);
+    const bInicio = toMinutes(inicioB);
+    const bFim = toMinutes(fimB);
+
+    if (![aInicio, aFim, bInicio, bFim].every(Number.isFinite)) {
+        return false;
+    }
+
+    return aInicio < bFim && aFim > bInicio;
+};
+
+const intervaloCabeNaDisponibilidade = (horaInicio, horaFim, disponibilidades = []) => (
+    disponibilidades.some((disponibilidade) => {
+        const inicioDisponivel = toMinutes(disponibilidade.HoraInicio);
+        const fimDisponivel = toMinutes(disponibilidade.HoraFim);
+        const inicio = toMinutes(horaInicio);
+        const fim = toMinutes(horaFim);
+
+        if (![inicioDisponivel, fimDisponivel, inicio, fim].every(Number.isFinite)) {
+            return false;
+        }
+
+        return inicio >= inicioDisponivel && fim <= fimDisponivel;
+    })
+);
+
+const normalizeText = (value) => String(value || '').trim().toLowerCase();
+
+const relationMatchesStyle = (relation, estilo) => (
+    relation.IdEstiloDanca === estilo?.IdEstiloDanca ||
+    (
+        Boolean(normalizeText(relation.EstiloDanca?.Nome)) &&
+        Boolean(normalizeText(estilo?.Nome)) &&
+        normalizeText(relation.EstiloDanca?.Nome) === normalizeText(estilo?.Nome)
+    )
+);
+
+const professorSuportaEstilo = (professor, estilo) => (
+    Array.isArray(professor?.EstiloProfessor) &&
+    professor.EstiloProfessor.some((item) => relationMatchesStyle(item, estilo))
+);
+
 const garantirAlunoDoEncarregado = async (idEncarregado, idAluno) => {
     const alunos = await bookingService.listarAlunosDoEncarregado(idEncarregado);
     const aluno = alunos.find((item) => item.IdAluno === idAluno);
@@ -80,6 +146,66 @@ const validarDuracao = (duracao) => {
     return valor;
 };
 
+const validarProfessorDoPedido = async (idProfessor, estilo) => {
+    const professor = await classRepo.findProfessorById(idProfessor);
+    if (!professor) {
+        throw criarErro('O professor selecionado nao existe.', 400);
+    }
+
+    if (!professorSuportaEstilo(professor, estilo)) {
+        throw criarErro('O professor selecionado nao esta associado ao estilo escolhido.', 400);
+    }
+
+    return professor;
+};
+
+const validarDisponibilidadeProfessor = async (pedido, idProfessor) => {
+    const inicio = construirDataHora(pedido.DataPretendida, pedido.HoraPretendida);
+    if (!inicio) {
+        throw criarErro('A data ou hora pretendida e invalida.', 400);
+    }
+
+    if (inicio <= new Date()) {
+        throw criarErro('Nao e possivel confirmar um pedido para um horario passado.', 400);
+    }
+
+    const fim = construirFim(inicio, pedido.DuracaoMinutos);
+
+    const [aulasDoProfessor, disponibilidades, pedidosConfirmados] = await Promise.all([
+        classRepo.findProfessorClassesByDate(idProfessor, pedido.DataPretendida),
+        classRepo.findProfessorAvailabilityByDate(idProfessor, pedido.DataPretendida),
+        privateLessonRequestRepo.findProfessorPendingApprovalByDate(
+            idProfessor,
+            construirData(pedido.DataPretendida),
+            pedido.IdPedidoAulaPrivada
+        )
+    ]);
+
+    if (!intervaloCabeNaDisponibilidade(inicio, fim, disponibilidades)) {
+        throw criarErro('O professor nao tem disponibilidade registada para este horario.', 400);
+    }
+
+    const aulaSobreposta = aulasDoProfessor.find((aula) => (
+        horariosSobrepostos(inicio, fim, aula.HoraInicio, aula.HoraFim)
+    ));
+
+    if (aulaSobreposta) {
+        throw criarErro('O professor ja tem uma aula marcada neste horario.', 400);
+    }
+
+    const pedidoSobreposto = pedidosConfirmados.find((pedidoConfirmado) => {
+        const inicioPedido = construirDataHora(pedidoConfirmado.DataPretendida, pedidoConfirmado.HoraPretendida);
+        const fimPedido = construirFim(inicioPedido, pedidoConfirmado.DuracaoMinutos);
+        return horariosSobrepostos(inicio, fim, inicioPedido, fimPedido);
+    });
+
+    if (pedidoSobreposto) {
+        throw criarErro('O professor ja confirmou outro pedido de aula privada neste horario.', 400);
+    }
+
+    return { inicio, fim };
+};
+
 const criarPedido = async (dados, idEncarregado) => {
     if (!idEncarregado) {
         throw criarErro('IdEncarregado e obrigatorio.', 400);
@@ -88,6 +214,7 @@ const criarPedido = async (dados, idEncarregado) => {
     const {
         IdAluno,
         IdEstiloDanca,
+        IdProfessorSolicitado,
         DataPretendida,
         HoraPretendida,
         DuracaoMinutos,
@@ -95,8 +222,8 @@ const criarPedido = async (dados, idEncarregado) => {
         Observacoes
     } = dados || {};
 
-    if (!IdAluno || !IdEstiloDanca || !DataPretendida || !HoraPretendida) {
-        throw criarErro('IdAluno, IdEstiloDanca, DataPretendida e HoraPretendida sao obrigatorios.', 400);
+    if (!IdAluno || !IdEstiloDanca || !IdProfessorSolicitado || !DataPretendida || !HoraPretendida) {
+        throw criarErro('IdAluno, IdEstiloDanca, IdProfessorSolicitado, DataPretendida e HoraPretendida sao obrigatorios.', 400);
     }
 
     await garantirAlunoDoEncarregado(idEncarregado, IdAluno);
@@ -105,6 +232,8 @@ const criarPedido = async (dados, idEncarregado) => {
     if (!estilo) {
         throw criarErro('O estilo de danca selecionado nao existe.', 400);
     }
+
+    await validarProfessorDoPedido(IdProfessorSolicitado, estilo);
 
     const duracao = validarDuracao(DuracaoMinutos);
     const capacidade = validarCapacidade(CapacidadePretendida);
@@ -122,12 +251,13 @@ const criarPedido = async (dados, idEncarregado) => {
         IdEncarregado: idEncarregado,
         IdAluno,
         IdEstiloDanca,
+        IdProfessorSolicitado,
         DataPretendida: construirData(DataPretendida),
         HoraPretendida: dataHoraPretendida,
         DuracaoMinutos: duracao,
         CapacidadePretendida: capacidade,
         Observacoes: Observacoes ? String(Observacoes).trim() : null,
-        EstadoPedido: 'Pendente'
+        EstadoPedido: ESTADOS_PEDIDO.PENDENTE_PROFESSOR
     });
 };
 
@@ -143,6 +273,78 @@ const listarPedidosDoEncarregado = async (idEncarregado) => {
     return await privateLessonRequestRepo.findByGuardian(idEncarregado);
 };
 
+const listarPedidosDoProfessor = async (idProfessor) => {
+    if (!idProfessor) {
+        throw criarErro('IdProfessor e obrigatorio.', 400);
+    }
+
+    return await privateLessonRequestRepo.findByTeacher(idProfessor);
+};
+
+const confirmarPedidoProfessor = async (idPedidoAulaPrivada, dados, idProfessor) => {
+    if (!idPedidoAulaPrivada || !idProfessor) {
+        throw criarErro('IdPedidoAulaPrivada e IdProfessor sao obrigatorios.', 400);
+    }
+
+    const pedido = await privateLessonRequestRepo.findById(idPedidoAulaPrivada);
+    if (!pedido) {
+        throw criarErro('Pedido de aula privada nao encontrado.', 404);
+    }
+
+    if (pedido.IdProfessorSolicitado !== idProfessor) {
+        throw criarErro('Apenas o professor solicitado pode confirmar este pedido.', 403);
+    }
+
+    if (pedido.EstadoPedido !== ESTADOS_PEDIDO.PENDENTE_PROFESSOR) {
+        throw criarErro('Apenas pedidos pendentes do professor podem ser confirmados.', 400);
+    }
+
+    await validarProfessorDoPedido(idProfessor, pedido.EstiloDanca);
+    await validarDisponibilidadeProfessor(pedido, idProfessor);
+
+    const pedidoAtualizado = await privateLessonRequestRepo.update(idPedidoAulaPrivada, {
+        EstadoPedido: ESTADOS_PEDIDO.PENDENTE_DIRECAO,
+        IdProfessorConfirmado: idProfessor,
+        ObservacaoProfessor: dados?.ObservacaoProfessor ? String(dados.ObservacaoProfessor).trim() : null,
+        DataRespostaProfessor: new Date()
+    });
+
+    return {
+        mensagem: 'Disponibilidade confirmada pelo professor. O pedido segue para validacao da Direcao.',
+        pedido: pedidoAtualizado
+    };
+};
+
+const rejeitarPedidoProfessor = async (idPedidoAulaPrivada, observacaoProfessor, idProfessor) => {
+    if (!idPedidoAulaPrivada || !idProfessor) {
+        throw criarErro('IdPedidoAulaPrivada e IdProfessor sao obrigatorios.', 400);
+    }
+
+    const pedido = await privateLessonRequestRepo.findById(idPedidoAulaPrivada);
+    if (!pedido) {
+        throw criarErro('Pedido de aula privada nao encontrado.', 404);
+    }
+
+    if (pedido.IdProfessorSolicitado !== idProfessor) {
+        throw criarErro('Apenas o professor solicitado pode rejeitar este pedido.', 403);
+    }
+
+    if (pedido.EstadoPedido !== ESTADOS_PEDIDO.PENDENTE_PROFESSOR) {
+        throw criarErro('Apenas pedidos pendentes do professor podem ser rejeitados pelo professor.', 400);
+    }
+
+    const pedidoAtualizado = await privateLessonRequestRepo.update(idPedidoAulaPrivada, {
+        EstadoPedido: ESTADOS_PEDIDO.REJEITADO_PROFESSOR,
+        ObservacaoProfessor: observacaoProfessor ? String(observacaoProfessor).trim() : null,
+        DataRespostaProfessor: new Date()
+    });
+
+    return {
+        mensagem: 'Pedido rejeitado pelo professor.',
+        pedido: pedidoAtualizado
+    };
+};
+
 const aprovarPedido = async (idPedidoAulaPrivada, dados, idDiretor) => {
     if (!idPedidoAulaPrivada || !idDiretor) {
         throw criarErro('IdPedidoAulaPrivada e IdDiretor sao obrigatorios.', 400);
@@ -153,20 +355,20 @@ const aprovarPedido = async (idPedidoAulaPrivada, dados, idDiretor) => {
         throw criarErro('Pedido de aula privada nao encontrado.', 404);
     }
 
-    if (pedido.EstadoPedido !== 'Pendente') {
-        throw criarErro('Apenas pedidos pendentes podem ser aprovados.', 400);
+    if (pedido.EstadoPedido !== ESTADOS_PEDIDO.PENDENTE_DIRECAO) {
+        throw criarErro('Apenas pedidos confirmados pelo professor podem ser aprovados pela Direcao.', 400);
     }
 
-    const IdProfessor = dados?.IdProfessor;
+    const IdProfessor = pedido.IdProfessorConfirmado;
     const IdEstudio = dados?.IdEstudio;
     const preco = Number(dados?.Preco);
-    const dataPretendida = dados?.DataPretendida || pedido.DataPretendida;
-    const horaPretendida = dados?.HoraPretendida || pedido.HoraPretendida;
-    const duracao = dados?.DuracaoMinutos ? validarDuracao(dados.DuracaoMinutos) : pedido.DuracaoMinutos;
+    const dataPretendida = pedido.DataPretendida;
+    const horaPretendida = pedido.HoraPretendida;
+    const duracao = pedido.DuracaoMinutos;
     const capacidade = dados?.CapacidadeMaxima ? validarCapacidade(dados.CapacidadeMaxima) : pedido.CapacidadePretendida;
 
     if (!IdProfessor || !IdEstudio) {
-        throw criarErro('IdProfessor e IdEstudio sao obrigatorios para aprovar o pedido.', 400);
+        throw criarErro('O pedido precisa de professor confirmado e IdEstudio para ser aprovado.', 400);
     }
 
     if (!Number.isFinite(preco) || preco < 0) {
@@ -209,7 +411,7 @@ const aprovarPedido = async (idPedidoAulaPrivada, dados, idDiretor) => {
     }
 
     const pedidoAtualizado = await privateLessonRequestRepo.update(idPedidoAulaPrivada, {
-        EstadoPedido: 'Aprovado',
+        EstadoPedido: ESTADOS_PEDIDO.APROVADO,
         ObservacaoDirecao: dados?.ObservacaoDirecao ? String(dados.ObservacaoDirecao).trim() : null,
         DataDecisao: new Date(),
         IdDiretorDecisao: idDiretor,
@@ -234,12 +436,12 @@ const rejeitarPedido = async (idPedidoAulaPrivada, observacaoDirecao, idDiretor)
         throw criarErro('Pedido de aula privada nao encontrado.', 404);
     }
 
-    if (pedido.EstadoPedido !== 'Pendente') {
+    if (![ESTADOS_PEDIDO.PENDENTE_PROFESSOR, ESTADOS_PEDIDO.PENDENTE_DIRECAO].includes(pedido.EstadoPedido)) {
         throw criarErro('Apenas pedidos pendentes podem ser rejeitados.', 400);
     }
 
     const pedidoAtualizado = await privateLessonRequestRepo.update(idPedidoAulaPrivada, {
-        EstadoPedido: 'Rejeitado',
+        EstadoPedido: ESTADOS_PEDIDO.REJEITADO_DIRECAO,
         ObservacaoDirecao: observacaoDirecao ? String(observacaoDirecao).trim() : null,
         DataDecisao: new Date(),
         IdDiretorDecisao: idDiretor
@@ -255,6 +457,9 @@ module.exports = {
     criarPedido,
     listarPedidos,
     listarPedidosDoEncarregado,
+    listarPedidosDoProfessor,
+    confirmarPedidoProfessor,
+    rejeitarPedidoProfessor,
     aprovarPedido,
     rejeitarPedido
 };

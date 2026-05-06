@@ -1281,6 +1281,36 @@ button {
   gap: 8px;
 }
 
+.guardian-availability-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.guardian-availability-slot {
+  border: 1px solid #d2ddea;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #16324f;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 10px 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.guardian-availability-slot:hover {
+  border-color: #2563eb;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12);
+  transform: translateY(-1px);
+}
+
+.guardian-availability-slot--selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
 .guardian-request-actions {
   display: flex;
   justify-content: flex-end;

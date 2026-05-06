@@ -24,6 +24,20 @@ const pedidoInclude = {
         }
     },
     EstiloDanca: true,
+    ProfessorSolicitado: {
+        include: {
+            Utilizador: {
+                select: utilizadorResumoSelect
+            }
+        }
+    },
+    ProfessorConfirmado: {
+        include: {
+            Utilizador: {
+                select: utilizadorResumoSelect
+            }
+        }
+    },
     Aula: {
         include: {
             Professor: {
@@ -67,10 +81,39 @@ const privateLessonRequestRepository = {
         });
     },
 
+    findByTeacher: async (idProfessor) => {
+        return await prisma.pedidoAula.findMany({
+            where: {
+                OR: [
+                    { IdProfessorSolicitado: idProfessor },
+                    { IdProfessorConfirmado: idProfessor }
+                ]
+            },
+            include: pedidoInclude,
+            orderBy: [
+                { DataPedido: 'desc' },
+                { IdPedidoAulaPrivada: 'desc' }
+            ]
+        });
+    },
+
     findById: async (idPedidoAulaPrivada) => {
         return await prisma.pedidoAula.findUnique({
             where: { IdPedidoAulaPrivada: idPedidoAulaPrivada },
             include: pedidoInclude
+        });
+    },
+
+    findProfessorPendingApprovalByDate: async (idProfessor, data, excludeIdPedidoAulaPrivada) => {
+        return await prisma.pedidoAula.findMany({
+            where: {
+                IdProfessorConfirmado: idProfessor,
+                DataPretendida: data,
+                EstadoPedido: 'PendenteDirecao',
+                ...(excludeIdPedidoAulaPrivada
+                    ? { IdPedidoAulaPrivada: { not: excludeIdPedidoAulaPrivada } }
+                    : {})
+            }
         });
     },
 
@@ -80,6 +123,7 @@ const privateLessonRequestRepository = {
                 IdEncarregado: dados.IdEncarregado,
                 IdAluno: dados.IdAluno,
                 IdEstiloDanca: dados.IdEstiloDanca,
+                IdProfessorSolicitado: dados.IdProfessorSolicitado ?? null,
                 DataPretendida: dados.DataPretendida,
                 HoraPretendida: dados.HoraPretendida,
                 DuracaoMinutos: dados.DuracaoMinutos,

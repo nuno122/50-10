@@ -75,7 +75,7 @@ const LessonValidation = ({ embedded = false }) => {
     }, []);
 
     const pendingPrivateRequestsCount = useMemo(
-        () => privateLessonRequests.filter((request) => request.EstadoPedido === 'Pendente').length,
+        () => privateLessonRequests.filter((request) => request.EstadoPedido === 'PendenteDirecao').length,
         [privateLessonRequests]
     );
     const pendingCancellationCount = useMemo(

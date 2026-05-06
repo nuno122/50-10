@@ -213,6 +213,8 @@ model Professor {
   Disponibilidade Disponibilidade[]
   EstiloProfessor EstiloProfessor[]
   Utilizador      Utilizador        @relation(fields: [IdUtilizador], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Professor__IdUti__66603565")
+  PedidosSolicitados PedidoAula[]    @relation("ProfessorSolicitadoPedidoAula")
+  PedidosConfirmados PedidoAula[]    @relation("ProfessorConfirmadoPedidoAula")
 }
 
 model sysdiagrams {
@@ -263,6 +265,8 @@ model PedidoAula {
   IdEncarregado        String      @db.UniqueIdentifier
   IdAluno              String      @db.UniqueIdentifier
   IdEstiloDanca        String      @db.UniqueIdentifier
+  IdProfessorSolicitado String?     @db.UniqueIdentifier
+  IdProfessorConfirmado String?     @db.UniqueIdentifier
   IdAulaCriada         String?     @db.UniqueIdentifier
   IdDiretorDecisao     String?     @db.UniqueIdentifier
   DataPretendida       DateTime    @db.Date
@@ -270,17 +274,23 @@ model PedidoAula {
   DuracaoMinutos       Int
   CapacidadePretendida Int         @default(1)
   Observacoes          String?     @db.NVarChar(Max)
-  EstadoPedido         String      @default("Pendente") @db.NVarChar(50)
+  EstadoPedido         String      @default("PendenteProfessor") @db.NVarChar(50)
+  ObservacaoProfessor  String?     @db.NVarChar(Max)
   ObservacaoDirecao    String?     @db.NVarChar(Max)
   DataPedido           DateTime    @default(now())
+  DataRespostaProfessor DateTime?
   DataDecisao          DateTime?
   Aluno                Aluno       @relation(fields: [IdAluno], references: [IdUtilizador], onUpdate: NoAction)
   Aula                 Aula?       @relation(fields: [IdAulaCriada], references: [IdAula], onUpdate: NoAction)
   Utilizador           Utilizador? @relation(fields: [IdDiretorDecisao], references: [IdUtilizador], onUpdate: NoAction)
   Encarregado          Encarregado @relation(fields: [IdEncarregado], references: [IdUtilizador], onUpdate: NoAction)
   EstiloDanca          EstiloDanca @relation(fields: [IdEstiloDanca], references: [IdEstiloDanca], onUpdate: NoAction)
+  ProfessorSolicitado  Professor?  @relation("ProfessorSolicitadoPedidoAula", fields: [IdProfessorSolicitado], references: [IdUtilizador], onDelete: NoAction, onUpdate: NoAction)
+  ProfessorConfirmado  Professor?  @relation("ProfessorConfirmadoPedidoAula", fields: [IdProfessorConfirmado], references: [IdUtilizador], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([EstadoPedido, DataPedido])
   @@index([IdAluno, DataPedido])
   @@index([IdEncarregado, DataPedido])
+  @@index([IdProfessorSolicitado, EstadoPedido])
+  @@index([IdProfessorConfirmado, EstadoPedido])
 }

@@ -41,6 +41,53 @@ const getPedidosDoEncarregado = async (req, res) => {
     }
 };
 
+const getPedidosDoProfessor = async (req, res) => {
+    try {
+        const idProfessor = req.utilizador ? req.utilizador.IdUtilizador : null;
+        const pedidos = await privateLessonRequestService.listarPedidosDoProfessor(idProfessor);
+        res.json(pedidos);
+    } catch (erro) {
+        console.error(erro);
+        res.status(erro.statusCode || 500).json({
+            erro: erro.message || 'Erro ao carregar os pedidos do professor.'
+        });
+    }
+};
+
+const confirmarPedidoProfessor = async (req, res) => {
+    try {
+        const idProfessor = req.utilizador ? req.utilizador.IdUtilizador : null;
+        const resultado = await privateLessonRequestService.confirmarPedidoProfessor(
+            req.params.idPedidoAulaPrivada,
+            req.body,
+            idProfessor
+        );
+        res.json(resultado);
+    } catch (erro) {
+        console.error(erro);
+        res.status(erro.statusCode || 500).json({
+            erro: erro.message || 'Erro ao confirmar disponibilidade do professor.'
+        });
+    }
+};
+
+const rejeitarPedidoProfessor = async (req, res) => {
+    try {
+        const idProfessor = req.utilizador ? req.utilizador.IdUtilizador : null;
+        const resultado = await privateLessonRequestService.rejeitarPedidoProfessor(
+            req.params.idPedidoAulaPrivada,
+            req.body?.ObservacaoProfessor,
+            idProfessor
+        );
+        res.json(resultado);
+    } catch (erro) {
+        console.error(erro);
+        res.status(erro.statusCode || 500).json({
+            erro: erro.message || 'Erro ao rejeitar o pedido pelo professor.'
+        });
+    }
+};
+
 const aprovarPedido = async (req, res) => {
     try {
         const idDiretor = req.utilizador ? req.utilizador.IdUtilizador : null;
@@ -75,6 +122,9 @@ module.exports = {
     criarPedido,
     getPedidos,
     getPedidosDoEncarregado,
+    getPedidosDoProfessor,
+    confirmarPedidoProfessor,
+    rejeitarPedidoProfessor,
     aprovarPedido,
     rejeitarPedido
 };
