@@ -486,10 +486,10 @@ const getInitialImportForm = () => {
     };
 };
 
-const TeacherSchedule = () => {
+const TeacherSchedule = ({ initialTab = 'lessons' }) => {
     const { user } = useAuth();
     const { notify, refreshSnapshot } = useNotifications();
-    const [activeTab, setActiveTab] = useState('lessons');
+    const [activeTab, setActiveTab] = useState(initialTab);
     const [availabilityMode, setAvailabilityMode] = useState('calendar');
     const [lessons, setLessons] = useState([]);
     const [privateRequests, setPrivateRequests] = useState([]);
@@ -562,6 +562,10 @@ const TeacherSchedule = () => {
     useEffect(() => {
         loadData();
     }, [user?.Id]);
+
+    useEffect(() => {
+        setActiveTab(initialTab);
+    }, [initialTab]);
 
     useEffect(() => {
         setMonthlyDraft(buildMonthlyDraft(monthlyMonth, savedAvailability));

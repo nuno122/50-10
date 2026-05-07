@@ -5,9 +5,7 @@ import {
     getAulas,
     getAlugueres,
     getAlunosEncarregado,
-    getEstilos,
     getEstudios,
-    getInventario,
     getMinhasMarcacoes,
     getPagamentos,
     getPagamentosEncarregado,
@@ -107,12 +105,6 @@ const getUpcomingLabel = (date) => {
     if (targetDay.getTime() === tomorrow.getTime()) return `Amanha ${time}`;
     return `${formatDate(target)} ${time}`;
 };
-
-const countInventoryUnits = (inventory) => (
-    inventory.reduce((total, article) => (
-        total + (article.TamanhoArtigo || []).reduce((sum, size) => sum + Number(size.Quantidade || 0), 0)
-    ), 0)
-);
 
 const createActivity = (action, when, type) => ({ action, when, type });
 
@@ -392,17 +384,15 @@ const Dashboard = () => {
                 const commonRequests = await Promise.all([
                     getAulas(),
                     getAlugueres(),
-                    getEstilos(),
                     getEstudios(),
-                    getInventario(),
                     getPagamentos()
                 ]);
 
-                const [aulas, aluguers, estilos, estudios, inventory, pagamentos] = commonRequests;
+                const [aulas, aluguers, estudios, pagamentos] = commonRequests;
 
                 if (permission === PERMISSOES.DIRECAO) {
                     const users = await getUtilizadores();
-                    setDashboard(buildDirectorDashboard({ users, aulas, inventory, estudios, pagamentos, aluguers }));
+                    setDashboard(buildDirectorDashboard({ users, aulas, estudios, pagamentos, aluguers }));
                 } else if (permission === PERMISSOES.PROFESSOR) {
                     setDashboard(buildTeacherDashboard({ aulas, user }));
                 } else if (permission === PERMISSOES.ALUNO) {
@@ -413,7 +403,7 @@ const Dashboard = () => {
                         getAlunosEncarregado(),
                         getPagamentosEncarregado()
                     ]);
-                    setDashboard(buildGuardianDashboard({ aluguers, pagamentos: pagamentosEncarregado, aulas, inventory, user, students }));
+                    setDashboard(buildGuardianDashboard({ aluguers, pagamentos: pagamentosEncarregado, aulas, user, students }));
                 } else {
                     setDashboard(emptyDashboard);
                 }
@@ -436,7 +426,6 @@ const Dashboard = () => {
                     <p className="dashboard-eyebrow">Dashboard</p>
                     <h1>Painel Principal</h1>
                     <p className="dashboard-subtitle">{safeDashboard.welcome}</p>
-                    {safeDashboard.note && <p className="dashboard-note">{safeDashboard.note}</p>}
                 </div>
             </div>
 
@@ -460,38 +449,6 @@ const Dashboard = () => {
                         ))}
                     </div>
 
-                    <div className="dashboard-grid">
-                        <section className="dashboard-card">
-                            <div className="dashboard-card-header">
-                                <h2>Informacao Rapida</h2>
-                            </div>
-                            <div className="dashboard-list">
-                                {safeDashboard.quick.map(([label, value]) => (
-                                    <div key={label} className="dashboard-list-row">
-                                        <span>{label}</span>
-                                        <strong>{value}</strong>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-
-                        <section className="dashboard-card">
-                            <div className="dashboard-card-header">
-                                <h2>Atividade Recente</h2>
-                            </div>
-                            <div className="dashboard-activity">
-                                {safeDashboard.activity.map((item) => (
-                                    <div key={`${item.action}-${item.when}`} className="dashboard-activity-row">
-                                        <span className={`dashboard-dot dashboard-dot--${item.type}`} />
-                                        <div>
-                                            <p>{item.action}</p>
-                                            <small>{item.when}</small>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                    </div>
                 </>
             )}
         </div>

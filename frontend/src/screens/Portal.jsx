@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getRoleLabel, isAluno, isDirecao, isEncarregado, isProfessor } from '../utils/permissions';
 import Dashboard from './Dashboard';
+import EventManagement from './EventManagement';
 import FinanceManagement from './FinanceManagement';
 import GuardianLessons from './GuardianLessons';
 import GuardianLessonRequest from './GuardianLessonRequest';
@@ -25,36 +26,40 @@ const Portal = () => {
     const menuItems = useMemo(() => (
         userIsDirecao
             ? [
-                { id: 'dashboard', label: 'Dashboard' },
-                { id: 'schedule', label: 'Gestao de Horarios' },
-                { id: 'users', label: 'Gestao de Utilizadores' },
-                { id: 'rental-requests', label: 'Alugueres e Extensoes' },
-                { id: 'lesson-validations', label: 'Aulas e Cancelamentos' },
+                { id: 'dashboard', label: 'Resumo' },
+                { id: 'events', label: 'Eventos' },
+                { id: 'schedule', label: 'Horarios e Aulas' },
+                { id: 'users', label: 'Utilizadores' },
+                { id: 'rental-requests', label: 'Alugueres' },
+                { id: 'lesson-validations', label: 'Validacoes' },
                 { id: 'finance', label: 'Financeiro' },
-                { id: 'inventory', label: 'Gestao de Inventario' }
+                { id: 'inventory', label: 'Inventario' }
             ]
             : userIsProfessor
                 ? [
-                    { id: 'dashboard', label: 'Dashboard' },
-                    { id: 'teacher-schedule', label: 'Aulas e Disponibilidade' },
-                    { id: 'inventory', label: 'Inventario e Aluguer' }
+                    { id: 'dashboard', label: 'Resumo' },
+                    { id: 'events', label: 'Eventos' },
+                    { id: 'teacher-schedule', label: 'Agenda e Disponibilidade' },
+                    { id: 'teacher-private-requests', label: 'Pedidos Privados' },
+                    { id: 'inventory', label: 'Alugueres e Inventario' }
                 ]
                 : userIsEncarregado
                     ? [
-                        { id: 'dashboard', label: 'Dashboard' },
-                        { id: 'lesson-request', label: 'Pedido de Aula Privada' },
-                        { id: 'guardian-lessons', label: 'Aulas e Cancelamentos' },
+                        { id: 'dashboard', label: 'Resumo' },
+                        { id: 'events', label: 'Eventos' },
+                        { id: 'lesson-request', label: 'Aulas Privadas' },
+                        { id: 'guardian-lessons', label: 'Marcacoes' },
                         { id: 'finance', label: 'Pagamentos' },
-                        { id: 'inventory', label: 'Inventario e Aluguer' }
+                        { id: 'inventory', label: 'Alugueres e Inventario' }
                     ]
                     : userIsAluno
                         ? [
-                            { id: 'dashboard', label: 'Dashboard' },
-                            { id: 'agenda', label: 'A Minha Agenda' }
+                            { id: 'dashboard', label: 'Resumo' },
+                            { id: 'agenda', label: 'Agenda' }
                         ]
                         : [
-                            { id: 'dashboard', label: 'Dashboard' },
-                            { id: 'inventory', label: 'Inventario e Aluguer' }
+                            { id: 'dashboard', label: 'Resumo' },
+                            { id: 'inventory', label: 'Alugueres e Inventario' }
                         ]
     ), [userIsAluno, userIsDirecao, userIsEncarregado, userIsProfessor]);
 
@@ -83,6 +88,10 @@ const Portal = () => {
             return <FinanceManagement />;
         }
 
+        if (activeView === 'events' && (userIsDirecao || userIsProfessor || userIsEncarregado)) {
+            return <EventManagement />;
+        }
+
         if (activeView === 'agenda' && userIsAluno) {
             return <StudentAgenda />;
         }
@@ -100,7 +109,11 @@ const Portal = () => {
         }
 
         if (activeView === 'teacher-schedule' && userIsProfessor) {
-            return <TeacherSchedule />;
+            return <TeacherSchedule initialTab="lessons" />;
+        }
+
+        if (activeView === 'teacher-private-requests' && userIsProfessor) {
+            return <TeacherSchedule initialTab="privateRequests" />;
         }
 
         return <Dashboard />;
@@ -129,7 +142,7 @@ const Portal = () => {
                 </nav>
 
                 <button type="button" className="portal-logout" onClick={logout}>
-                    Logout
+                    Terminar Sessao
                 </button>
             </aside>
 

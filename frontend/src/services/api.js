@@ -100,6 +100,37 @@ export const editarArtigo = async (id, dados) =>
 
 export const getAulas = async () => request('/aulas');
 
+export const getEventos = async () => request('/eventos');
+
+export const criarEvento = async (dados) =>
+    request('/eventos', {
+        method: 'POST',
+        body: JSON.stringify(dados)
+    });
+
+export const atualizarEvento = async (idEvento, dados) =>
+    request(`/eventos/${idEvento}`, {
+        method: 'PATCH',
+        body: JSON.stringify(dados)
+    });
+
+export const removerEvento = async (idEvento) =>
+    request(`/eventos/${idEvento}`, {
+        method: 'DELETE'
+    });
+
+export const adicionarComentarioEvento = async (idEvento, Comentario) =>
+    request(`/eventos/${idEvento}/comentarios`, {
+        method: 'POST',
+        body: JSON.stringify({ Comentario })
+    });
+
+export const editarComentarioEvento = async (idEventoComentario, Comentario) =>
+    request(`/eventos/comentarios/${idEventoComentario}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ Comentario })
+    });
+
 export const getPedidosAulaPrivada = async () => request('/pedidos-aula-privada');
 
 export const getPedidosAulaPrivadaEncarregado = async () => request('/pedidos-aula-privada/encarregado');

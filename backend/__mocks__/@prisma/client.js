@@ -18,7 +18,9 @@ const mockTables = {
     aluguer:        { findMany: jest.fn(), findUnique: jest.fn(), findFirst: jest.fn(), create: jest.fn(), createMany: jest.fn(), update: jest.fn(), delete: jest.fn(), deleteMany: jest.fn() },
     pedidoExtensao: { findMany: jest.fn(), findUnique: jest.fn(), findFirst: jest.fn(), create: jest.fn(), createMany: jest.fn(), update: jest.fn(), delete: jest.fn(), deleteMany: jest.fn() },
     estudio:        { findMany: jest.fn(), findUnique: jest.fn(), findFirst: jest.fn(), create: jest.fn(), createMany: jest.fn(), update: jest.fn(), delete: jest.fn(), deleteMany: jest.fn() },
-    estiloDanca:    { findMany: jest.fn(), findUnique: jest.fn(), findFirst: jest.fn(), create: jest.fn(), createMany: jest.fn(), update: jest.fn(), delete: jest.fn(), deleteMany: jest.fn() }
+    estiloDanca:    { findMany: jest.fn(), findUnique: jest.fn(), findFirst: jest.fn(), create: jest.fn(), createMany: jest.fn(), update: jest.fn(), delete: jest.fn(), deleteMany: jest.fn() },
+    evento:         { findMany: jest.fn(), findUnique: jest.fn(), findFirst: jest.fn(), create: jest.fn(), createMany: jest.fn(), update: jest.fn(), delete: jest.fn(), deleteMany: jest.fn() },
+    eventoComentario:{ findMany: jest.fn(), findUnique: jest.fn(), findFirst: jest.fn(), create: jest.fn(), createMany: jest.fn(), update: jest.fn(), delete: jest.fn(), deleteMany: jest.fn() }
 };
 
 const PrismaClient = jest.fn().mockImplementation(() => ({

@@ -159,6 +159,39 @@ model EstudioEstilo {
   @@id([IdEstudio, IdEstiloDanca], map: "PK__EstudioE__20F530B453003BA1")
 }
 
+model Evento {
+  IdEvento              String            @id @default(dbgenerated("newsequentialid()")) @db.UniqueIdentifier
+  IdUtilizadorCriador   String            @db.UniqueIdentifier
+  Titulo                String            @db.NVarChar(200)
+  Descricao             String            @db.NVarChar(Max)
+  DataPublicacaoInicio  DateTime
+  DataPublicacaoFim     DateTime
+  DataEvento            DateTime          @db.Date
+  Local                 String            @db.NVarChar(200)
+  TipoEvento            String            @db.NVarChar(100)
+  Link                  String            @db.NVarChar(500)
+  EstadoEvento          Boolean           @default(true)
+  Criador               Utilizador        @relation("EventoCriador", fields: [IdUtilizadorCriador], references: [IdUtilizador], onUpdate: NoAction)
+  EventoComentario      EventoComentario[]
+
+  @@index([EstadoEvento, DataPublicacaoInicio, DataPublicacaoFim])
+  @@index([DataEvento])
+  @@index([IdUtilizadorCriador, DataPublicacaoInicio])
+}
+
+model EventoComentario {
+  IdEventoComentario String    @id @default(dbgenerated("newsequentialid()")) @db.UniqueIdentifier
+  IdEvento           String    @db.UniqueIdentifier
+  IdProfessor        String    @db.UniqueIdentifier
+  Comentario         String    @db.NVarChar(Max)
+  DataComentario     DateTime  @default(now())
+  Evento             Evento    @relation(fields: [IdEvento], references: [IdEvento], onDelete: Cascade, onUpdate: NoAction)
+  Professor          Professor @relation(fields: [IdProfessor], references: [IdUtilizador], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([IdEvento, DataComentario])
+  @@index([IdProfessor, DataComentario])
+}
+
 model Marcacao {
   IdMarcacao                    String      @id(map: "PK__Marcacao__0FFD43310A4D8F8C") @default(dbgenerated("newsequentialid()"), map: "DF__Marcacao__IdMarc__08B54D69") @db.UniqueIdentifier
   IdAluno                       String      @db.UniqueIdentifier
@@ -207,14 +240,15 @@ model PedidoExtensao {
 }
 
 model Professor {
-  IdUtilizador    String            @id(map: "PK__Professo__7A170D74A70F451A") @db.UniqueIdentifier
-  Iban            String?           @db.VarChar(50)
-  Aula            Aula[]
-  Disponibilidade Disponibilidade[]
-  EstiloProfessor EstiloProfessor[]
-  Utilizador      Utilizador        @relation(fields: [IdUtilizador], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Professor__IdUti__66603565")
-  PedidosSolicitados PedidoAula[]    @relation("ProfessorSolicitadoPedidoAula")
-  PedidosConfirmados PedidoAula[]    @relation("ProfessorConfirmadoPedidoAula")
+  IdUtilizador       String             @id(map: "PK__Professo__7A170D74A70F451A") @db.UniqueIdentifier
+  Iban               String?            @db.VarChar(50)
+  Aula               Aula[]
+  Disponibilidade    Disponibilidade[]
+  EstiloProfessor    EstiloProfessor[]
+  EventoComentario   EventoComentario[]
+  Utilizador         Utilizador         @relation(fields: [IdUtilizador], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Professor__IdUti__66603565")
+  PedidosSolicitados PedidoAula[]       @relation("ProfessorSolicitadoPedidoAula")
+  PedidosConfirmados PedidoAula[]       @relation("ProfessorConfirmadoPedidoAula")
 }
 
 model sysdiagrams {
@@ -254,6 +288,7 @@ model Utilizador {
   Aluguer                                            Aluguer[]
   Aluno                                              Aluno?
   Encarregado                                        Encarregado?
+  EventosCriados                                     Evento[]     @relation("EventoCriador")
   Marcacao                                           Marcacao[]
   PedidoAula                                         PedidoAula[]
   Professor                                          Professor?
