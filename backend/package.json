@@ -8,6 +8,10 @@
     "test:coverage": "jest --coverage --collectCoverageFrom=\"src/**/*.js\"",
     "test:integration": "jest --roots \"../Tests/IntegrationTests\" --testTimeout=15000 --config=\"{\\\"testEnvironment\\\":\\\"node\\\",\\\"modulePaths\\\":[\\\"<rootDir>/node_modules\\\"]}\"",
     "start": "npm --prefix .. run build && electron ../electron/main.cjs",
+    "open": "electron ../electron/main.cjs",
+    "open:direcao": "electron ../electron/main.cjs --profile=direcao",
+    "open:professor": "electron ../electron/main.cjs --profile=professor",
+    "open:encarregado": "electron ../electron/main.cjs --profile=encarregado",
     "dev": "nodemon index.js"
   },
   "keywords": [],

@@ -16,9 +16,17 @@ const normalizeDateKey = (value) => {
 };
 
 const extractTime = (value) => {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        const hours = String(value.getUTCHours()).padStart(2, '0');
+        const minutes = String(value.getUTCMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }
+
     const match = String(value || '').match(/(\d{2}):(\d{2})/);
     return match ? `${match[1]}:${match[2]}` : '';
 };
+
+const buildIsoTime = (dateKey, timeValue) => `${dateKey}T${timeValue}:00.000Z`;
 
 const toMinutes = (value) => {
     const [hours, minutes] = String(extractTime(value) || value || '00:00').split(':').map(Number);
@@ -32,6 +40,57 @@ const intervalsOverlap = (inicioA, fimA, inicioB, fimB) => (
 const intervalContains = (containerInicio, containerFim, inicio, fim) => (
     toMinutes(containerInicio) <= toMinutes(inicio) && toMinutes(containerFim) >= toMinutes(fim)
 );
+
+const mergeAvailabilityEntries = (disponibilidades = []) => {
+    const normalized = disponibilidades
+        .map((item) => ({
+            Data: normalizeDateKey(item.Data),
+            HoraInicio: extractTime(item.HoraInicio),
+            HoraFim: extractTime(item.HoraFim)
+        }))
+        .filter((item) => item.Data && item.HoraInicio && item.HoraFim)
+        .sort((left, right) => {
+            if (left.Data !== right.Data) {
+                return left.Data.localeCompare(right.Data);
+            }
+
+            return toMinutes(left.HoraInicio) - toMinutes(right.HoraInicio);
+        });
+
+    const merged = [];
+
+    normalized.forEach((current) => {
+        const previous = merged[merged.length - 1];
+
+        if (
+            previous &&
+            previous.Data === current.Data &&
+            intervalsOverlap(previous.HoraInicio, previous.HoraFim, current.HoraInicio, current.HoraFim)
+        ) {
+            if (toMinutes(current.HoraFim) > toMinutes(previous.HoraFim)) {
+                previous.HoraFim = current.HoraFim;
+            }
+            return;
+        }
+
+        if (
+            previous &&
+            previous.Data === current.Data &&
+            previous.HoraInicio === current.HoraInicio &&
+            previous.HoraFim === current.HoraFim
+        ) {
+            return;
+        }
+
+        merged.push({ ...current });
+    });
+
+    return merged.map((item) => ({
+        Data: item.Data,
+        HoraInicio: buildIsoTime(item.Data, item.HoraInicio),
+        HoraFim: buildIsoTime(item.Data, item.HoraFim)
+    }));
+};
 
 const findProfessorById = async (idProfessor) => {
     return await prisma.professor.findUnique({
@@ -146,39 +205,39 @@ const replaceByProfessorInScope = async (idProfessor, { scope, disponibilidades 
             `${normalizeDateKey(item.Data)}|${extractTime(item.HoraInicio)}|${extractTime(item.HoraFim)}`
         ));
 
-        if (removidas.length > 0) {
-            const datasRemovidas = [...new Set(removidas.map((item) => normalizeDateKey(item.Data)).filter(Boolean))];
+        let finalDisponibilidades = [...disponibilidades];
+
+        if (removidas.length > 0 || finalDisponibilidades.length > 0) {
             const aulas = await tx.aula.findMany({
                 where: {
                     IdProfessor: idProfessor,
                     EstaAtivo: true,
-                    Data: {
-                        in: datasRemovidas.map((date) => new Date(date))
-                    }
+                    Data: where.Data
                 }
             });
 
-            const aulaSemDisponibilidade = aulas.find((aula) => {
+            const aulasSemDisponibilidade = aulas.filter((aula) => {
                 const aulaDateKey = normalizeDateKey(aula.Data);
-                const estavaCoberta = removidas.some((disponibilidade) => (
-                    normalizeDateKey(disponibilidade.Data) === aulaDateKey &&
-                    intervalsOverlap(disponibilidade.HoraInicio, disponibilidade.HoraFim, aula.HoraInicio, aula.HoraFim)
-                ));
 
-                if (!estavaCoberta) {
-                    return false;
-                }
-
-                return !disponibilidades.some((disponibilidade) => (
+                return !finalDisponibilidades.some((disponibilidade) => (
                     normalizeDateKey(disponibilidade.Data) === aulaDateKey &&
                     intervalContains(disponibilidade.HoraInicio, disponibilidade.HoraFim, aula.HoraInicio, aula.HoraFim)
                 ));
             });
 
-            if (aulaSemDisponibilidade) {
-                const erro = new Error('Nao e possivel remover disponibilidade com aulas ja marcadas nesse horario.');
-                erro.statusCode = 400;
-                throw erro;
+            if (aulasSemDisponibilidade.length > 0) {
+                finalDisponibilidades = mergeAvailabilityEntries([
+                    ...finalDisponibilidades,
+                    ...aulasSemDisponibilidade.map((aula) => {
+                        const aulaDateKey = normalizeDateKey(aula.Data);
+
+                        return {
+                            Data: aulaDateKey,
+                            HoraInicio: buildIsoTime(aulaDateKey, extractTime(aula.HoraInicio)),
+                            HoraFim: buildIsoTime(aulaDateKey, extractTime(aula.HoraFim))
+                        };
+                    })
+                ]);
             }
         }
 
@@ -186,9 +245,9 @@ const replaceByProfessorInScope = async (idProfessor, { scope, disponibilidades 
             where
         });
 
-        if (disponibilidades.length > 0) {
+        if (finalDisponibilidades.length > 0) {
             await tx.disponibilidade.createMany({
-                data: disponibilidades.map((item) => ({
+                data: finalDisponibilidades.map((item) => ({
                     IdProfessor: idProfessor,
                     Data: new Date(item.Data),
                     HoraInicio: new Date(item.HoraInicio),

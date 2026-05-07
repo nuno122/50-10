@@ -12,7 +12,6 @@ router.get(
     bookingController.getPedidosCancelamentoPendentes
 );
 
-router.get('/minhas', verificarToken, verificarPermissao(PERMISSOES.ALUNO), bookingController.getMarcacoesDoAluno);
 router.get('/aluno/:idAluno', verificarToken, verificarPermissao(PERMISSOES.DIRECAO), bookingController.getMarcacoesDoAluno);
 
 router.get(
@@ -29,16 +28,12 @@ router.get(
     bookingController.getMarcacoesDoEncarregado
 );
 
-router.post('/', verificarToken, verificarPermissao(PERMISSOES.ALUNO), bookingController.criarMarcacao);
-
 router.post(
     '/encarregado',
     verificarToken,
     verificarPermissao(PERMISSOES.ENCARREGADO),
     bookingController.criarMarcacaoEncarregado
 );
-
-router.patch('/:idMarcacao/cancelar', verificarToken, verificarPermissao(PERMISSOES.ALUNO), bookingController.cancelarMarcacao);
 
 router.patch(
     '/encarregado/:idMarcacao/cancelar',

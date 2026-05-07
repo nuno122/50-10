@@ -90,14 +90,13 @@ describe('Booking Service', () => {
             });
             bookingRepo.findExisting.mockResolvedValue(null);
             bookingRepo.create.mockResolvedValue({ IdMarcacao: 1, IdAluno: 1, IdAula: 1 });
-            bookingRepo.criarPagamento.mockResolvedValue({});
 
             const resultado = await bookingService.criarMarcacao(1, 1);
 
             expect(resultado.mensagem).toBe('Lugar reservado!');
             expect(resultado.marcacao).toBeDefined();
             expect(bookingRepo.create).toHaveBeenCalledWith(1, 1);
-            expect(bookingRepo.criarPagamento).toHaveBeenCalled();
+            expect(bookingRepo.criarPagamento).not.toHaveBeenCalled();
         });
 
         it('deve propagar a falha se o registo da transacao falhar na base de dados', async () => {

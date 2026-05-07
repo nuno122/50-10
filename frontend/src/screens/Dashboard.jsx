@@ -6,7 +6,6 @@ import {
     getAlugueres,
     getAlunosEncarregado,
     getEstudios,
-    getMinhasMarcacoes,
     getPagamentos,
     getPagamentosEncarregado,
     getUtilizadores
@@ -257,57 +256,6 @@ const buildTeacherDashboard = ({ aulas, user }) => {
     };
 };
 
-const buildStudentDashboard = ({ marcacoes, aulas, user }) => {
-    const aulasMap = new Map(aulas.map((aula) => [aula.IdAula, aula]));
-    const activeBookings = marcacoes.filter((marcacao) => marcacao.EstaAtivo);
-    const futureBookings = activeBookings
-        .map((marcacao) => {
-            const aula = aulasMap.get(marcacao.IdAula) || marcacao.Aula;
-            return { marcacao, aula, date: getAulaDateTime(aula) };
-        })
-        .filter((entry) => entry.aula && entry.date > new Date())
-        .sort((a, b) => a.date - b.date);
-
-    const nextBooking = futureBookings[0];
-    const pendingPayments = activeBookings.flatMap((marcacao) => marcacao.Pagamento || [])
-        .filter(isPendingPayment);
-    const ownClasses = activeBookings.map((marcacao) => aulasMap.get(marcacao.IdAula) || marcacao.Aula).filter(Boolean);
-    const uniqueTeachers = new Set(ownClasses.map((aula) => aula.IdProfessor));
-    const validatedFutureBookings = futureBookings.filter((entry) => entry.aula?.ValidacaoDirecao);
-    const awaitingTeacher = futureBookings.filter((entry) => !entry.aula?.ConfirmacaoProfessor);
-    const awaitingDirector = futureBookings.filter((entry) => entry.aula?.ConfirmacaoProfessor && !entry.aula?.ValidacaoDirecao);
-    const thisMonth = new Date();
-
-    return {
-        welcome: `A agenda de danca de ${user?.Nome || 'Aluno'}`,
-        note: awaitingTeacher.length > 0
-            ? `Tem ${awaitingTeacher.length} aula(s) futuras ainda por confirmar pelo professor.`
-            : awaitingDirector.length > 0
-                ? `${awaitingDirector.length} aula(s) tuas aguardam validacao da Direcao.`
-                : '',
-        stats: [
-            { title: 'Proxima Aula', value: nextBooking ? getUpcomingLabel(nextBooking.date) : 'Sem aula', icon: 'CL', tone: 'green' },
-            { title: 'Aulas Validadas', value: validatedFutureBookings.length, icon: 'OK', tone: 'blue' },
-            { title: 'Pagamentos Pendentes', value: pendingPayments.length, icon: 'EU', tone: 'amber' },
-            { title: 'Professores', value: uniqueTeachers.size, icon: 'US', tone: 'purple' }
-        ],
-        quick: [
-            ['Aulas este mes', ownClasses.filter((aula) => {
-                const date = new Date(aula.Data);
-                return date.getMonth() === thisMonth.getMonth() && date.getFullYear() === thisMonth.getFullYear();
-            }).length],
-            ['Aguardam professor', awaitingTeacher.length],
-            ['Aguardam Direcao', awaitingDirector.length],
-            ['Valor pendente', formatCurrency(pendingPayments.reduce((sum, pagamento) => sum + Number(pagamento.Custo || 0), 0))]
-        ],
-        activity: futureBookings.slice(0, 4).map(({ aula, date }) => createActivity(
-            `${aula.EstiloDanca?.Nome || 'Aula'} com ${aula.Professor?.Utilizador?.NomeCompleto || 'professor por definir'}`,
-            getUpcomingLabel(date),
-            'booking'
-        ))
-    };
-};
-
 const buildGuardianDashboard = ({ aluguers, pagamentos, aulas, inventory, user, students }) => {
     const ownRentals = aluguers.filter((aluguer) => aluguer.IdUtilizador === user?.Id || aluguer.Utilizador?.IdUtilizador === user?.Id);
     const ownPayments = pagamentos || [];
@@ -395,9 +343,6 @@ const Dashboard = () => {
                     setDashboard(buildDirectorDashboard({ users, aulas, estudios, pagamentos, aluguers }));
                 } else if (permission === PERMISSOES.PROFESSOR) {
                     setDashboard(buildTeacherDashboard({ aulas, user }));
-                } else if (permission === PERMISSOES.ALUNO) {
-                    const marcacoes = await getMinhasMarcacoes();
-                    setDashboard(buildStudentDashboard({ marcacoes, aulas, user }));
                 } else if (permission === PERMISSOES.ENCARREGADO) {
                     const [students, pagamentosEncarregado] = await Promise.all([
                         getAlunosEncarregado(),

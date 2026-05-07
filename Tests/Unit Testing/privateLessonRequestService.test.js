@@ -61,6 +61,25 @@ describe('Private Lesson Request Service', () => {
                 DuracaoMinutos: 60
             }, 'enc-1')).rejects.toThrow('O aluno selecionado nao esta associado a este encarregado.');
         });
+
+        it('deve falhar se o professor ja tiver uma aula marcada no horario pedido', async () => {
+            classRepo.findProfessorClassesByDate.mockResolvedValue([
+                {
+                    HoraInicio: '2028-01-15T10:00:00.000Z',
+                    HoraFim: '2028-01-15T11:00:00.000Z'
+                }
+            ]);
+
+            await expect(privateLessonRequestService.criarPedido({
+                IdAluno: 'aluno-1',
+                IdEstiloDanca: 'estilo-1',
+                IdProfessorSolicitado: 'prof-1',
+                DataPretendida: '2028-01-15',
+                HoraPretendida: '10:30',
+                DuracaoMinutos: 60,
+                CapacidadePretendida: 1
+            }, 'enc-1')).rejects.toThrow('O professor ja tem uma aula marcada neste horario.');
+        });
     });
 
     describe('aprovarPedido', () => {

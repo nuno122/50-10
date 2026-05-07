@@ -80,6 +80,43 @@ const estudioSuportaEstilo = (estudio, estilo) => (
     estudio.EstudioEstilo.some((item) => relationMatchesStyle(item, estilo))
 );
 
+const estudioTemCapacidade = (estudio, capacidade) => (
+    Number(estudio?.Capacidade || 0) >= Number(capacidade || 0)
+);
+
+const estudioTemConflito = (estudio, aulas = [], horaInicio, horaFim) => {
+    const novaHoraInicio = toMinutes(horaInicio);
+    const novaHoraFim = toMinutes(horaFim);
+
+    return aulas.some((aulaExistente) => {
+        const existenteInicio = toMinutes(aulaExistente.HoraInicio);
+        const existenteFim = toMinutes(aulaExistente.HoraFim);
+
+        return aulaExistente.IdEstudio === estudio.IdEstudio &&
+            novaHoraInicio < existenteFim &&
+            novaHoraFim > existenteInicio;
+    });
+};
+
+const podeUsarEstudioAlternativo = (dados) => dados?.PermitirEstudioAlternativo === true;
+const podeUsarProfessorAlternativo = (dados, tipoAula) => (
+    tipoAula === 'Regular' &&
+    dados?.PermitirProfessorAlternativo === true
+);
+
+const existemEstudiosCompativeisDisponiveis = async ({ data, horaInicio, horaFim, capacidade, estilo }) => {
+    const [estudios, aulasNoDia] = await Promise.all([
+        classRepo.findAllStudios(),
+        classRepo.findClassesByDate(data)
+    ]);
+
+    return estudios.some((estudio) => (
+        estudioSuportaEstilo(estudio, estilo) &&
+        estudioTemCapacidade(estudio, capacidade) &&
+        !estudioTemConflito(estudio, aulasNoDia, horaInicio, horaFim)
+    ));
+};
+
 const ConsultarVagas = async () => {
     return await classRepo.GetAulasDisponiveis();
 };
@@ -108,7 +145,7 @@ const criarAula = async (dados) => {
     const tipoAula = dados.TipoAula || 'Regular';
 
     if (!TIPOS_AULA_VALIDOS.includes(tipoAula)) {
-        throw criarErro('TipoAula invalido. Usa Regular ou Particular.', 400);
+        throw criarErro('TipoAula invalido. Usa Regular ou Coaching.', 400);
     }
 
     const [professor, estudio, estilo] = await Promise.all([
@@ -121,7 +158,7 @@ const criarAula = async (dados) => {
         throw criarErro('O professor selecionado nao existe na tabela Professor.', 400);
     }
 
-    if (!professorSuportaEstilo(professor, estilo)) {
+    if (!professorSuportaEstilo(professor, estilo) && !podeUsarProfessorAlternativo(dados, tipoAula)) {
         throw criarErro('O professor selecionado nao esta associado ao estilo escolhido.', 400);
     }
 
@@ -129,15 +166,11 @@ const criarAula = async (dados) => {
         throw criarErro('O estudio selecionado nao existe.', 400);
     }
 
-    if (!estudioSuportaEstilo(estudio, estilo)) {
-        throw criarErro('O estudio selecionado nao suporta o estilo escolhido.', 400);
-    }
-
     if (!estilo) {
         throw criarErro('O estilo de danca selecionado nao existe.', 400);
     }
 
-    if (Number(dados.CapacidadeMaxima) > Number(estudio.Capacidade || 0)) {
+    if (!estudioTemCapacidade(estudio, dados.CapacidadeMaxima)) {
         throw criarErro('A capacidade da aula excede a capacidade do estudio selecionado.', 400);
     }
 
@@ -152,13 +185,38 @@ const criarAula = async (dados) => {
         throw criarErro('A hora de fim tem de ser posterior a hora de inicio.', 400);
     }
 
+    if (!estudioSuportaEstilo(estudio, estilo)) {
+        if (!podeUsarEstudioAlternativo(dados)) {
+            throw criarErro('O estudio selecionado nao suporta o estilo escolhido.', 400);
+        }
+
+        const existeEstudioCompativelDisponivel = await existemEstudiosCompativeisDisponiveis({
+            data: dados.Data,
+            horaInicio: dados.HoraInicio,
+            horaFim: dados.HoraFim,
+            capacidade: dados.CapacidadeMaxima,
+            estilo
+        });
+
+        if (existeEstudioCompativelDisponivel) {
+            throw criarErro(
+                'Existem estudios compativeis disponiveis para este horario. Escolhe primeiro um estudio associado ao estilo.',
+                400
+            );
+        }
+    }
+
+    const shouldValidateProfessorAvailability = tipoAula === 'Particular';
+
     const [aulasNoEstudio, aulasDoProfessorNoDia, disponibilidadesProfessor] = await Promise.all([
         classRepo.findOverlapping(dados.IdEstudio, dados.Data),
         classRepo.findProfessorClassesByDate(dados.IdProfessor, dados.Data),
-        classRepo.findProfessorAvailabilityByDate(dados.IdProfessor, dados.Data)
+        shouldValidateProfessorAvailability
+            ? classRepo.findProfessorAvailabilityByDate(dados.IdProfessor, dados.Data)
+            : Promise.resolve([])
     ]);
 
-    if (!intervaloCabeNaDisponibilidade(dados.HoraInicio, dados.HoraFim, disponibilidadesProfessor)) {
+    if (shouldValidateProfessorAvailability && !intervaloCabeNaDisponibilidade(dados.HoraInicio, dados.HoraFim, disponibilidadesProfessor)) {
         throw criarErro('O professor nao tem disponibilidade registada para este horario.', 400);
     }
 

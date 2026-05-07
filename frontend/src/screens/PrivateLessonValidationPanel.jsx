@@ -57,6 +57,7 @@ const buildDefaultForm = (request) => ({
     DuracaoMinutos: String(request.DuracaoMinutos || 60),
     CapacidadeMaxima: String(request.CapacidadePretendida || 1),
     IdProfessor: request.IdProfessorConfirmado || '',
+    StudioSelectionMode: 'compatible',
     IdEstudio: '',
     Preco: '0',
     ObservacaoDirecao: ''
@@ -129,13 +130,7 @@ const getTeacherOptions = (users, request, form, disponibilidades, aulas) => {
 const getStudioOptions = (studios, request, form, aulas) => {
     const criteria = getScheduleCriteria(request, form);
 
-    return (studios || []).filter((studio) => {
-        const styles = studio.EstudioEstilo || [];
-        const supportsStyle = styles.some((item) => relationMatchesStyle(item, request));
-        if (!supportsStyle) {
-            return false;
-        }
-
+    const allAvailableOptions = (studios || []).filter((studio) => {
         if (Number.isFinite(criteria.capacity) && criteria.capacity > 0 && Number(studio.Capacidade || 0) < criteria.capacity) {
             return false;
         }
@@ -158,6 +153,18 @@ const getStudioOptions = (studios, request, form, aulas) => {
 
         return !hasConflict;
     });
+
+    const compatibleOptions = allAvailableOptions.filter((studio) => (
+        (studio.EstudioEstilo || []).some((item) => relationMatchesStyle(item, request))
+    ));
+
+    return {
+        compatibleOptions,
+        allAvailableOptions,
+        alternativeOptions: allAvailableOptions.filter((studio) => (
+            !compatibleOptions.some((compatibleStudio) => compatibleStudio.IdEstudio === studio.IdEstudio)
+        ))
+    };
 };
 
 const PrivateLessonValidationPanel = ({
@@ -179,14 +186,14 @@ const PrivateLessonValidationPanel = ({
     return (
         <section className="rental-card rental-list-card">
             <div className="rental-form-header">
-                <h2>Requisicao de Aula</h2>
-                <p>Requisicoes enviadas pelos encarregados e aguardando decisao da Direcao.</p>
+                <h2>Requisicao de Coaching</h2>
+                <p>Pedidos de Coaching enviados pelos encarregados e aguardando decisao da Direcao.</p>
             </div>
 
             {pendingRequests.length === 0 ? (
                 <div className="rental-empty">
                     <p className="rental-empty-title">Sem requisicoes pendentes</p>
-                    <p className="rental-empty-copy">Quando surgirem novas requisicoes de aula, vao aparecer aqui.</p>
+                    <p className="rental-empty-copy">Quando surgirem novos pedidos de Coaching, vao aparecer aqui.</p>
                 </div>
             ) : (
                 <div className="rental-list">
@@ -196,7 +203,30 @@ const PrivateLessonValidationPanel = ({
                             ...(forms[request.IdPedidoAulaPrivada] || {})
                         };
                         const confirmedTeacher = (users || []).find((user) => user.IdUtilizador === request.IdProfessorConfirmado);
-                        const studioOptions = getStudioOptions(studios, request, form, aulas);
+                        const studioState = getStudioOptions(studios, request, form, aulas);
+                        const hasCompatibleSelection = studioState.compatibleOptions.some((studio) => studio.IdEstudio === form.IdEstudio);
+                        const hasAvailableSelection = studioState.allAvailableOptions.some((studio) => studio.IdEstudio === form.IdEstudio);
+                        const canUnlockAlternative = studioState.alternativeOptions.length > 0 || studioState.compatibleOptions.length === 0;
+                        const studioSelectionMode = form.StudioSelectionMode === 'alternative'
+                            ? 'alternative'
+                            : hasCompatibleSelection
+                                ? 'compatible'
+                                : hasAvailableSelection
+                                    ? 'alternative'
+                                    : 'compatible';
+                        const selectedStudioId = hasAvailableSelection ? form.IdEstudio : '';
+                        const canApproveRequest = Boolean(request.IdProfessorConfirmado && selectedStudioId);
+                        const approvalBlockedReason = !request.IdProfessorConfirmado
+                            ? 'O professor ainda precisa de confirmar o pedido antes da aprovacao final.'
+                            : !selectedStudioId
+                                ? 'Escolha primeiro um estudio para aprovar este pedido.'
+                                : '';
+                        const showAlternativeSelector = studioSelectionMode === 'alternative' && canUnlockAlternative && studioState.allAvailableOptions.length > 0;
+                        const normalizedForm = {
+                            ...form,
+                            IdEstudio: selectedStudioId
+                        };
+                        delete normalizedForm.StudioSelectionMode;
 
                         return (
                             <article key={request.IdPedidoAulaPrivada} className="rental-item">
@@ -233,6 +263,26 @@ const PrivateLessonValidationPanel = ({
                                                 <p className="rental-extension-title">Observacoes do encarregado</p>
                                                 <p>{request.Observacoes}</p>
                                             </div>
+                                        </div>
+                                    )}
+
+                                    {studioState.compatibleOptions.length === 0 && studioState.allAvailableOptions.length > 0 && (
+                                        <div className="rental-form-note">
+                                            Nao existe nenhum estudio associado a este estilo disponivel para este horario.
+                                            A Direcao pode escolher um estudio alternativo livre com capacidade suficiente.
+                                        </div>
+                                    )}
+
+                                    {showAlternativeSelector && studioState.compatibleOptions.length > 0 && (
+                                        <div className="rental-form-note">
+                                            A lista abaixo mostra todos os estudios livres. Um estudio alternativo so deve ser usado
+                                            quando nenhum estudio compativel servir para este horario.
+                                        </div>
+                                    )}
+
+                                    {approvalBlockedReason && (
+                                        <div className="rental-form-note">
+                                            {approvalBlockedReason}
                                         </div>
                                     )}
 
@@ -290,19 +340,61 @@ const PrivateLessonValidationPanel = ({
                                         <label>
                                             <span>Estudio</span>
                                             <select
-                                                value={form.IdEstudio}
-                                                onChange={(event) => onChangeForm(request.IdPedidoAulaPrivada, 'IdEstudio', event.target.value)}
+                                                value={showAlternativeSelector ? '__other__' : selectedStudioId}
+                                                onChange={(event) => {
+                                                    if (event.target.value === '__other__') {
+                                                        onChangeForm(request.IdPedidoAulaPrivada, 'StudioSelectionMode', 'alternative');
+                                                        onChangeForm(request.IdPedidoAulaPrivada, 'IdEstudio', '');
+                                                        return;
+                                                    }
+
+                                                    onChangeForm(request.IdPedidoAulaPrivada, 'StudioSelectionMode', 'compatible');
+                                                    onChangeForm(request.IdPedidoAulaPrivada, 'IdEstudio', event.target.value);
+                                                }}
                                             >
                                                 <option value="">
-                                                    {studioOptions.length === 0 ? 'Sem estudios compativeis' : 'Selecione o estudio'}
+                                                    {studioState.compatibleOptions.length === 0
+                                                        ? 'Sem estudios compativeis disponiveis'
+                                                        : 'Selecione o estudio compativel'}
                                                 </option>
-                                                {studioOptions.map((studio) => (
+                                                {studioState.compatibleOptions.map((studio) => (
                                                     <option key={studio.IdEstudio} value={studio.IdEstudio}>
                                                         Estudio {studio.Numero} - Capacidade {studio.Capacidade}
                                                     </option>
                                                 ))}
+                                                {canUnlockAlternative && (
+                                                    <option value="__other__">Outro estudio</option>
+                                                )}
                                             </select>
                                         </label>
+
+                                        {showAlternativeSelector && (
+                                            <label>
+                                                <span>Outro estudio</span>
+                                                <select
+                                                    value={selectedStudioId}
+                                                    onChange={(event) => {
+                                                        onChangeForm(request.IdPedidoAulaPrivada, 'StudioSelectionMode', 'alternative');
+                                                        onChangeForm(request.IdPedidoAulaPrivada, 'IdEstudio', event.target.value);
+                                                    }}
+                                                >
+                                                    <option value="">
+                                                        {studioState.allAvailableOptions.length === 0
+                                                            ? 'Sem estudios livres neste horario'
+                                                            : 'Selecione entre todos os estudios livres'}
+                                                    </option>
+                                                    {studioState.allAvailableOptions.map((studio) => {
+                                                        const isCompatible = studioState.compatibleOptions.some((item) => item.IdEstudio === studio.IdEstudio);
+                                                        return (
+                                                            <option key={studio.IdEstudio} value={studio.IdEstudio}>
+                                                                Estudio {studio.Numero} - Capacidade {studio.Capacidade}
+                                                                {isCompatible ? ' - Compativel' : ' - Alternativo'}
+                                                            </option>
+                                                        );
+                                                    })}
+                                                </select>
+                                            </label>
+                                        )}
 
                                         <label>
                                             <span>Preco (EUR)</span>
@@ -339,10 +431,11 @@ const PrivateLessonValidationPanel = ({
                                     <button
                                         type="button"
                                         className="rental-button rental-button--warning"
-                                        onClick={() => onApprove(request.IdPedidoAulaPrivada, form)}
-                                        disabled={saving}
+                                        onClick={() => onApprove(request.IdPedidoAulaPrivada, normalizedForm)}
+                                        disabled={saving || !canApproveRequest}
+                                        title={approvalBlockedReason || 'Aprovar e Agendar Coaching'}
                                     >
-                                        Aprovar e Criar Aula
+                                        Aprovar e Agendar Coaching
                                     </button>
                                 </div>
                             </article>

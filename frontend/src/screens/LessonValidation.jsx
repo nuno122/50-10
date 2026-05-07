@@ -101,6 +101,12 @@ const LessonValidation = ({ embedded = false }) => {
     };
 
     const handleApprovePrivateRequest = async (idPedidoAulaPrivada, form) => {
+        if (!form?.IdEstudio) {
+            setError('Escolhe primeiro um estudio para aprovar o pedido de Coaching.');
+            setFeedback('');
+            return;
+        }
+
         setSaving(true);
         setError('');
 
@@ -111,10 +117,10 @@ const LessonValidation = ({ embedded = false }) => {
                 CapacidadeMaxima: Number(form.CapacidadeMaxima),
                 Preco: Number(form.Preco)
             });
-            setFeedback('Requisicao de aula aprovada com sucesso.');
+            setFeedback('Pedido de Coaching aprovado com sucesso.');
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel aprovar a requisicao de aula.');
+            setError(err.message || 'Nao foi possivel aprovar o pedido de Coaching.');
         } finally {
             setSaving(false);
         }
@@ -126,10 +132,10 @@ const LessonValidation = ({ embedded = false }) => {
 
         try {
             await rejeitarPedidoAulaPrivada(idPedidoAulaPrivada, observacao);
-            setFeedback('Requisicao de aula rejeitada.');
+            setFeedback('Pedido de Coaching rejeitado.');
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel rejeitar a requisicao de aula.');
+            setError(err.message || 'Nao foi possivel rejeitar o pedido de Coaching.');
         } finally {
             setSaving(false);
         }
@@ -191,12 +197,12 @@ const LessonValidation = ({ embedded = false }) => {
                 {feedback && <div className="rental-banner rental-banner--success">{feedback}</div>}
                 {error && <div className="rental-banner rental-banner--error">{error}</div>}
 
-                <div className="rental-layout">
+                <div className="rental-layout rental-layout--single">
                     <div className="rental-main">
                         <div className="rental-stats">
                             <article className="rental-card rental-stat-card">
                                 <div>
-                                    <p>Requisicao de Aula</p>
+                                    <p>Pedidos de Coaching</p>
                                     <strong>{pendingPrivateRequestsCount}</strong>
                                 </div>
                                 <span>RA</span>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNotifications } from '../contexts/NotificationContext';
 import { criarAula, criarAulasEmLote, getAulas, getDisponibilidades, getEstilos, getEstudios, getUtilizadores } from '../services/api';
 import { PERMISSOES } from '../utils/permissions';
@@ -23,7 +23,10 @@ const FIELD_ALIASES = {
 
 const initialForm = {
     date: '',
+    anchorDate: '',
+    dayOfWeek: '1',
     teacher: '',
+    teacherSelectionMode: 'compatible',
     style: '',
     lessonType: 'Regular',
     capacity: '',
@@ -31,7 +34,8 @@ const initialForm = {
     endTime: '',
     duration: '',
     studio: '',
-    repeatMode: 'none',
+    studioSelectionMode: 'compatible',
+    repeatMode: 'weekly',
     repeatUntil: ''
 };
 
@@ -115,7 +119,26 @@ const formatTime = (value) => {
     return `${String(parts.hours).padStart(2, '0')}:${String(parts.minutes).padStart(2, '0')}`;
 };
 
+const formatLessonTypeLabel = (value) => {
+    const normalized = normalizeText(value);
+    return normalized.startsWith('part') ? 'Coaching' : 'Regular';
+};
+
 const formatTimeRange = (startValue, endValue) => `${formatTime(startValue)} - ${formatTime(endValue)}`;
+
+const WEEKDAY_OPTIONS = [
+    { value: '1', label: 'Segunda-feira' },
+    { value: '2', label: 'Terca-feira' },
+    { value: '3', label: 'Quarta-feira' },
+    { value: '4', label: 'Quinta-feira' },
+    { value: '5', label: 'Sexta-feira' },
+    { value: '6', label: 'Sabado' },
+    { value: '0', label: 'Domingo' }
+];
+
+const getWeekdayLabel = (value) => (
+    WEEKDAY_OPTIONS.find((option) => option.value === String(value))?.label || 'Dia da semana'
+);
 
 const getRelationStyleIds = (items = []) => items.map((item) => item.IdEstiloDanca);
 
@@ -141,6 +164,10 @@ const toMinutes = (timeValue) => {
     const [hours, minutes] = normalized.split(':').map(Number);
     return (hours * 60) + minutes;
 };
+
+const overlaps = (startA, endA, startB, endB) => startA < endB && endA > startB;
+
+const minutesToTime = (value) => `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
 
 const buildIsoTime = (date, time) => {
     const dayText = typeof date === 'string' ? date.slice(0, 10) : toDateInputValue(date);
@@ -192,6 +219,23 @@ const parseDateInput = (value) => {
     const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (!match) return null;
     return createValidDate(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+};
+
+const getNextOccurrenceDateKey = (anchorDateValue, weekdayValue) => {
+    const anchorDate = parseDateInput(anchorDateValue) || parseDateInput(toDateInputValue(new Date()));
+    const weekday = Number(weekdayValue);
+
+    if (!anchorDate || !Number.isInteger(weekday) || weekday < 0 || weekday > 6) {
+        return '';
+    }
+
+    const candidate = new Date(anchorDate);
+
+    while (candidate.getDay() !== weekday) {
+        candidate.setDate(candidate.getDate() + 1);
+    }
+
+    return toDateInputValue(candidate);
 };
 
 const buildMonthlyDates = (dayOfMonth, startDate, endDate) => {
@@ -263,7 +307,118 @@ const buildRecurringDates = (startDateValue, repeatMode, repeatUntilValue) => {
     return buildAnnualDates(startDate.getMonth() + 1, startDate.getDate(), startDate, repeatUntil);
 };
 
-const layoutDayLessons = (lessons) => {
+const buildAvailableTimeSlots = (availabilityEntries = [], scheduledLessons = [], durationMinutes = 0) => {
+    const requiredDuration = Number(durationMinutes || 0);
+    const busyIntervals = scheduledLessons
+        .map((lesson) => ({
+            start: toMinutes(formatTime(lesson.HoraInicio)),
+            end: toMinutes(formatTime(lesson.HoraFim))
+        }))
+        .filter((interval) => Number.isFinite(interval.start) && Number.isFinite(interval.end) && interval.end > interval.start)
+        .sort((left, right) => left.start - right.start);
+
+    const freeIntervals = [];
+
+    availabilityEntries.forEach((entry) => {
+        const entryStart = toMinutes(formatTime(entry.HoraInicio));
+        const entryEnd = toMinutes(formatTime(entry.HoraFim));
+
+        if (!Number.isFinite(entryStart) || !Number.isFinite(entryEnd) || entryEnd <= entryStart) {
+            return;
+        }
+
+        let segments = [{ start: entryStart, end: entryEnd }];
+
+        busyIntervals.forEach((busyInterval) => {
+            segments = segments.flatMap((segment) => {
+                if (busyInterval.end <= segment.start || busyInterval.start >= segment.end) {
+                    return [segment];
+                }
+
+                const nextSegments = [];
+
+                if (busyInterval.start > segment.start) {
+                    nextSegments.push({
+                        start: segment.start,
+                        end: Math.min(busyInterval.start, segment.end)
+                    });
+                }
+
+                if (busyInterval.end < segment.end) {
+                    nextSegments.push({
+                        start: Math.max(busyInterval.end, segment.start),
+                        end: segment.end
+                    });
+                }
+
+                return nextSegments;
+            });
+        });
+
+        segments
+            .filter((segment) => (segment.end - segment.start) >= requiredDuration)
+            .forEach((segment) => {
+                freeIntervals.push({
+                    key: `${getDateKey(entry.Data)}-${segment.start}-${segment.end}`,
+                    startTime: minutesToTime(segment.start),
+                    endTime: minutesToTime(segment.end)
+                });
+            });
+    });
+
+    return freeIntervals.sort((left, right) => left.startTime.localeCompare(right.startTime));
+};
+
+const getStudioOptions = ({ estudios, aulas, formData, scheduleDates, effectiveEndTime }) => {
+    const capacity = Number(formData.capacity || 0);
+    const startMinutes = toMinutes(formData.startTime);
+    const endMinutes = toMinutes(effectiveEndTime);
+    const hasValidWindow = Boolean(formData.startTime && effectiveEndTime && endMinutes > startMinutes);
+    const datesToCheck = scheduleDates.length > 0 ? scheduleDates : (formData.date ? [formData.date] : []);
+
+    const allAvailableOptions = (estudios || []).filter((studio) => {
+        if (capacity > 0 && Number(studio.Capacidade || 0) < capacity) {
+            return false;
+        }
+
+        if (!hasValidWindow || datesToCheck.length === 0) {
+            return true;
+        }
+
+        return datesToCheck.every((dateKey) => !(aulas || []).some((aula) => (
+            aula.EstaAtivo !== false &&
+            aula.IdEstudio === studio.IdEstudio &&
+            getDateKey(aula.Data) === dateKey &&
+            overlaps(
+                startMinutes,
+                endMinutes,
+                toMinutes(formatTime(aula.HoraInicio)),
+                toMinutes(formatTime(aula.HoraFim))
+            )
+        )));
+    });
+
+    const compatibleOptions = allAvailableOptions.filter((studio) => (
+        getRelationStyleIds(studio.EstudioEstilo).includes(formData.style)
+    ));
+
+    return {
+        compatibleOptions,
+        allAvailableOptions,
+        alternativeOptions: allAvailableOptions.filter((studio) => (
+            !compatibleOptions.some((compatibleStudio) => compatibleStudio.IdEstudio === studio.IdEstudio)
+        ))
+    };
+};
+
+const getDirectorLessonStatusTone = (lesson) => {
+    if (lesson.validated) return 'success';
+    if (!lesson.confirmed && lesson.endDateTime <= new Date()) return 'warning';
+    if (!lesson.confirmed) return 'neutral';
+    return 'info';
+};
+
+const groupDayLessonsBySlot = (lessons) => {
     const sortedLessons = [...lessons].sort((left, right) => {
         if (left.startMinutes !== right.startMinutes) {
             return left.startMinutes - right.startMinutes;
@@ -276,60 +431,22 @@ const layoutDayLessons = (lessons) => {
         return String(left.id).localeCompare(String(right.id));
     });
 
-    const positionedLessons = [];
-    let group = [];
-    let active = [];
-    let groupMaxLane = -1;
-    let groupEnd = -1;
+    return sortedLessons.reduce((groups, lesson) => {
+        const key = `${lesson.startMinutes}-${lesson.endMinutes}`;
+        const currentGroup = groups[groups.length - 1];
 
-    const flushGroup = () => {
-        if (group.length === 0) return;
-
-        const laneCount = Math.max(groupMaxLane + 1, 1);
-        group.forEach((lesson) => {
-            positionedLessons.push({
-                ...lesson,
-                lane: lesson._lane,
-                laneCount
+        if (!currentGroup || currentGroup.key !== key) {
+            groups.push({
+                key,
+                timeRange: lesson.timeRange,
+                lessons: [lesson]
             });
-        });
-
-        group = [];
-        active = [];
-        groupMaxLane = -1;
-        groupEnd = -1;
-    };
-
-    sortedLessons.forEach((lesson) => {
-        if (group.length > 0 && lesson.startMinutes >= groupEnd) {
-            flushGroup();
+            return groups;
         }
 
-        active = active.filter((item) => item.endMinutes > lesson.startMinutes);
-
-        const usedLanes = new Set(active.map((item) => item.lane));
-        let lane = 0;
-        while (usedLanes.has(lane)) {
-            lane += 1;
-        }
-
-        const lessonWithLane = {
-            ...lesson,
-            _lane: lane
-        };
-
-        active.push({
-            lane,
-            endMinutes: lesson.endMinutes
-        });
-
-        group.push(lessonWithLane);
-        groupMaxLane = Math.max(groupMaxLane, lane);
-        groupEnd = Math.max(groupEnd, lesson.endMinutes);
-    });
-
-    flushGroup();
-    return positionedLessons;
+        currentGroup.lessons.push(lesson);
+        return groups;
+    }, []);
 };
 
 const splitDelimitedLine = (line, delimiter) => {
@@ -444,7 +561,7 @@ const resolveWeekday = (value) => {
 
 const resolveLessonType = (value, fallback = 'Regular') => {
     const normalized = normalizeText(value || fallback);
-    return normalized.startsWith('part') ? 'Particular' : 'Regular';
+    return normalized.startsWith('part') || normalized.startsWith('coach') ? 'Particular' : 'Regular';
 };
 
 const resolveProfessorId = (value, professores) => {
@@ -505,6 +622,21 @@ const normalizeBatchResult = (result) => {
         aulas: result?.aula ? [result.aula] : [],
         erros: []
     };
+};
+
+const buildFailureSummaryMessage = (count, errors = []) => {
+    const fallback = `${count} aula(s) nao foram criadas. Consulta o resumo abaixo.`;
+    const firstError = errors[0];
+
+    if (!firstError) {
+        return fallback;
+    }
+
+    const reference = firstError.referencia ? `${firstError.referencia}: ` : '';
+    const message = String(firstError.mensagem || 'Falha na criacao.').replace(/[.]+$/, '');
+    const suffix = errors.length > 1 ? ` Mais ${errors.length - 1} falha(s) no resumo.` : '';
+
+    return `${count} aula(s) nao foram criadas. ${reference}${message}.${suffix}`;
 };
 
 const buildImportDates = (cadence, row, rangeStart, rangeEnd) => {
@@ -593,6 +725,7 @@ const ScheduleManagement = () => {
     const [feedback, setFeedback] = useState('');
     const [operationSummary, setOperationSummary] = useState(null);
     const [selectedLesson, setSelectedLesson] = useState(null);
+    const operationSummaryRef = useRef(null);
 
     const loadData = async () => {
         setLoading(true);
@@ -632,74 +765,191 @@ const ScheduleManagement = () => {
     const startOfWeek = getStartOfWeek(currentDate);
     const weekDays = getDaysOfWeek(startOfWeek);
     const monthName = startOfWeek.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
-    const timeRows = useMemo(() => Array.from({ length: 17 }, (_, index) => index + 7), []);
-
-    const recurrencePreviewDates = useMemo(
-        () => buildRecurringDates(formData.date, formData.repeatMode, formData.repeatUntil),
-        [formData.date, formData.repeatMode, formData.repeatUntil]
+    const isCoaching = formData.lessonType === 'Particular';
+    const regularFirstOccurrence = useMemo(
+        () => getNextOccurrenceDateKey(formData.anchorDate || toDateInputValue(new Date()), formData.dayOfWeek),
+        [formData.anchorDate, formData.dayOfWeek]
     );
+    const scheduleReferenceDate = isCoaching ? formData.date : regularFirstOccurrence;
+
+    const recurrencePreviewDates = useMemo(() => {
+        if (isCoaching) {
+            return formData.date ? [formData.date] : [];
+        }
+
+        if (!regularFirstOccurrence) {
+            return [];
+        }
+
+        if (!formData.repeatUntil) {
+            return [regularFirstOccurrence];
+        }
+
+        return buildRecurringDates(regularFirstOccurrence, 'weekly', formData.repeatUntil);
+    }, [formData.date, formData.repeatUntil, isCoaching, regularFirstOccurrence]);
 
     const effectiveEndTime = useMemo(
         () => formData.endTime || (formData.duration ? computeEndTime(formData.startTime, formData.duration) : ''),
         [formData.duration, formData.endTime, formData.startTime]
     );
 
-    const availableTeachers = useMemo(() => professores.filter((teacher) => {
-        const styleIds = getRelationStyleIds(teacher.Professor?.EstiloProfessor);
+    const teacherState = useMemo(() => {
+        const compatibleOptions = professores.filter((teacher) => {
+            const styleIds = getRelationStyleIds(teacher.Professor?.EstiloProfessor);
 
-        if (!formData.style) {
-            return true;
+            if (!formData.style) {
+                return true;
+            }
+
+            if (!styleIds.includes(formData.style)) {
+                return false;
+            }
+
+            if (!isCoaching || !formData.date) {
+                return true;
+            }
+
+            const disponibilidadesDoDia = disponibilidades.filter((entry) => (
+                entry.IdProfessor === teacher.IdUtilizador &&
+                getDateKey(entry.Data) === formData.date
+            ));
+
+            if (disponibilidadesDoDia.length === 0) {
+                return false;
+            }
+
+            if (!formData.startTime || !effectiveEndTime) {
+                return true;
+            }
+
+            const inicioAula = toMinutes(formData.startTime);
+            const fimAula = toMinutes(effectiveEndTime);
+            const aulasDoProfessor = aulas.filter((aula) => (
+                aula.EstaAtivo !== false &&
+                aula.IdProfessor === teacher.IdUtilizador &&
+                getDateKey(aula.Data) === formData.date
+            ));
+
+            const temConflito = aulasDoProfessor.some((aula) => overlaps(
+                inicioAula,
+                fimAula,
+                toMinutes(formatTime(aula.HoraInicio)),
+                toMinutes(formatTime(aula.HoraFim))
+            ));
+
+            if (temConflito) {
+                return false;
+            }
+
+            return disponibilidadesDoDia.some((entry) => {
+                const inicioDisponivel = toMinutes(formatTime(entry.HoraInicio));
+                const fimDisponivel = toMinutes(formatTime(entry.HoraFim));
+                return inicioAula >= inicioDisponivel && fimAula <= fimDisponivel;
+            });
+        });
+
+        const allAvailableOptions = isCoaching ? compatibleOptions : professores;
+
+        return {
+            compatibleOptions,
+            allAvailableOptions,
+            alternativeOptions: allAvailableOptions.filter((teacher) => (
+                !compatibleOptions.some((compatibleTeacher) => compatibleTeacher.IdUtilizador === teacher.IdUtilizador)
+            ))
+        };
+    }, [aulas, disponibilidades, effectiveEndTime, formData.date, formData.startTime, formData.style, isCoaching, professores]);
+
+    const coachingTeacherAvailability = useMemo(() => {
+        if (!isCoaching || !formData.teacher || !formData.date) {
+            return [];
         }
 
-        if (!styleIds.includes(formData.style)) {
-            return false;
-        }
-
-        if (!formData.date) {
-            return true;
-        }
-
-        const disponibilidadesDoDia = disponibilidades.filter((entry) => (
-            entry.IdProfessor === teacher.IdUtilizador &&
+        return disponibilidades.filter((entry) => (
+            entry.IdProfessor === formData.teacher &&
             getDateKey(entry.Data) === formData.date
         ));
+    }, [disponibilidades, formData.date, formData.teacher, isCoaching]);
 
-        if (disponibilidadesDoDia.length === 0) {
-            return false;
+    const coachingTeacherLessons = useMemo(() => {
+        if (!isCoaching || !formData.teacher || !formData.date) {
+            return [];
         }
 
-        if (!formData.startTime || !effectiveEndTime) {
-            return true;
-        }
+        return aulas.filter((aula) => (
+            aula.EstaAtivo !== false &&
+            aula.IdProfessor === formData.teacher &&
+            getDateKey(aula.Data) === formData.date
+        ));
+    }, [aulas, formData.date, formData.teacher, isCoaching]);
 
-        const inicioAula = toMinutes(formData.startTime);
-        const fimAula = toMinutes(effectiveEndTime);
+    const availableTimeSlots = useMemo(() => (
+        isCoaching
+            ? buildAvailableTimeSlots(coachingTeacherAvailability, coachingTeacherLessons, Number(formData.duration || 0))
+            : []
+    ), [coachingTeacherAvailability, coachingTeacherLessons, formData.duration, isCoaching]);
 
-        return disponibilidadesDoDia.some((entry) => {
-            const inicioDisponivel = toMinutes(formatTime(entry.HoraInicio));
-            const fimDisponivel = toMinutes(formatTime(entry.HoraFim));
-            return inicioAula >= inicioDisponivel && fimAula <= fimDisponivel;
-        });
-    }), [disponibilidades, effectiveEndTime, formData.date, formData.startTime, formData.style, professores]);
+    const studioState = useMemo(() => (
+        getStudioOptions({
+            estudios,
+            aulas,
+            formData,
+            scheduleDates: recurrencePreviewDates,
+            effectiveEndTime
+        })
+    ), [aulas, effectiveEndTime, estudios, formData, recurrencePreviewDates]);
 
-    const availableStudios = useMemo(() => estudios.filter((studio) => {
-        if (!formData.style) {
-            return true;
-        }
+    const selectedTeacherName = useMemo(() => (
+        professores.find((teacher) => teacher.IdUtilizador === formData.teacher)?.NomeCompleto || 'O professor selecionado'
+    ), [formData.teacher, professores]);
 
-        const styleIds = getRelationStyleIds(studio.EstudioEstilo);
-        return styleIds.includes(formData.style);
-    }), [estudios, formData.style]);
+    const hasCompatibleTeacherSelection = teacherState.compatibleOptions.some((teacher) => teacher.IdUtilizador === formData.teacher);
+    const hasAvailableTeacherSelection = teacherState.allAvailableOptions.some((teacher) => teacher.IdUtilizador === formData.teacher);
+    const canUnlockAlternativeTeacher = !isCoaching && teacherState.alternativeOptions.length > 0;
+    const teacherSelectionMode = !isCoaching && formData.teacherSelectionMode === 'alternative'
+        ? 'alternative'
+        : hasCompatibleTeacherSelection
+            ? 'compatible'
+            : hasAvailableTeacherSelection && !isCoaching
+                ? 'alternative'
+                : 'compatible';
+    const selectedTeacherId = hasAvailableTeacherSelection ? formData.teacher : '';
+    const showAlternativeTeacherSelector = !isCoaching &&
+        teacherSelectionMode === 'alternative' &&
+        canUnlockAlternativeTeacher &&
+        teacherState.allAvailableOptions.length > 0;
+
+    const hasCompatibleStudioSelection = studioState.compatibleOptions.some((studio) => studio.IdEstudio === formData.studio);
+    const hasAvailableStudioSelection = studioState.allAvailableOptions.some((studio) => studio.IdEstudio === formData.studio);
+    const canUnlockAlternativeStudio = studioState.alternativeOptions.length > 0 || studioState.compatibleOptions.length === 0;
+    const studioSelectionMode = formData.studioSelectionMode === 'alternative'
+        ? 'alternative'
+        : hasCompatibleStudioSelection
+            ? 'compatible'
+            : hasAvailableStudioSelection
+                ? 'alternative'
+                : 'compatible';
+    const selectedStudioId = hasAvailableStudioSelection ? formData.studio : '';
+    const showAlternativeStudioSelector = studioSelectionMode === 'alternative' && canUnlockAlternativeStudio && studioState.allAvailableOptions.length > 0;
+    const canSelectTeacher = Boolean(formData.style && (!isCoaching || formData.date));
+    const canSelectStudio = Boolean(formData.style && formData.capacity && formData.startTime && effectiveEndTime && recurrencePreviewDates.length > 0);
 
     useEffect(() => {
-        if (formData.teacher && !availableTeachers.some((teacher) => teacher.IdUtilizador === formData.teacher)) {
-            setFormData((prev) => ({ ...prev, teacher: '' }));
+        if (formData.teacher && !teacherState.allAvailableOptions.some((teacher) => teacher.IdUtilizador === formData.teacher)) {
+            setFormData((prev) => ({
+                ...prev,
+                teacher: '',
+                teacherSelectionMode: 'compatible'
+            }));
         }
 
-        if (formData.studio && !availableStudios.some((studio) => studio.IdEstudio === formData.studio)) {
-            setFormData((prev) => ({ ...prev, studio: '' }));
+        if (formData.studio && !studioState.allAvailableOptions.some((studio) => studio.IdEstudio === formData.studio)) {
+            setFormData((prev) => ({
+                ...prev,
+                studio: '',
+                studioSelectionMode: 'compatible'
+            }));
         }
-    }, [availableStudios, availableTeachers, formData.studio, formData.teacher]);
+    }, [formData.studio, formData.teacher, studioState.allAvailableOptions, teacherState.allAvailableOptions]);
 
     const scheduleItems = useMemo(() => aulas.map((aula) => {
         const lessonDate = new Date(aula.Data);
@@ -722,16 +972,54 @@ const ScheduleManagement = () => {
             endMinutes: Math.max(endMinutes, startMinutes + 30),
             teacher: aula.Professor?.Utilizador?.NomeCompleto || aula.IdProfessor,
             style: aula.EstiloDanca?.Nome || 'Sem estilo',
-            lessonType: aula.TipoAula || 'Regular',
+            lessonType: formatLessonTypeLabel(aula.TipoAula || 'Regular'),
             studio: studioLabel,
             capacity: aula.CapacidadeMaxima,
             enrolled,
             confirmed,
             validated,
+            statusLabel: getDirectorLessonStatus({
+                validated,
+                confirmed,
+                endDateTime,
+                enrolled
+            }),
+            statusTone: getDirectorLessonStatusTone({
+                validated,
+                confirmed,
+                endDateTime
+            }),
             endDateTime,
             dateLabel: formatDate(aula.Data)
         };
     }), [aulas]);
+
+    const scheduleBoardDays = useMemo(() => weekDays.map((day) => {
+        const dateKey = getDateKey(day);
+        const lessons = scheduleItems.filter((lesson) => lesson.dateKey === dateKey);
+
+        return {
+            date: day,
+            dateKey,
+            lessons,
+            groups: groupDayLessonsBySlot(lessons)
+        };
+    }), [scheduleItems, weekDays]);
+
+    const weeklyLessonTotal = useMemo(
+        () => scheduleBoardDays.reduce((total, day) => total + day.lessons.length, 0),
+        [scheduleBoardDays]
+    );
+
+    const weeklySlotTotal = useMemo(
+        () => scheduleBoardDays.reduce((total, day) => total + day.groups.length, 0),
+        [scheduleBoardDays]
+    );
+
+    const busyDayTotal = useMemo(
+        () => scheduleBoardDays.filter((day) => day.lessons.length > 0).length,
+        [scheduleBoardDays]
+    );
 
     const clearMessages = () => {
         setError('');
@@ -746,15 +1034,20 @@ const ScheduleManagement = () => {
 
     const openLessonModal = (day = new Date(), options = {}) => {
         const dateValue = toDateInputValue(day);
+        const lessonType = options.preferredType || 'Regular';
+        const dayOfWeek = String(new Date(day).getDay());
+        const regularDate = getNextOccurrenceDateKey(dateValue, dayOfWeek);
 
         setFormData({
             ...initialForm,
-            date: dateValue,
-            lessonType: options.forceRegular ? 'Regular' : initialForm.lessonType,
-            repeatMode: options.forceRegular ? 'weekly' : 'none'
+            anchorDate: dateValue,
+            dayOfWeek,
+            date: lessonType === 'Particular' ? dateValue : regularDate,
+            lessonType,
+            repeatMode: lessonType === 'Particular' ? 'none' : 'weekly'
         });
         setIsQuickBookOpen(true);
-        setActiveAction(options.forceRegular ? 'regular' : activeAction);
+        setActiveAction(lessonType === 'Regular' ? 'regular' : activeAction);
         clearMessages();
     };
 
@@ -772,22 +1065,59 @@ const ScheduleManagement = () => {
 
     const handleOpenRegularCreator = () => {
         setActiveAction('regular');
-        openLessonModal(new Date(), { forceRegular: true });
+        openLessonModal(new Date(), { preferredType: 'Regular' });
+    };
+
+    const handleLessonTypeChange = (nextType) => {
+        setFormData((prev) => {
+            const anchorDate = prev.anchorDate || prev.date || toDateInputValue(new Date());
+            const dayOfWeek = prev.dayOfWeek || String(new Date(`${anchorDate}T00:00:00`).getDay());
+
+            return {
+                ...prev,
+                lessonType: nextType,
+                date: nextType === 'Particular'
+                    ? (prev.date || anchorDate)
+                    : getNextOccurrenceDateKey(anchorDate, dayOfWeek),
+                dayOfWeek,
+                repeatMode: nextType === 'Particular' ? 'none' : 'weekly',
+                repeatUntil: nextType === 'Particular' ? '' : prev.repeatUntil,
+                teacher: '',
+                teacherSelectionMode: 'compatible',
+                studio: '',
+                studioSelectionMode: 'compatible'
+            };
+        });
+    };
+
+    const handleCoachingDateChange = (value) => {
+        setFormData((prev) => ({
+            ...prev,
+            date: value,
+            anchorDate: value || prev.anchorDate,
+            dayOfWeek: value ? String(new Date(`${value}T00:00:00`).getDay()) : prev.dayOfWeek,
+            studio: '',
+            studioSelectionMode: 'compatible'
+        }));
+    };
+
+    const handleRegularWeekdayChange = (value) => {
+        setFormData((prev) => ({
+            ...prev,
+            dayOfWeek: value,
+            date: getNextOccurrenceDateKey(prev.anchorDate || toDateInputValue(new Date()), value),
+            studio: '',
+            studioSelectionMode: 'compatible'
+        }));
     };
 
     const handleDurationClick = (minutes) => {
         setFormData((prev) => ({
             ...prev,
             duration: String(minutes),
-            endTime: prev.startTime ? computeEndTime(prev.startTime, minutes) : ''
-        }));
-    };
-
-    const handleEndTimeChange = (value) => {
-        setFormData((prev) => ({
-            ...prev,
-            endTime: value,
-            duration: ''
+            endTime: prev.startTime ? computeEndTime(prev.startTime, minutes) : '',
+            studio: '',
+            studioSelectionMode: 'compatible'
         }));
     };
 
@@ -814,26 +1144,39 @@ const ScheduleManagement = () => {
         CapacidadeMaxima: Number(formData.capacity),
         Preco: 0,
         TipoAula: formData.lessonType || 'Regular',
+        OrigemAula: 'Direcao',
+        PermitirProfessorAlternativo: formData.teacherSelectionMode === 'alternative',
         IdProfessor: formData.teacher,
         IdEstudio: formData.studio,
         IdEstiloDanca: formData.style,
+        PermitirEstudioAlternativo: formData.studioSelectionMode === 'alternative',
         Referencia: `${dateValue} ${formData.startTime}`
     }));
 
     const handleSubmit = async () => {
-        if (!formData.date || !formData.teacher || !formData.style || !formData.capacity || !formData.startTime || !formData.studio) {
+        if (!formData.teacher || !formData.style || !formData.capacity || !formData.startTime || !formData.studio) {
             setError('Preenche todos os campos obrigatorios.');
             return;
         }
 
-        if (formData.repeatMode !== 'none' && !formData.repeatUntil) {
+        if (isCoaching && !formData.date) {
+            setError('Escolhe a data do Coaching.');
+            return;
+        }
+
+        if (!isCoaching && !formData.dayOfWeek) {
+            setError('Escolhe o dia da semana da aula regular.');
+            return;
+        }
+
+        if (!isCoaching && !formData.repeatUntil) {
             setError('Define a data final da recorrencia.');
             return;
         }
 
-        if (formData.repeatMode !== 'none') {
+        if (!isCoaching) {
             const repeatUntil = parseDateInput(formData.repeatUntil);
-            const firstDate = parseDateInput(formData.date);
+            const firstDate = parseDateInput(regularFirstOccurrence);
             if (!repeatUntil || !firstDate || repeatUntil < firstDate) {
                 setError('A data final da recorrencia tem de ser igual ou posterior a data inicial.');
                 return;
@@ -858,6 +1201,11 @@ const ScheduleManagement = () => {
 
         const payloads = buildLessonPayloadsFromForm(effectiveEndTime);
 
+        if (payloads.length === 0) {
+            setError('Nao foi possivel gerar nenhuma aula com os dados escolhidos.');
+            return;
+        }
+
         if (payloads.length > 500) {
             setError('A serie excede o limite de 500 aulas. Reduz o intervalo.');
             return;
@@ -878,20 +1226,23 @@ const ScheduleManagement = () => {
                 notify({
                     title: result.totalCriadas === 1 ? 'Aula criada' : 'Serie criada',
                     message: result.totalCriadas === 1
-                        ? `A aula foi marcada para ${formatDate(formData.date)}.`
+                        ? `A aula foi marcada para ${formatDate(scheduleReferenceDate)}.`
                         : `${result.totalCriadas} aulas foram adicionadas ao horario.`,
                     tone: 'success'
                 });
                 setFeedback(
                     result.totalCriadas === 1
-                        ? `Aula agendada com sucesso para ${formatDate(formData.date)}.`
+                        ? `Aula agendada com sucesso para ${formatDate(scheduleReferenceDate)}.`
                         : `${result.totalCriadas} aulas criadas com sucesso.`
                 );
                 await loadData();
             }
 
             if (result.totalFalhas > 0) {
-                setError(`${result.totalFalhas} aula(s) nao foram criadas. Consulta o resumo abaixo.`);
+                setError(buildFailureSummaryMessage(result.totalFalhas, result.erros || []));
+                requestAnimationFrame(() => {
+                    operationSummaryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
             }
 
             if (result.totalCriadas > 0) {
@@ -1056,7 +1407,10 @@ const ScheduleManagement = () => {
             }
 
             if (combinedErrors.length > 0) {
-                setError(`${combinedErrors.length} entrada(s) ficaram por criar. Consulta o resumo abaixo.`);
+                setError(buildFailureSummaryMessage(combinedErrors.length, combinedErrors));
+                requestAnimationFrame(() => {
+                    operationSummaryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
             }
         } catch (err) {
             setError(err.message || 'Nao foi possivel importar o ficheiro.');
@@ -1072,7 +1426,7 @@ const ScheduleManagement = () => {
                     <p className="schedule-eyebrow">Direcao</p>
                     <h1>Gestao de Horarios</h1>
                     <p className="schedule-subtitle">
-                        Cria aulas regulares, importa horarios em CSV e acompanha o calendario semanal.
+                        Cria aulas regulares e Coachings, importa horarios em CSV e acompanha o calendario semanal.
                     </p>
                 </div>
                 <button type="button" className="schedule-button schedule-button--primary" onClick={() => openLessonModal(new Date())}>
@@ -1086,9 +1440,9 @@ const ScheduleManagement = () => {
             <div className="schedule-actions-grid">
                 <article className={`schedule-action-card ${activeAction === 'regular' ? 'schedule-action-card--active' : ''}`}>
                     <p className="schedule-eyebrow">Menu</p>
-                    <h2>Criar aulas regulares</h2>
+                    <h2>Criar aulas e Coachings</h2>
                     <p className="schedule-action-copy">
-                        Agenda uma aula unica ou cria series semanais, mensais e anuais para a Direcao.
+                        Define sessoes de Coaching com data exata ou cria series regulares semanais para a Direcao.
                     </p>
                     <button type="button" className="schedule-button schedule-button--primary" onClick={handleOpenRegularCreator}>
                         Abrir criador
@@ -1208,7 +1562,7 @@ const ScheduleManagement = () => {
                                 <span>Tipo de aula por defeito</span>
                                 <select value={importForm.defaultLessonType} onChange={(event) => setImportForm((prev) => ({ ...prev, defaultLessonType: event.target.value }))}>
                                     <option value="Regular">Regular</option>
-                                    <option value="Particular">Particular</option>
+                                    <option value="Particular">Coaching</option>
                                 </select>
                             </label>
                         </div>
@@ -1261,7 +1615,7 @@ const ScheduleManagement = () => {
             )}
 
             {operationSummary && (
-                <section className="schedule-summary">
+                <section ref={operationSummaryRef} className="schedule-summary">
                     <div className="schedule-summary-head">
                         <div>
                             <p className="schedule-eyebrow">Resumo</p>
@@ -1308,6 +1662,12 @@ const ScheduleManagement = () => {
                             </button>
                         </div>
                     </div>
+
+                    <div className="schedule-toolbar-summary">
+                        <span>{weeklyLessonTotal} aula(s)</span>
+                        <span>{weeklySlotTotal} bloco(s)</span>
+                        <span>{busyDayTotal} dia(s) ocupados</span>
+                    </div>
                 </div>
 
                 {loading ? (
@@ -1316,86 +1676,77 @@ const ScheduleManagement = () => {
                         <p className="schedule-empty-copy">A preparar aulas, estudios, estilos e professores.</p>
                     </div>
                 ) : (
-                    <div className="schedule-calendar">
-                        <div className="schedule-week-header">
-                            <div className="schedule-time-corner" />
-                            <div className="schedule-days-row">
-                                {weekDays.map((day, index) => {
-                                    const isToday = new Date().toDateString() === day.toDateString();
-                                    const dayName = day.toLocaleDateString('pt-PT', { weekday: 'short' });
+                    <div className="schedule-calendar schedule-calendar--board">
+                        <div className="schedule-board">
+                            {scheduleBoardDays.map((day, index) => {
+                                const isToday = new Date().toDateString() === day.date.toDateString();
+                                const dayName = day.date.toLocaleDateString('pt-PT', { weekday: 'long' });
+                                const dayLabel = day.date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
 
-                                    return (
-                                        <div key={index} className={`schedule-day-header ${isToday ? 'schedule-day-header--today' : ''}`}>
-                                            <span>{dayName}</span>
-                                            <strong>{day.getDate()}</strong>
-                                            <button type="button" className="schedule-day-add" onClick={() => handleQuickBook(day)}>
+                                return (
+                                    <section key={index} className={`schedule-day-panel ${isToday ? 'schedule-day-panel--today' : ''}`}>
+                                        <div className="schedule-day-panel-header">
+                                            <div className="schedule-day-panel-copy">
+                                                <span>{dayName}</span>
+                                                <strong>{dayLabel}</strong>
+                                                <small>
+                                                    {day.lessons.length === 0
+                                                        ? 'Sem aulas marcadas'
+                                                        : `${day.lessons.length} aula(s) em ${day.groups.length} bloco(s)`}
+                                                </small>
+                                            </div>
+                                            <button type="button" className="schedule-day-add schedule-day-add--panel" onClick={() => handleQuickBook(day.date)}>
                                                 +
                                             </button>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
 
-                        <div className="schedule-grid">
-                            <div className="schedule-time-column">
-                                {timeRows.map((hour) => (
-                                    <div key={hour} className="schedule-time-label">
-                                        {String(hour).padStart(2, '0')}:00
-                                    </div>
-                                ))}
-                            </div>
+                                        {day.groups.length === 0 ? (
+                                            <div className="schedule-day-panel-empty">
+                                                <p>Dia livre.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="schedule-day-panel-body">
+                                                {day.groups.map((group) => (
+                                                    <article key={group.key} className="schedule-slot-group">
+                                                        <div className="schedule-slot-group-header">
+                                                            <strong>{group.timeRange}</strong>
+                                                            <span>{group.lessons.length} aula(s)</span>
+                                                        </div>
 
-                            <div className="schedule-columns">
-                                {weekDays.map((day, index) => {
-                                    const dayClasses = layoutDayLessons(
-                                        scheduleItems.filter((lesson) => lesson.dateKey === getDateKey(day))
-                                    );
+                                                        <div className="schedule-slot-list">
+                                                            {group.lessons.map((lesson) => (
+                                                                <button
+                                                                    key={lesson.id}
+                                                                    type="button"
+                                                                    className={`schedule-slot-card schedule-slot-card--${lesson.statusTone} ${lesson.lessonType === 'Coaching' ? 'schedule-slot-card--coaching' : ''}`}
+                                                                    onClick={() => handleOpenLessonDetails(lesson)}
+                                                                >
+                                                                    <div className="schedule-slot-card-top">
+                                                                        <strong>{lesson.style}</strong>
+                                                                        <span className={`schedule-slot-badge ${lesson.lessonType === 'Coaching' ? 'schedule-slot-badge--coaching' : 'schedule-slot-badge--regular'}`}>
+                                                                            {lesson.lessonType}
+                                                                        </span>
+                                                                    </div>
 
-                                    return (
-                                        <div key={index} className="schedule-day-column">
-                                            <div className="schedule-hour-lines">
-                                                {timeRows.map((hour) => (
-                                                    <div key={hour} className="schedule-hour-line" />
+                                                                    <div className="schedule-slot-card-meta">
+                                                                        <span>{lesson.teacher}</span>
+                                                                        <span>{lesson.studio}</span>
+                                                                    </div>
+
+                                                                    <div className="schedule-slot-card-meta">
+                                                                        <span>{lesson.enrolled}/{lesson.capacity} inscritos</span>
+                                                                        <span>{lesson.statusLabel}</span>
+                                                                    </div>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </article>
                                                 ))}
                                             </div>
-
-                                            {dayClasses.map((lesson) => {
-                                                const [hours, minutes] = lesson.time.split(':').map(Number);
-                                                const topPercentage = Math.max(0, ((hours - 7 + (minutes / 60)) / 17) * 100);
-                                                const heightPercentage = ((lesson.duration / 60) / 17) * 100;
-                                                const widthPercentage = 100 / lesson.laneCount;
-                                                const leftPercentage = lesson.lane * widthPercentage;
-
-                                                return (
-                                                    <div
-                                                        key={lesson.id}
-                                                        className="schedule-lesson-wrap"
-                                                        style={{
-                                                            top: `${topPercentage}%`,
-                                                            height: `${Math.max(heightPercentage, 7)}%`,
-                                                            left: `calc(${leftPercentage}% + 4px)`,
-                                                            width: `calc(${widthPercentage}% - 8px)`,
-                                                            right: 'auto',
-                                                            zIndex: lesson.lane + 1
-                                                        }}
-                                                    >
-                                                        <button
-                                                            type="button"
-                                                            className="schedule-lesson-marker"
-                                                            onClick={() => handleOpenLessonDetails(lesson)}
-                                                            title={`${lesson.style} | ${lesson.timeRange}`}
-                                                        >
-                                                            <span className="schedule-lesson-marker-icon" aria-hidden="true" />
-                                                            <span className="schedule-lesson-marker-time">{lesson.time}</span>
-                                                        </button>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                                        )}
+                                    </section>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
@@ -1407,7 +1758,14 @@ const ScheduleManagement = () => {
                         <div className="schedule-modal-header">
                             <div>
                                 <p className="schedule-eyebrow">Agendar aula</p>
-                                <h2>{formData.date ? formatDate(formData.date) : ''}</h2>
+                                <h2>{isCoaching ? 'Novo Coaching' : 'Nova aula regular'}</h2>
+                                <p className="schedule-helper">
+                                    {isCoaching
+                                        ? (formData.date ? `Sessao prevista para ${formatDate(formData.date)}.` : 'Escolhe a data do Coaching.')
+                                        : scheduleReferenceDate
+                                            ? `Primeira ocorrencia em ${formatDate(scheduleReferenceDate)}.`
+                                            : 'Escolhe o dia da semana para gerar a serie regular.'}
+                                </p>
                             </div>
                             <button type="button" className="schedule-button schedule-button--ghost" onClick={() => setIsQuickBookOpen(false)}>
                                 Fechar
@@ -1418,127 +1776,95 @@ const ScheduleManagement = () => {
                             {error && <div className="schedule-banner schedule-banner--error">{error}</div>}
 
                             <label>
-                                <span>Data da aula *</span>
-                                <input
-                                    type="date"
-                                    value={formData.date}
-                                    onChange={(event) => setFormData((prev) => ({ ...prev, date: event.target.value }))}
-                                />
-                            </label>
-
-                            <label>
-                                <span>Estilo de danca *</span>
-                                <select value={formData.style} onChange={(event) => setFormData((prev) => ({ ...prev, style: event.target.value }))}>
-                                    <option value="">Selecione o estilo</option>
-                                    {estilos.map((style) => (
-                                        <option key={style.IdEstiloDanca} value={style.IdEstiloDanca}>
-                                            {style.Nome}
-                                        </option>
-                                    ))}
+                                <span>Tipo de aula *</span>
+                                <select
+                                    value={formData.lessonType}
+                                    onChange={(event) => handleLessonTypeChange(event.target.value)}
+                                >
+                                    <option value="Regular">Regular</option>
+                                    <option value="Particular">Coaching</option>
                                 </select>
                             </label>
 
-                            <div className="schedule-form-grid">
+                            {isCoaching ? (
                                 <label>
-                                    <span>Estudio *</span>
-                                    <select
-                                        value={formData.studio}
-                                        onChange={(event) => setFormData((prev) => ({ ...prev, studio: event.target.value }))}
-                                        disabled={!formData.style}
-                                    >
-                                        <option value="">{formData.style ? 'Selecione o estudio compativel' : 'Escolha primeiro o estilo'}</option>
-                                        {availableStudios.map((studio) => (
-                                            <option key={studio.IdEstudio} value={studio.IdEstudio}>
-                                                Estudio {studio.Numero}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
-
-                                <label>
-                                    <span>Professor *</span>
-                                    <select
-                                        value={formData.teacher}
-                                        onChange={(event) => setFormData((prev) => ({ ...prev, teacher: event.target.value }))}
-                                        disabled={!formData.style || !formData.date}
-                                    >
-                                        <option value="">
-                                            {formData.style
-                                                ? formData.date
-                                                    ? 'Selecione o professor disponivel'
-                                                    : 'Selecione a data para filtrar a disponibilidade'
-                                                : 'Escolha primeiro o estilo'}
-                                        </option>
-                                        {availableTeachers.map((teacher) => (
-                                            <option key={teacher.IdUtilizador} value={teacher.IdUtilizador}>
-                                                {teacher.NomeCompleto}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
-                            </div>
-
-                            <div className="schedule-form-grid">
-                                <label>
-                                    <span>Tipo de aula *</span>
-                                    <select
-                                        value={formData.lessonType}
-                                        onChange={(event) => setFormData((prev) => ({ ...prev, lessonType: event.target.value }))}
-                                    >
-                                        <option value="Regular">Regular</option>
-                                        <option value="Particular">Particular</option>
-                                    </select>
-                                </label>
-
-                                <label>
-                                    <span>Recorrencia</span>
-                                    <select
-                                        value={formData.repeatMode}
-                                        onChange={(event) => setFormData((prev) => ({
-                                            ...prev,
-                                            repeatMode: event.target.value,
-                                            repeatUntil: event.target.value === 'none' ? '' : prev.repeatUntil
-                                        }))}
-                                    >
-                                        <option value="none">Nao repetir</option>
-                                        <option value="weekly">Semanal</option>
-                                        <option value="monthly">Mensal</option>
-                                        <option value="annual">Anual</option>
-                                    </select>
-                                </label>
-                            </div>
-
-                            {formData.repeatMode !== 'none' && (
-                                <label>
-                                    <span>Repetir ate *</span>
+                                    <span>Data do Coaching *</span>
                                     <input
                                         type="date"
-                                        value={formData.repeatUntil}
-                                        onChange={(event) => setFormData((prev) => ({ ...prev, repeatUntil: event.target.value }))}
+                                        value={formData.date}
+                                        onChange={(event) => handleCoachingDateChange(event.target.value)}
                                     />
                                 </label>
-                            )}
+                            ) : (
+                                <>
+                                    <div className="schedule-form-grid">
+                                        <label>
+                                            <span>Dia da semana *</span>
+                                            <select value={formData.dayOfWeek} onChange={(event) => handleRegularWeekdayChange(event.target.value)}>
+                                                {WEEKDAY_OPTIONS.map((option) => (
+                                                    <option key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
 
-                            {formData.repeatMode !== 'none' && (
-                                <p className="schedule-helper">
-                                    {formData.repeatUntil
-                                        ? `Previstas ${recurrencePreviewDates.length} aula(s) nesta serie.`
-                                        : 'Escolhe a data final para calcular a serie.'}
-                                </p>
+                                        <label>
+                                            <span>Gerar ate *</span>
+                                            <input
+                                                type="date"
+                                                value={formData.repeatUntil}
+                                                onChange={(event) => setFormData((prev) => ({ ...prev, repeatUntil: event.target.value }))}
+                                            />
+                                        </label>
+                                    </div>
+
+                                    <p className="schedule-helper">
+                                        {formData.repeatUntil
+                                            ? `Previstas ${recurrencePreviewDates.length} aula(s), sempre a ${getWeekdayLabel(formData.dayOfWeek).toLowerCase()}.`
+                                            : `A serie vai arrancar na primeira ${getWeekdayLabel(formData.dayOfWeek).toLowerCase()} disponivel a partir de ${formatDate(formData.anchorDate || scheduleReferenceDate)}.`}
+                                    </p>
+                                </>
                             )}
 
                             <div className="schedule-form-grid">
+                                <label>
+                                    <span>Estilo de danca *</span>
+                                    <select
+                                        value={formData.style}
+                                        onChange={(event) => setFormData((prev) => ({
+                                            ...prev,
+                                            style: event.target.value,
+                                            teacher: '',
+                                            teacherSelectionMode: 'compatible',
+                                            studio: '',
+                                            studioSelectionMode: 'compatible'
+                                        }))}
+                                    >
+                                        <option value="">Selecione o estilo</option>
+                                        {estilos.map((style) => (
+                                            <option key={style.IdEstiloDanca} value={style.IdEstiloDanca}>
+                                                {style.Nome}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+
                                 <label>
                                     <span>Limite de vagas *</span>
                                     <input
                                         type="number"
                                         min="1"
                                         value={formData.capacity}
-                                        onChange={(event) => setFormData((prev) => ({ ...prev, capacity: event.target.value }))}
+                                        onChange={(event) => setFormData((prev) => ({
+                                            ...prev,
+                                            capacity: event.target.value,
+                                            studio: '',
+                                            studioSelectionMode: 'compatible'
+                                        }))}
                                         placeholder="Ex: 12"
                                     />
                                 </label>
-                                <div />
                             </div>
 
                             <div className="schedule-form-grid">
@@ -1550,7 +1876,9 @@ const ScheduleManagement = () => {
                                         onChange={(event) => setFormData((prev) => ({
                                             ...prev,
                                             startTime: event.target.value,
-                                            endTime: prev.duration ? computeEndTime(event.target.value, prev.duration) : prev.endTime
+                                            endTime: prev.duration ? computeEndTime(event.target.value, prev.duration) : prev.endTime,
+                                            studio: '',
+                                            studioSelectionMode: 'compatible'
                                         }))}
                                     />
                                 </label>
@@ -1560,7 +1888,13 @@ const ScheduleManagement = () => {
                                     <input
                                         type="time"
                                         value={formData.endTime}
-                                        onChange={(event) => handleEndTimeChange(event.target.value)}
+                                        onChange={(event) => setFormData((prev) => ({
+                                            ...prev,
+                                            endTime: event.target.value,
+                                            duration: '',
+                                            studio: '',
+                                            studioSelectionMode: 'compatible'
+                                        }))}
                                         disabled={Boolean(formData.duration)}
                                     />
                                 </label>
@@ -1582,15 +1916,224 @@ const ScheduleManagement = () => {
                                 </div>
                             </div>
 
-                            {formData.style && availableStudios.length === 0 && (
+                            <label>
+                                <span>Professor *</span>
+                                <select
+                                    value={showAlternativeTeacherSelector ? '__other__' : selectedTeacherId}
+                                    onChange={(event) => {
+                                        if (event.target.value === '__other__') {
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                teacherSelectionMode: 'alternative',
+                                                teacher: ''
+                                            }));
+                                            return;
+                                        }
+
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            teacherSelectionMode: 'compatible',
+                                            teacher: event.target.value
+                                        }));
+                                    }}
+                                    disabled={!canSelectTeacher}
+                                >
+                                    <option value="">
+                                        {!formData.style
+                                            ? 'Escolha primeiro o estilo'
+                                            : !isCoaching
+                                                ? teacherState.compatibleOptions.length === 0
+                                                    ? 'Sem professor associado ao estilo'
+                                                    : 'Selecione o professor'
+                                                : formData.date
+                                                    ? 'Selecione o professor disponivel'
+                                                    : 'Escolha primeiro a data do Coaching'}
+                                    </option>
+                                    {teacherState.compatibleOptions.map((teacher) => (
+                                        <option key={teacher.IdUtilizador} value={teacher.IdUtilizador}>
+                                            {teacher.NomeCompleto}
+                                        </option>
+                                    ))}
+                                    {canUnlockAlternativeTeacher && (
+                                        <option value="__other__">Outro professor</option>
+                                    )}
+                                </select>
+                            </label>
+
+                            {!isCoaching && teacherState.compatibleOptions.length === 0 && teacherState.allAvailableOptions.length > 0 && (
                                 <p className="schedule-helper">
-                                    Nao existem estudios associados ao estilo escolhido.
+                                    Nao existe nenhum professor associado ao estilo escolhido. Podes usar a opcao "Outro professor".
                                 </p>
                             )}
 
-                            {formData.style && formData.date && availableTeachers.length === 0 && (
+                            {showAlternativeTeacherSelector && teacherState.compatibleOptions.length > 0 && (
+                                <p className="schedule-helper">
+                                    Esta lista mostra todos os professores ativos, incluindo alternativas fora do estilo.
+                                </p>
+                            )}
+
+                            {showAlternativeTeacherSelector && (
+                                <label>
+                                    <span>Outro professor</span>
+                                    <select
+                                        value={selectedTeacherId}
+                                        onChange={(event) => setFormData((prev) => ({
+                                            ...prev,
+                                            teacherSelectionMode: 'alternative',
+                                            teacher: event.target.value
+                                        }))}
+                                    >
+                                        <option value="">
+                                            {teacherState.allAvailableOptions.length === 0
+                                                ? 'Nao existem professores ativos'
+                                                : 'Selecione um professor alternativo'}
+                                        </option>
+                                        {teacherState.allAvailableOptions.map((teacher) => {
+                                            const isCompatible = teacherState.compatibleOptions.some((item) => item.IdUtilizador === teacher.IdUtilizador);
+                                            return (
+                                                <option key={teacher.IdUtilizador} value={teacher.IdUtilizador}>
+                                                    {teacher.NomeCompleto}{isCompatible ? ' - Compativel' : ' - Alternativo'}
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
+                                </label>
+                            )}
+
+                            {isCoaching && (
+                                <div className="schedule-availability-note">
+                                    <p className="schedule-availability-title">Disponibilidade do professor</p>
+                                    {!formData.date ? (
+                                        <p className="schedule-helper">Escolha primeiro a data do Coaching.</p>
+                                    ) : !formData.style ? (
+                                        <p className="schedule-helper">Escolha o estilo para filtrar os professores certos.</p>
+                                    ) : !formData.teacher ? (
+                                        <p className="schedule-helper">Escolha o professor para ver os blocos livres nesse dia.</p>
+                                    ) : coachingTeacherAvailability.length === 0 ? (
+                                        <p className="schedule-helper">{selectedTeacherName} nao tem disponibilidade registada neste dia.</p>
+                                    ) : availableTimeSlots.length === 0 ? (
+                                        <p className="schedule-helper">{selectedTeacherName} nao tem blocos livres para a duracao escolhida neste dia.</p>
+                                    ) : (
+                                        <>
+                                            <p className="schedule-helper">
+                                                Os blocos abaixo ja descontam as aulas que o professor tem marcadas nesse dia.
+                                            </p>
+                                            <div className="schedule-availability-slots">
+                                                {availableTimeSlots.map((slot) => (
+                                                    <button
+                                                        key={slot.key}
+                                                        type="button"
+                                                        className={`schedule-availability-slot ${formData.startTime === slot.startTime ? 'schedule-availability-slot--selected' : ''}`}
+                                                        onClick={() => setFormData((prev) => ({
+                                                            ...prev,
+                                                            startTime: slot.startTime,
+                                                            endTime: prev.duration ? computeEndTime(slot.startTime, prev.duration) : slot.endTime,
+                                                            studio: '',
+                                                            studioSelectionMode: 'compatible'
+                                                        }))}
+                                                    >
+                                                        {slot.startTime} - {slot.endTime}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
+                            <label>
+                                <span>Estudio *</span>
+                                <select
+                                    value={showAlternativeStudioSelector ? '__other__' : selectedStudioId}
+                                    onChange={(event) => {
+                                        if (event.target.value === '__other__') {
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                studioSelectionMode: 'alternative',
+                                                studio: ''
+                                            }));
+                                            return;
+                                        }
+
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            studioSelectionMode: 'compatible',
+                                            studio: event.target.value
+                                        }));
+                                    }}
+                                    disabled={!canSelectStudio}
+                                >
+                                    <option value="">
+                                        {!formData.style
+                                            ? 'Escolha primeiro o estilo'
+                                            : !formData.capacity
+                                                ? 'Indique primeiro a capacidade'
+                                                : !formData.startTime || !effectiveEndTime
+                                                    ? 'Defina primeiro o horario'
+                                                    : studioState.compatibleOptions.length === 0
+                                                        ? 'Sem estudio compativel livre'
+                                                        : 'Selecione o estudio compativel'}
+                                    </option>
+                                    {studioState.compatibleOptions.map((studio) => (
+                                        <option key={studio.IdEstudio} value={studio.IdEstudio}>
+                                            Estudio {studio.Numero} - Capacidade {studio.Capacidade}
+                                        </option>
+                                    ))}
+                                    {canUnlockAlternativeStudio && (
+                                        <option value="__other__">Outro estudio</option>
+                                    )}
+                                </select>
+                            </label>
+
+                            {studioState.compatibleOptions.length === 0 && studioState.allAvailableOptions.length > 0 && (
+                                <p className="schedule-helper">
+                                    Nao existe nenhum estudio associado ao estilo livre para este horario. Podes usar a opcao "Outro estudio".
+                                </p>
+                            )}
+
+                            {showAlternativeStudioSelector && studioState.compatibleOptions.length > 0 && (
+                                <p className="schedule-helper">
+                                    Esta lista mostra todos os estudios livres para o horario escolhido, incluindo alternativas fora do estilo.
+                                </p>
+                            )}
+
+                            {showAlternativeStudioSelector && (
+                                <label>
+                                    <span>Outro estudio</span>
+                                    <select
+                                        value={selectedStudioId}
+                                        onChange={(event) => setFormData((prev) => ({
+                                            ...prev,
+                                            studioSelectionMode: 'alternative',
+                                            studio: event.target.value
+                                        }))}
+                                    >
+                                        <option value="">
+                                            {studioState.allAvailableOptions.length === 0
+                                                ? 'Nao existem estudios livres'
+                                                : 'Selecione um estudio alternativo'}
+                                        </option>
+                                        {studioState.allAvailableOptions.map((studio) => {
+                                            const isCompatible = studioState.compatibleOptions.some((item) => item.IdEstudio === studio.IdEstudio);
+                                            return (
+                                                <option key={studio.IdEstudio} value={studio.IdEstudio}>
+                                                    Estudio {studio.Numero} - Capacidade {studio.Capacidade}{isCompatible ? ' - Compativel' : ' - Alternativo'}
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
+                                </label>
+                            )}
+
+                            {formData.style && canSelectTeacher && teacherState.compatibleOptions.length === 0 && isCoaching && (
                                 <p className="schedule-helper">
                                     Nao existem professores disponiveis para este estilo na data e horario selecionados.
+                                </p>
+                            )}
+
+                            {formData.style && canSelectStudio && studioState.allAvailableOptions.length === 0 && (
+                                <p className="schedule-helper">
+                                    Nao existem estudios livres com capacidade suficiente para este horario.
                                 </p>
                             )}
                         </div>
@@ -1602,9 +2145,9 @@ const ScheduleManagement = () => {
                             <button type="button" className="schedule-button schedule-button--primary" onClick={handleSubmit} disabled={saving}>
                                 {saving
                                     ? 'A guardar...'
-                                    : formData.repeatMode === 'none'
-                                        ? 'Confirmar agendamento'
-                                        : 'Criar serie'}
+                                    : isCoaching
+                                        ? 'Confirmar Coaching'
+                                        : 'Criar serie regular'}
                             </button>
                         </div>
                     </section>

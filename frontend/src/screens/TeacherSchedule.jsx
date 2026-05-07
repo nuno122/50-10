@@ -683,10 +683,10 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
 
         try {
             await confirmarPedidoAulaPrivadaProfessor(request.IdPedidoAulaPrivada);
-            setFeedback('Disponibilidade confirmada. O pedido segue para a Direcao validar o estudio.');
+            setFeedback('Disponibilidade confirmada. O pedido de Coaching segue para a Direcao validar o estudio.');
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel confirmar o pedido de aula privada.');
+            setError(err.message || 'Nao foi possivel confirmar o pedido de Coaching.');
         } finally {
             setSavingLesson(false);
         }
@@ -698,10 +698,10 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
 
         try {
             await rejeitarPedidoAulaPrivadaProfessor(request.IdPedidoAulaPrivada, 'Professor indisponivel no horario pedido.');
-            setFeedback('Pedido de aula privada rejeitado.');
+            setFeedback('Pedido de Coaching rejeitado.');
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel rejeitar o pedido de aula privada.');
+            setError(err.message || 'Nao foi possivel rejeitar o pedido de Coaching.');
         } finally {
             setSavingLesson(false);
         }
@@ -1093,7 +1093,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                     className={`teacher-tab ${activeTab === 'privateRequests' ? 'teacher-tab--active' : ''}`}
                     onClick={() => setActiveTab('privateRequests')}
                 >
-                    Pedidos Privados
+                    Pedidos de Coaching
                 </button>
             </div>
 
@@ -1191,8 +1191,8 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                         </div>
                     ) : pendingPrivateRequests.length === 0 ? (
                         <div className="teacher-empty">
-                            <p className="teacher-empty-title">Sem pedidos privados pendentes</p>
-                            <p>Quando um encarregado pedir uma aula contigo, aparece aqui para confirmares a disponibilidade.</p>
+                            <p className="teacher-empty-title">Sem pedidos de Coaching pendentes</p>
+                            <p>Quando um encarregado pedir um Coaching contigo, aparece aqui para confirmares a disponibilidade.</p>
                         </div>
                     ) : (
                         <div className="teacher-grid">
@@ -1200,7 +1200,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                                 <article key={request.IdPedidoAulaPrivada} className="teacher-card">
                                     <div className="teacher-card-header">
                                         <span className="teacher-badge teacher-badge--primary">A confirmar</span>
-                                        <h2>{request.EstiloDanca?.Nome || 'Aula privada'}</h2>
+                                        <h2>{request.EstiloDanca?.Nome || 'Coaching'}</h2>
                                     </div>
                                     <div className="teacher-card-body">
                                         <p>{formatDate(request.DataPretendida)} - {extractTime(request.HoraPretendida)}</p>

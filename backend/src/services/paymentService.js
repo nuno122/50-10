@@ -9,10 +9,24 @@ const create = async (Valor, DataLimite, IdMarcacao) => {
     });
 };
 
+const normalizeStatus = (value) => String(value || '').trim().toLowerCase();
+
+const marcacaoJaTemPagamentoAtivo = (marcacao) => (
+    Array.isArray(marcacao?.Pagamento) &&
+    marcacao.Pagamento.some((pagamento) => normalizeStatus(pagamento?.EstadoPagamento) !== 'cancelado')
+);
+
 const GerarPagamento = async (listaMarcacoes, preco) => {
+    const marcacoes = Array.isArray(listaMarcacoes)
+        ? listaMarcacoes
+        : (listaMarcacoes ? [listaMarcacoes] : []);
     const pagamentos = [];
 
-    for (const marcacao of listaMarcacoes) {
+    for (const marcacao of marcacoes) {
+        if (!marcacao?.IdMarcacao || marcacaoJaTemPagamentoAtivo(marcacao)) {
+            continue;
+        }
+
         const dataLimite = new Date();
         dataLimite.setDate(dataLimite.getDate() + 5);
 

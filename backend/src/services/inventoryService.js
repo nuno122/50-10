@@ -1,4 +1,5 @@
 const inventoryRepo = require('../repositories/inventoryRepository');
+const PERMISSOES = require('../config/permissions');
 
 const criarErro = (mensagem, statusCode) => {
     const erro = new Error(mensagem);
@@ -10,35 +11,71 @@ const listarArtigos = async () => {
     return await inventoryRepo.findAll();
 };
 
-const criarArtigo = async (dados) => {
+const podeGerirArtigo = (utilizador, artigo) => {
+    if (!utilizador || !artigo) {
+        return false;
+    }
+
+    return utilizador.Permissoes === PERMISSOES.DIRECAO
+        || artigo.IdUtilizadorCriador === utilizador.IdUtilizador;
+};
+
+const criarArtigo = async (dados, utilizador) => {
     const { Nome, CustoPorDia } = dados || {};
 
     if (!Nome) {
-        throw criarErro('Nome do artigo \u00e9 obrigat\u00f3rio.', 400);
+        throw criarErro('Nome do artigo e obrigatorio.', 400);
     }
 
     if (CustoPorDia === undefined || CustoPorDia === null || CustoPorDia === '' || Number(CustoPorDia) <= 0) {
         throw criarErro('Custo por dia deve ser um valor positivo.', 400);
     }
 
-    return await inventoryRepo.create(dados);
+    if (!utilizador?.IdUtilizador) {
+        throw criarErro('Sessao invalida para publicar o anuncio.', 401);
+    }
+
+    return await inventoryRepo.create({
+        ...dados,
+        IdUtilizadorCriador: utilizador.IdUtilizador
+    });
 };
 
-const editarArtigo = async (id, dados) => {
+const editarArtigo = async (id, dados, utilizador) => {
     if (!id) {
-        throw criarErro('ID do artigo \u00e9 obrigat\u00f3rio para edi\u00e7\u00e3o.', 400);
+        throw criarErro('ID do artigo e obrigatorio para edicao.', 400);
     }
 
     if (!dados || typeof dados !== 'object') {
-        throw criarErro('Dados do artigo s\u00e3o obrigat\u00f3rios para edi\u00e7\u00e3o.', 400);
+        throw criarErro('Dados do artigo sao obrigatorios para edicao.', 400);
+    }
+
+    const artigoAtual = await inventoryRepo.findById(id);
+
+    if (!artigoAtual) {
+        throw criarErro('Artigo nao encontrado.', 404);
+    }
+
+    if (!podeGerirArtigo(utilizador, artigoAtual)) {
+        throw criarErro('Nao tens permissao para editar este anuncio.', 403);
     }
 
     return await inventoryRepo.update(id, dados);
 };
 
-const removerArtigo = async (id) => {
+const removerArtigo = async (id, utilizador) => {
     if (!id) {
-        throw criarErro('ID do artigo \u00e9 obrigat\u00f3rio para remo\u00e7\u00e3o.', 400);
+        throw criarErro('ID do artigo e obrigatorio para remocao.', 400);
+    }
+
+    const artigoAtual = await inventoryRepo.findById(id);
+
+    if (!artigoAtual) {
+        throw criarErro('Artigo nao encontrado.', 404);
+    }
+
+    if (!podeGerirArtigo(utilizador, artigoAtual)) {
+        throw criarErro('Nao tens permissao para remover este anuncio.', 403);
     }
 
     return await inventoryRepo.delete(id);

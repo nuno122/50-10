@@ -8,6 +8,20 @@ const handleResponse = async (response) => {
         if (data && typeof data === 'object') {
             Object.assign(error, data);
         }
+
+        if (
+            response.status === 401
+            && typeof window !== 'undefined'
+            && localStorage.getItem('authToken')
+        ) {
+            window.dispatchEvent(new CustomEvent('entartes:auth-invalid', {
+                detail: {
+                    message: error.message,
+                    status: response.status
+                }
+            }));
+        }
+
         throw error;
     }
 
@@ -212,26 +226,14 @@ export const getPagamentosEncarregado = async () => request('/pagamentos/encarre
 export const pagarPagamento = async (idPagamento) =>
     request(`/pagamentos/${idPagamento}/pagar`, { method: 'PATCH' });
 
-
-export const cancelarMarcacao = async (idMarcacao) =>
-    request(`/marcacoes/${idMarcacao}/cancelar`, { method: 'PATCH' });
-
 export const getMarcacoes = async () => request('/marcacoes');
 
 export const getPedidosCancelamentoPendentes = async () => request('/marcacoes/cancelamentos/pendentes');
-
-export const getMinhasMarcacoes = async () => request('/marcacoes/minhas');
 
 export const getAlunosEncarregado = async () => request('/marcacoes/encarregado/alunos');
 
 export const getMarcacoesEncarregado = async (idAluno) =>
     request(`/marcacoes/encarregado/minhas?idAluno=${encodeURIComponent(idAluno)}`);
-
-export const criarMarcacao = async ({ IdAluno, IdAula }) =>
-    request('/marcacoes', {
-        method: 'POST',
-        body: JSON.stringify({ IdAluno, IdAula })
-    });
 
 export const criarMarcacaoEncarregado = async ({ IdAluno, IdAula }) =>
     request('/marcacoes/encarregado', {

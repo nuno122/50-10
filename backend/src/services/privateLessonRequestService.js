@@ -133,7 +133,7 @@ const garantirAlunoDoEncarregado = async (idEncarregado, idAluno) => {
 const validarCapacidade = (capacidade) => {
     const valor = Number(capacidade || 1);
     if (!Number.isInteger(valor) || valor < 1 || valor > 4) {
-        throw criarErro('A capacidade da aula particular tem de estar entre 1 e 4 participantes.', 400);
+        throw criarErro('A capacidade do Coaching tem de estar entre 1 e 4 participantes.', 400);
     }
     return valor;
 };
@@ -200,7 +200,7 @@ const validarDisponibilidadeProfessor = async (pedido, idProfessor) => {
     });
 
     if (pedidoSobreposto) {
-        throw criarErro('O professor ja confirmou outro pedido de aula privada neste horario.', 400);
+        throw criarErro('O professor ja confirmou outro pedido de Coaching neste horario.', 400);
     }
 
     return { inicio, fim };
@@ -247,6 +247,12 @@ const criarPedido = async (dados, idEncarregado) => {
         throw criarErro('O pedido tem de ser para um horario futuro.', 400);
     }
 
+    await validarDisponibilidadeProfessor({
+        DataPretendida: construirData(DataPretendida),
+        HoraPretendida: dataHoraPretendida,
+        DuracaoMinutos: duracao
+    }, IdProfessorSolicitado);
+
     return await privateLessonRequestRepo.create({
         IdEncarregado: idEncarregado,
         IdAluno,
@@ -288,7 +294,7 @@ const confirmarPedidoProfessor = async (idPedidoAulaPrivada, dados, idProfessor)
 
     const pedido = await privateLessonRequestRepo.findById(idPedidoAulaPrivada);
     if (!pedido) {
-        throw criarErro('Pedido de aula privada nao encontrado.', 404);
+        throw criarErro('Pedido de Coaching nao encontrado.', 404);
     }
 
     if (pedido.IdProfessorSolicitado !== idProfessor) {
@@ -322,7 +328,7 @@ const rejeitarPedidoProfessor = async (idPedidoAulaPrivada, observacaoProfessor,
 
     const pedido = await privateLessonRequestRepo.findById(idPedidoAulaPrivada);
     if (!pedido) {
-        throw criarErro('Pedido de aula privada nao encontrado.', 404);
+        throw criarErro('Pedido de Coaching nao encontrado.', 404);
     }
 
     if (pedido.IdProfessorSolicitado !== idProfessor) {
@@ -352,7 +358,7 @@ const aprovarPedido = async (idPedidoAulaPrivada, dados, idDiretor) => {
 
     const pedido = await privateLessonRequestRepo.findById(idPedidoAulaPrivada);
     if (!pedido) {
-        throw criarErro('Pedido de aula privada nao encontrado.', 404);
+        throw criarErro('Pedido de Coaching nao encontrado.', 404);
     }
 
     if (pedido.EstadoPedido !== ESTADOS_PEDIDO.PENDENTE_DIRECAO) {
@@ -419,7 +425,7 @@ const aprovarPedido = async (idPedidoAulaPrivada, dados, idDiretor) => {
     });
 
     return {
-        mensagem: 'Pedido aprovado com sucesso e convertido em aula particular.',
+        mensagem: 'Pedido aprovado com sucesso e convertido em sessao de Coaching.',
         pedido: pedidoAtualizado,
         aula: resultadoAula.aula,
         marcacao: resultadoMarcacao.marcacao
@@ -433,7 +439,7 @@ const rejeitarPedido = async (idPedidoAulaPrivada, observacaoDirecao, idDiretor)
 
     const pedido = await privateLessonRequestRepo.findById(idPedidoAulaPrivada);
     if (!pedido) {
-        throw criarErro('Pedido de aula privada nao encontrado.', 404);
+        throw criarErro('Pedido de Coaching nao encontrado.', 404);
     }
 
     if (![ESTADOS_PEDIDO.PENDENTE_PROFESSOR, ESTADOS_PEDIDO.PENDENTE_DIRECAO].includes(pedido.EstadoPedido)) {
@@ -448,7 +454,7 @@ const rejeitarPedido = async (idPedidoAulaPrivada, observacaoDirecao, idDiretor)
     });
 
     return {
-        mensagem: 'Pedido de aula privada rejeitado.',
+        mensagem: 'Pedido de Coaching rejeitado.',
         pedido: pedidoAtualizado
     };
 };

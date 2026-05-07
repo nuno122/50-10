@@ -1,7 +1,9 @@
 const classService = require('../../backend/src/services/classService');
 const classRepo = require('../../backend/src/repositories/classRepository');
+const paymentService = require('../../backend/src/services/paymentService');
 
 jest.mock('../../backend/src/repositories/classRepository');
+jest.mock('../../backend/src/services/paymentService');
 
 describe('Class Service', () => {
     beforeEach(() => {
@@ -27,6 +29,8 @@ describe('Class Service', () => {
                     HoraFim: '2026-05-01T18:00:00.000Z'
                 }
             ]);
+            classRepo.findClassesByDate.mockResolvedValue([]);
+            classRepo.findAllStudios.mockResolvedValue([]);
         });
 
         it('deve emitir erro 400 quando nao forem enviados todos os dados obrigatorios', async () => {
@@ -48,7 +52,8 @@ describe('Class Service', () => {
                 Preco: 15,
                 IdProfessor: 1,
                 IdEstudio: 2,
-                IdEstiloDanca: 3
+                IdEstiloDanca: 3,
+                TipoAula: 'Particular'
             };
 
             classRepo.findOverlapping.mockResolvedValue([
@@ -117,7 +122,8 @@ describe('Class Service', () => {
                 Preco: 15,
                 IdProfessor: 1,
                 IdEstudio: 2,
-                IdEstiloDanca: 3
+                IdEstiloDanca: 3,
+                TipoAula: 'Particular'
             };
 
             classRepo.findOverlapping.mockResolvedValue([]);
@@ -132,6 +138,30 @@ describe('Class Service', () => {
             await expect(classService.criarAula(dadosPreenchidos))
                 .rejects
                 .toThrow('O professor nao tem disponibilidade registada para este horario.');
+        });
+
+        it('deve criar uma aula regular mesmo sem disponibilidade registada do professor', async () => {
+            const dadosValidos = {
+                Data: '2026-05-01',
+                HoraInicio: '2026-05-01T10:00:00.000Z',
+                HoraFim: '2026-05-01T11:00:00.000Z',
+                CapacidadeMaxima: 20,
+                Preco: 15,
+                IdProfessor: 1,
+                IdEstudio: 2,
+                IdEstiloDanca: 3,
+                TipoAula: 'Regular'
+            };
+
+            classRepo.findOverlapping.mockResolvedValue([]);
+            classRepo.findProfessorClassesByDate.mockResolvedValue([]);
+            classRepo.findProfessorAvailabilityByDate.mockResolvedValue([]);
+            classRepo.create.mockResolvedValue({ IdAula: 11, ...dadosValidos });
+
+            const resultado = await classService.criarAula(dadosValidos);
+
+            expect(resultado.aula.IdAula).toBe(11);
+            expect(classRepo.findProfessorAvailabilityByDate).not.toHaveBeenCalled();
         });
 
         it('deve criar a aula com sucesso quando todos os dados estiverem preenchidos e nao houver sobreposicoes', async () => {
@@ -223,6 +253,126 @@ describe('Class Service', () => {
                 .rejects
                 .toThrow('A capacidade da aula excede a capacidade do estudio selecionado.');
         });
+
+        it('deve permitir um professor alternativo numa aula regular quando a Direcao o desbloquear', async () => {
+            const dadosValidos = {
+                Data: '2026-05-01',
+                HoraInicio: '2026-05-01T10:00:00.000Z',
+                HoraFim: '2026-05-01T11:00:00.000Z',
+                CapacidadeMaxima: 20,
+                Preco: 15,
+                IdProfessor: 1,
+                IdEstudio: 2,
+                IdEstiloDanca: 3,
+                TipoAula: 'Regular',
+                PermitirProfessorAlternativo: true
+            };
+
+            classRepo.findProfessorById.mockResolvedValue({
+                IdProfessor: 1,
+                EstiloProfessor: [{ IdEstiloDanca: 9 }]
+            });
+            classRepo.findOverlapping.mockResolvedValue([]);
+            classRepo.findProfessorClassesByDate.mockResolvedValue([]);
+            classRepo.create.mockResolvedValue({ IdAula: 12, ...dadosValidos });
+
+            const resultado = await classService.criarAula(dadosValidos);
+
+            expect(resultado.aula.IdAula).toBe(12);
+            expect(classRepo.create).toHaveBeenCalledWith({
+                ...dadosValidos,
+                TipoAula: 'Regular',
+                OrigemAula: 'Direcao'
+            });
+        });
+
+        it('deve permitir um estudio alternativo quando a Direcao o desbloquear e nao existir nenhum estudio compativel disponivel', async () => {
+            const dadosValidos = {
+                Data: '2026-05-01',
+                HoraInicio: '2026-05-01T10:00:00.000Z',
+                HoraFim: '2026-05-01T11:00:00.000Z',
+                CapacidadeMaxima: 20,
+                Preco: 15,
+                IdProfessor: 1,
+                IdEstudio: 2,
+                IdEstiloDanca: 3,
+                TipoAula: 'Regular',
+                OrigemAula: 'Direcao',
+                PermitirEstudioAlternativo: true
+            };
+
+            classRepo.findEstudioById.mockResolvedValue({
+                IdEstudio: 2,
+                Capacidade: 30,
+                EstudioEstilo: [{ IdEstiloDanca: 9 }]
+            });
+            classRepo.findAllStudios.mockResolvedValue([
+                {
+                    IdEstudio: 2,
+                    Capacidade: 30,
+                    EstudioEstilo: [{ IdEstiloDanca: 9 }]
+                },
+                {
+                    IdEstudio: 5,
+                    Capacidade: 25,
+                    EstudioEstilo: [{ IdEstiloDanca: 3 }]
+                }
+            ]);
+            classRepo.findClassesByDate.mockResolvedValue([
+                {
+                    IdEstudio: 5,
+                    HoraInicio: '2026-05-01T10:00:00.000Z',
+                    HoraFim: '2026-05-01T11:30:00.000Z'
+                }
+            ]);
+            classRepo.findOverlapping.mockResolvedValue([]);
+            classRepo.findProfessorClassesByDate.mockResolvedValue([]);
+            classRepo.create.mockResolvedValue({ IdAula: 10, ...dadosValidos });
+
+            const resultado = await classService.criarAula(dadosValidos);
+
+            expect(resultado.aula.IdAula).toBe(10);
+            expect(classRepo.create).toHaveBeenCalledWith(dadosValidos);
+        });
+
+        it('deve bloquear um estudio alternativo quando existir estudio compativel disponivel', async () => {
+            const dadosValidos = {
+                Data: '2026-05-01',
+                HoraInicio: '2026-05-01T10:00:00.000Z',
+                HoraFim: '2026-05-01T11:00:00.000Z',
+                CapacidadeMaxima: 20,
+                Preco: 15,
+                IdProfessor: 1,
+                IdEstudio: 2,
+                IdEstiloDanca: 3,
+                TipoAula: 'Particular',
+                OrigemAula: 'PedidoEncarregado',
+                PermitirEstudioAlternativo: true
+            };
+
+            classRepo.findEstudioById.mockResolvedValue({
+                IdEstudio: 2,
+                Capacidade: 30,
+                EstudioEstilo: [{ IdEstiloDanca: 9 }]
+            });
+            classRepo.findAllStudios.mockResolvedValue([
+                {
+                    IdEstudio: 2,
+                    Capacidade: 30,
+                    EstudioEstilo: [{ IdEstiloDanca: 9 }]
+                },
+                {
+                    IdEstudio: 5,
+                    Capacidade: 25,
+                    EstudioEstilo: [{ IdEstiloDanca: 3 }]
+                }
+            ]);
+            classRepo.findClassesByDate.mockResolvedValue([]);
+
+            await expect(classService.criarAula(dadosValidos))
+                .rejects
+                .toThrow('Existem estudios compativeis disponiveis para este horario. Escolhe primeiro um estudio associado ao estilo.');
+        });
     });
 
     describe('Criar Aulas Em Lote', () => {
@@ -244,6 +394,8 @@ describe('Class Service', () => {
                     HoraFim: '2026-05-01T18:00:00.000Z'
                 }
             ]);
+            classRepo.findClassesByDate.mockResolvedValue([]);
+            classRepo.findAllStudios.mockResolvedValue([]);
         });
 
         it('deve devolver erro 400 quando nao existirem aulas para criar', async () => {
@@ -298,6 +450,51 @@ describe('Class Service', () => {
             expect(resultado.aulas[0].IdAula).toBe(10);
             expect(resultado.erros[0].referencia).toBe('Linha 3');
             expect(resultado.erros[0].mensagem).toBe('Conflito de horario! Estudio ocupado.');
+        });
+    });
+
+    describe('Validar Aula', () => {
+        it('deve gerar pagamentos apenas na conclusao da Direcao depois da confirmacao do professor', async () => {
+            classRepo.findByIdComAlunos.mockResolvedValue({
+                IdAula: 77,
+                EstaAtivo: true,
+                ConfirmacaoProfessor: true,
+                Marcacao: [
+                    { IdMarcacao: 10, Pagamento: [] },
+                    { IdMarcacao: 11, Pagamento: [] }
+                ],
+                Preco: 18
+            });
+            classRepo.atualizarValidacaoDirecao.mockResolvedValue({ IdAula: 77, ValidacaoDirecao: true });
+            paymentService.GerarPagamento.mockResolvedValue({
+                pagamentos: [{ IdPagamento: 1 }, { IdPagamento: 2 }]
+            });
+
+            const resultado = await classService.validarAula(77);
+
+            expect(classRepo.atualizarValidacaoDirecao).toHaveBeenCalledWith(77);
+            expect(paymentService.GerarPagamento).toHaveBeenCalledWith([
+                { IdMarcacao: 10, Pagamento: [] },
+                { IdMarcacao: 11, Pagamento: [] }
+            ], 18);
+            expect(resultado.pagamentos).toHaveLength(2);
+        });
+
+        it('deve bloquear a conclusao da Direcao quando o professor ainda nao confirmou a aula', async () => {
+            classRepo.findByIdComAlunos.mockResolvedValue({
+                IdAula: 88,
+                EstaAtivo: true,
+                ConfirmacaoProfessor: false,
+                Marcacao: [{ IdMarcacao: 12, Pagamento: [] }],
+                Preco: 20
+            });
+
+            await expect(classService.validarAula(88))
+                .rejects
+                .toThrow('A aula tem de ser confirmada pelo professor antes da validacao da Direcao.');
+
+            expect(classRepo.atualizarValidacaoDirecao).not.toHaveBeenCalled();
+            expect(paymentService.GerarPagamento).not.toHaveBeenCalled();
         });
     });
 });

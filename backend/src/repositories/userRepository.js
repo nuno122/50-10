@@ -13,6 +13,17 @@ const normalizeOptionalValue = (value) => {
 };
 
 const normalizeRequiredValue = (value) => String(value || '').trim();
+const normalizeStyleIds = (value) => {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+
+    return [...new Set(
+        value
+            .map((entry) => String(entry || '').trim())
+            .filter(Boolean)
+    )];
+};
 
 const userRepository = {
     // Buscar todos
@@ -104,6 +115,7 @@ const userRepository = {
     // Criar Utilizador com as relacoes chatas
     create: async (dados) => {
         const { Permissoes } = dados;
+        const styleIds = normalizeStyleIds(dados.IdsEstiloDanca);
 
         return await prisma.utilizador.create({
             data: {
@@ -120,18 +132,19 @@ const userRepository = {
                     connect: { CodigoPostal: normalizeRequiredValue(dados.CodigoPostal) }
                 },
 
-                ...(Permissoes === PERMISSOES.ALUNO && {
-                    Aluno: {
-                        create: {
-                            DataNascimento: dados.DataNascimento,
-                            Informacao: dados.Informacao ?? null
-                        }
-                    }
-                }),
                 ...(Permissoes === PERMISSOES.PROFESSOR && {
                     Professor: {
                         create: {
-                            Iban: normalizeOptionalValue(dados.Iban)
+                            Iban: normalizeOptionalValue(dados.Iban),
+                            EstiloProfessor: styleIds.length > 0
+                                ? {
+                                    create: styleIds.map((idEstiloDanca) => ({
+                                        EstiloDanca: {
+                                            connect: { IdEstiloDanca: idEstiloDanca }
+                                        }
+                                    }))
+                                }
+                                : undefined
                         }
                     }
                 }),
@@ -158,6 +171,8 @@ const userRepository = {
     },
 
     update: async (idUtilizador, dados) => {
+        const styleIds = normalizeStyleIds(dados.IdsEstiloDanca);
+
         return await prisma.utilizador.update({
             where: { IdUtilizador: idUtilizador },
             data: {
@@ -174,7 +189,19 @@ const userRepository = {
                 ...(dados.Permissoes === PERMISSOES.PROFESSOR && {
                     Professor: {
                         update: {
-                            Iban: normalizeOptionalValue(dados.Iban)
+                            Iban: normalizeOptionalValue(dados.Iban),
+                            EstiloProfessor: {
+                                deleteMany: {},
+                                ...(styleIds.length > 0
+                                    ? {
+                                        create: styleIds.map((idEstiloDanca) => ({
+                                            EstiloDanca: {
+                                                connect: { IdEstiloDanca: idEstiloDanca }
+                                            }
+                                        }))
+                                    }
+                                    : {})
+                            }
                         }
                     }
                 })

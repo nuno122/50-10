@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 const AuthContext = createContext();
 
@@ -15,6 +15,20 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    const login = useCallback((newToken, userData) => {
+        setToken(newToken);
+        setUser(userData);
+        localStorage.setItem('authToken', newToken);
+        localStorage.setItem('authUser', JSON.stringify(userData));
+    }, []);
+
+    const logout = useCallback(() => {
+        setToken(null);
+        setUser(null);
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('authUser');
+    }, []);
+
     useEffect(() => {
         // Load token from localStorage on app start
         const savedToken = localStorage.getItem('authToken');
@@ -26,19 +40,16 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
     }, []);
 
-    const login = (newToken, userData) => {
-        setToken(newToken);
-        setUser(userData);
-        localStorage.setItem('authToken', newToken);
-        localStorage.setItem('authUser', JSON.stringify(userData));
-    };
+    useEffect(() => {
+        const handleAuthInvalid = () => {
+            logout();
+        };
 
-    const logout = () => {
-        setToken(null);
-        setUser(null);
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('authUser');
-    };
+        window.addEventListener('entartes:auth-invalid', handleAuthInvalid);
+        return () => {
+            window.removeEventListener('entartes:auth-invalid', handleAuthInvalid);
+        };
+    }, [logout]);
 
     const value = {
         token,

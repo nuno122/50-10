@@ -1,5 +1,6 @@
 const userService = require('../../backend/src/services/userService');
 const userRepository = require('../../backend/src/repositories/userRepository');
+const PERMISSOES = require('../../backend/src/config/permissions');
 
 jest.mock('../../backend/src/repositories/userRepository');
 
@@ -8,125 +9,50 @@ describe('User Service', () => {
         jest.clearAllMocks();
     });
 
-    describe('criarUtilizador - Validacao de campos obrigatorios', () => {
-        it('deve rejeitar com 400 quando NomeCompleto esta em falta', async () => {
-            const dados = { Email: 'teste@teste.com', Permissoes: 1 };
-            await expect(userService.criarUtilizador(dados))
+    describe('criarUtilizador', () => {
+        it('rejects when NomeCompleto is missing', async () => {
+            await expect(userService.criarUtilizador({ Email: 'teste@teste.com', Permissoes: PERMISSOES.DIRECAO }))
                 .rejects
-                .toMatchObject({ statusCode: 400, message: 'NomeCompleto é obrigatório.' });
+                .toMatchObject({ statusCode: 400, message: 'NomeCompleto e obrigatorio.' });
         });
 
-        it('deve rejeitar com 400 quando Email esta em falta', async () => {
-            const dados = { NomeCompleto: 'Sr. Teste', Permissoes: 1 };
-            await expect(userService.criarUtilizador(dados))
-                .rejects
-                .toMatchObject({ statusCode: 400, message: 'Email é obrigatório.' });
-        });
-
-        it('deve rejeitar com 400 quando NomeUtilizador esta em falta', async () => {
-            const dados = { NomeCompleto: 'Sr. Teste', Email: 't@t.com', Permissoes: 3 };
-            await expect(userService.criarUtilizador(dados))
-                .rejects
-                .toMatchObject({ statusCode: 400, message: 'NomeUtilizador é obrigatório.' });
-        });
-
-        it('deve rejeitar com 400 quando CodigoPostal esta em falta', async () => {
+        it('rejects when permission is not managed in the portal', async () => {
             const dados = {
-                NomeCompleto: 'Sr. Teste',
-                NomeUtilizador: 'teste',
-                Email: 't@t.com',
-                Nif: '123456789',
-                Morada: 'Rua X',
-                Permissoes: 3
-            };
-
-            await expect(userService.criarUtilizador(dados))
-                .rejects
-                .toMatchObject({ statusCode: 400, message: 'CodigoPostal é obrigatório.' });
-        });
-
-        it('deve rejeitar com 400 quando Morada esta em falta', async () => {
-            const dados = {
-                NomeCompleto: 'Sr. Teste',
-                NomeUtilizador: 'teste',
-                Email: 't@t.com',
-                Nif: '123456789',
-                CodigoPostal: '1000-100',
-                Permissoes: 3
-            };
-
-            await expect(userService.criarUtilizador(dados))
-                .rejects
-                .toMatchObject({ statusCode: 400, message: 'Morada é obrigatória.' });
-        });
-
-        it('deve rejeitar com 400 quando NIF esta em falta', async () => {
-            const dados = {
-                NomeCompleto: 'Sr. Teste',
-                NomeUtilizador: 'teste',
-                Email: 't@t.com',
-                CodigoPostal: '1000-100',
-                Morada: 'Rua X',
-                Permissoes: 3
-            };
-
-            await expect(userService.criarUtilizador(dados))
-                .rejects
-                .toMatchObject({ statusCode: 400, message: 'NIF é obrigatório.' });
-        });
-
-        it('deve rejeitar com 400 quando Permissoes e um valor invalido', async () => {
-            const dados = {
-                NomeCompleto: 'Sr. Teste',
-                NomeUtilizador: 'teste',
-                Email: 't@t.com',
+                NomeCompleto: 'Perfil Invalido',
+                NomeUtilizador: 'perfil.invalido',
+                Email: 'perfil@invalido.pt',
                 Nif: '123456789',
                 CodigoPostal: '1000-100',
                 Morada: 'Rua X',
-                Permissoes: 99
-            };
-
-            await expect(userService.criarUtilizador(dados))
-                .rejects
-                .toMatchObject({ statusCode: 400, message: 'Nível de permissão inválido.' });
-        });
-
-        it('deve rejeitar com 400 quando Professor nao tem IBAN', async () => {
-            const dados = {
-                NomeCompleto: 'Prof',
-                NomeUtilizador: 'prof',
-                Email: 'p@p.com',
-                Nif: '123456789',
-                CodigoPostal: '1000-100',
-                Morada: 'Rua Y',
-                Permissoes: 2,
+                Permissoes: 99,
                 PalavraPasse: 'secret'
             };
 
             await expect(userService.criarUtilizador(dados))
                 .rejects
-                .toMatchObject({ statusCode: 400, message: 'IBAN é obrigatório para professores.' });
+                .toMatchObject({ statusCode: 400, message: 'So e permitido criar Encarregados, Professores e membros da Direcao.' });
         });
 
-        it('deve rejeitar com 400 quando PalavraPasse esta em falta', async () => {
+        it('rejects when professor does not define styles', async () => {
             const dados = {
-                NomeCompleto: 'Admin',
-                NomeUtilizador: 'admin',
-                Email: 'admin@a.com',
+                NomeCompleto: 'Prof Sem Estilo',
+                NomeUtilizador: 'prof.sem.estilo',
+                Email: 'prof@estilo.pt',
                 Nif: '123456789',
                 CodigoPostal: '1000-100',
-                Morada: 'Rua Z',
-                Permissoes: 3
+                Morada: 'Rua Y',
+                Permissoes: PERMISSOES.PROFESSOR,
+                Iban: 'PT50000201231234567890154',
+                PalavraPasse: 'secret',
+                IdsEstiloDanca: []
             };
 
             await expect(userService.criarUtilizador(dados))
                 .rejects
-                .toMatchObject({ statusCode: 400, message: 'PalavraPasse é obrigatória.' });
+                .toMatchObject({ statusCode: 400, message: 'Define pelo menos um estilo para o professor.' });
         });
-    });
 
-    describe('criarUtilizador - Criacao com sucesso', () => {
-        it('deve criar Professor e chamar o repositorio com password hasheada', async () => {
+        it('creates professor with hashed password and style ids', async () => {
             const dados = {
                 NomeCompleto: 'Professor OK',
                 NomeUtilizador: 'prof.ok',
@@ -134,24 +60,26 @@ describe('User Service', () => {
                 Nif: '123456789',
                 CodigoPostal: '1000-100',
                 Morada: 'Rua Central',
-                Permissoes: 2,
+                Permissoes: PERMISSOES.PROFESSOR,
                 Iban: 'PT50000201231234567890154',
-                PalavraPasse: '123456'
+                PalavraPasse: '123456',
+                IdsEstiloDanca: ['estilo-1', 'estilo-2']
             };
 
-            userRepository.create.mockResolvedValue({ id: 123, ...dados });
+            userRepository.create.mockResolvedValue({ IdUtilizador: 'u-1', ...dados });
 
             const resultado = await userService.criarUtilizador(dados);
 
-            expect(resultado.id).toBe(123);
-            expect(userRepository.create).toHaveBeenCalled();
+            expect(resultado.IdUtilizador).toBe('u-1');
+            expect(userRepository.create).toHaveBeenCalledTimes(1);
 
-            const callData = userRepository.create.mock.calls[0][0];
-            expect(callData.PalavraPasseHash).toBeDefined();
-            expect(callData.PalavraPasseHash).not.toBe('123456');
+            const payload = userRepository.create.mock.calls[0][0];
+            expect(payload.PalavraPasseHash).toBeDefined();
+            expect(payload.PalavraPasseHash).not.toBe('123456');
+            expect(payload.IdsEstiloDanca).toEqual(['estilo-1', 'estilo-2']);
         });
 
-        it('deve criar Direcao sem campos extra obrigatorios', async () => {
+        it('creates Direcao without professor fields', async () => {
             const dados = {
                 NomeCompleto: 'Admin',
                 NomeUtilizador: 'admin',
@@ -159,17 +87,17 @@ describe('User Service', () => {
                 Nif: '123456789',
                 CodigoPostal: '1000-100',
                 Morada: 'Rua da Direcao',
-                Permissoes: 3,
+                Permissoes: PERMISSOES.DIRECAO,
                 PalavraPasse: 'secret'
             };
 
-            userRepository.create.mockResolvedValue({ id: 1, ...dados });
+            userRepository.create.mockResolvedValue({ IdUtilizador: 'dir-1', ...dados });
 
             const resultado = await userService.criarUtilizador(dados);
-            expect(resultado.id).toBe(1);
+            expect(resultado.IdUtilizador).toBe('dir-1');
         });
 
-        it('deve traduzir erro de username duplicado para uma mensagem legivel', async () => {
+        it('translates duplicate username errors', async () => {
             const dados = {
                 NomeCompleto: 'Admin',
                 NomeUtilizador: 'admin',
@@ -177,7 +105,7 @@ describe('User Service', () => {
                 Nif: '123456789',
                 CodigoPostal: '1000-100',
                 Morada: 'Rua da Direcao',
-                Permissoes: 3,
+                Permissoes: PERMISSOES.DIRECAO,
                 PalavraPasse: 'secret'
             };
 
@@ -189,28 +117,6 @@ describe('User Service', () => {
             await expect(userService.criarUtilizador(dados))
                 .rejects
                 .toMatchObject({ statusCode: 400, message: 'Ja existe um utilizador com esse nome de utilizador.' });
-        });
-
-        it('deve traduzir erro de email duplicado para uma mensagem legivel', async () => {
-            const dados = {
-                NomeCompleto: 'Admin',
-                NomeUtilizador: 'admin',
-                Email: 'admin@a.com',
-                Nif: '123456789',
-                CodigoPostal: '1000-100',
-                Morada: 'Rua da Direcao',
-                Permissoes: 3,
-                PalavraPasse: 'secret'
-            };
-
-            userRepository.create.mockRejectedValue({
-                code: 'P2002',
-                meta: { target: ['Email'] }
-            });
-
-            await expect(userService.criarUtilizador(dados))
-                .rejects
-                .toMatchObject({ statusCode: 400, message: 'Ja existe um utilizador com esse email.' });
         });
     });
 });

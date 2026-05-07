@@ -115,11 +115,6 @@ const FazerMarcacao = async (idAula, idAluno) => {
     if (jaInscrito) throw criarErro('Ja estas inscrito nesta aula.', 400);
 
     const novaMarcacao = await bookingRepo.create(idAluno, idAula);
-    const preco = await GetPreco(idAula);
-    const prazoPagamento = new Date(aula.Data);
-    prazoPagamento.setDate(prazoPagamento.getDate() - 2);
-
-    await bookingRepo.criarPagamento(novaMarcacao.IdMarcacao, preco, prazoPagamento);
 
     return {
         mensagem: 'Lugar reservado!',

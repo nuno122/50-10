@@ -12,8 +12,6 @@ import { PERMISSOES } from '../utils/permissions';
 
 const roleLabel = (permission) => {
     switch (permission) {
-        case PERMISSOES.ALUNO:
-            return 'Aluno';
         case PERMISSOES.PROFESSOR:
             return 'Professor';
         case PERMISSOES.DIRECAO:
@@ -299,7 +297,7 @@ const RequestValidation = ({ embedded = false }) => {
                 {feedback && <div className="rental-banner rental-banner--success">{feedback}</div>}
                 {error && <div className="rental-banner rental-banner--error">{error}</div>}
 
-                <div className="rental-layout">
+                <div className="rental-layout rental-layout--single">
                     <div className="rental-main">
                         <div className="rental-stats">
                             <article className="rental-card rental-stat-card">

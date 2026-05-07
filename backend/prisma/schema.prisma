@@ -31,11 +31,15 @@ model Aluno {
 
 model Artigo {
   IdArtigo      String          @id(map: "PK__Artigo__A420008D2C73DFA3") @default(dbgenerated("newsequentialid()"), map: "DF__Artigo__IdArtigo__0F624AF8") @db.UniqueIdentifier
+  IdUtilizadorCriador String?   @db.UniqueIdentifier
   Nome          String          @db.NVarChar(100)
   CustoPorDia   Decimal         @db.Decimal(18, 2)
   EstadoArtigo  Boolean         @default(true, map: "DF__Artigo__EstadoAr__10566F31")
   ImagemPath    String?         @db.NVarChar(500)
+  Criador       Utilizador?     @relation("ArtigoCriador", fields: [IdUtilizadorCriador], references: [IdUtilizador], onUpdate: NoAction)
   TamanhoArtigo TamanhoArtigo[]
+
+  @@index([IdUtilizadorCriador], map: "Artigo_IdUtilizadorCriador_idx")
 }
 
 model ArtigoAluguer {
@@ -285,6 +289,7 @@ model Utilizador {
   EstaAtivo                                          Boolean      @default(true, map: "DF__Utilizado__EstaA__5CD6CB2B")
   NumeroCartaoCidadao                                String?      @db.VarChar(30)
   ValidadeCartaoCidadao                              DateTime?    @db.Date
+  ArtigosCriados                                     Artigo[]     @relation("ArtigoCriador")
   Aluguer                                            Aluguer[]
   Aluno                                              Aluno?
   Encarregado                                        Encarregado?

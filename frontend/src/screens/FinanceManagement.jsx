@@ -15,6 +15,10 @@ const formatCurrency = (value) => new Intl.NumberFormat('pt-PT', {
     currency: 'EUR'
 }).format(Number(value || 0));
 
+const formatLessonTypeLabel = (value) => (
+    String(value || '').trim().toLowerCase().startsWith('part') ? 'Coaching' : 'Regular'
+);
+
 const extractTime = (value) => {
     const text = String(value || '');
     const match = text.match(/(\d{2}):(\d{2})/);
@@ -87,7 +91,7 @@ const getValidationLabel = (lesson) => {
     }
 
     if (lesson.operationalStatus === 'awaiting-director') {
-        return { text: 'Aguarda direcao', tone: 'finance-badge--warning' };
+        return { text: 'Aguarda conclusao da direcao', tone: 'finance-badge--warning' };
     }
 
     if (lesson.validation.teacher && lesson.validation.director) {
@@ -114,7 +118,7 @@ const getActionNote = (lesson, isGuardian) => {
         case 'awaiting-teacher':
             return 'Aguarda conclusao do professor';
         case 'awaiting-director':
-            return 'Validar aula';
+            return 'Dar aula como concluida';
         case 'validated':
             return lesson.paid ? 'Sem acao pendente' : 'Registar pagamento presencial';
         default:
@@ -175,7 +179,7 @@ const buildDirectorLessons = (aulas, pagamentos) => {
             rawDate: new Date(aula.Data),
             date: formatDate(aula.Data),
             teacher: aula.Professor?.Utilizador?.NomeCompleto || aula.IdProfessor,
-            lessonType: aula.TipoAula || 'Regular',
+            lessonType: formatLessonTypeLabel(aula.TipoAula || 'Regular'),
             style: aula.EstiloDanca?.Nome || 'Sem estilo',
             duration: getDurationMinutes(aula),
             amount,
@@ -207,7 +211,7 @@ const buildGuardianLessons = (aulas, pagamentos) => {
             rawDate: new Date(aula?.Data),
             date: formatDate(aula?.Data),
             teacher: aula?.Professor?.Utilizador?.NomeCompleto || 'Professor por definir',
-            lessonType: aula?.TipoAula || 'Regular',
+            lessonType: formatLessonTypeLabel(aula?.TipoAula || 'Regular'),
             style: aula?.EstiloDanca?.Nome || 'Sem estilo',
             duration: getDurationMinutes(aula),
             amount,
@@ -355,7 +359,7 @@ const FinanceManagement = () => {
 
         try {
             await validarAulaDirecao(lesson.id);
-            setFeedback('Validacao da direcao concluida e pagamentos gerados para as marcacoes ativas.');
+            setFeedback('Aula concluida pela Direcao e pagamentos gerados para as marcacoes ativas.');
             await loadData();
         } catch (err) {
             setError(err.message || 'Nao foi possivel validar a aula.');
@@ -525,7 +529,7 @@ const FinanceManagement = () => {
                                                                 onClick={() => handleValidateDirector(lesson)}
                                                                 disabled={submittingId === lesson.id}
                                                             >
-                                                                {submittingId === lesson.id ? 'A validar...' : 'Aprovar'}
+                                                                {submittingId === lesson.id ? 'A concluir...' : 'Concluir Aula'}
                                                             </button>
                                                         ) : canRegisterPayment ? (
                                                             <button

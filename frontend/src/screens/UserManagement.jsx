@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNotifications } from '../contexts/NotificationContext';
-import { atualizarEstadoUtilizador, atualizarUtilizador, criarUtilizador, getUtilizadores } from '../services/api';
+import { atualizarEstadoUtilizador, atualizarUtilizador, criarUtilizador, getEstilos, getUtilizadores } from '../services/api';
 import { PERMISSOES } from '../utils/permissions';
 
 const MANAGED_ROLES = [PERMISSOES.ENCARREGADO, PERMISSOES.PROFESSOR, PERMISSOES.DIRECAO];
@@ -21,7 +21,8 @@ const emptyForm = {
     Morada: '',
     CodigoPostal: '',
     Permissoes: PERMISSOES.ENCARREGADO,
-    Iban: ''
+    Iban: '',
+    IdsEstiloDanca: []
 };
 
 const getRoleLabel = (permission) => ROLE_OPTIONS.find((role) => role.value === permission)?.label || 'Outro';
@@ -35,12 +36,14 @@ const validateUserForm = (formData, editingUser) => {
     if (!formData.Morada.trim()) return 'Indica a morada.';
     if (!editingUser && !formData.PalavraPasse.trim()) return 'Indica a palavra-passe.';
     if (Number(formData.Permissoes) === PERMISSOES.PROFESSOR && !formData.Iban.trim()) return 'Indica o IBAN do professor.';
+    if (Number(formData.Permissoes) === PERMISSOES.PROFESSOR && formData.IdsEstiloDanca.length === 0) return 'Seleciona pelo menos um estilo para o professor.';
     return '';
 };
 
 const UserManagement = () => {
     const { notify } = useNotifications();
     const [users, setUsers] = useState([]);
+    const [styles, setStyles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
@@ -66,8 +69,12 @@ const UserManagement = () => {
         setError('');
 
         try {
-            const data = await getUtilizadores();
+            const [data, stylesData] = await Promise.all([
+                getUtilizadores(),
+                getEstilos()
+            ]);
             setUsers((data || []).filter((user) => MANAGED_ROLES.includes(user.Permissoes)));
+            setStyles(stylesData || []);
         } catch (err) {
             setError(err.message || 'Nao foi possivel carregar os utilizadores.');
         } finally {
@@ -101,7 +108,8 @@ const UserManagement = () => {
             Morada: user.Morada || '',
             CodigoPostal: user.CodigoPostal || '',
             Permissoes: user.Permissoes,
-            Iban: user.Professor?.Iban || ''
+            Iban: user.Professor?.Iban || '',
+            IdsEstiloDanca: (user.Professor?.EstiloProfessor || []).map((entry) => entry.IdEstiloDanca)
         });
         setIsModalOpen(true);
         setError('');
@@ -137,6 +145,19 @@ const UserManagement = () => {
         setFormData((current) => ({ ...current, [field]: value }));
     };
 
+    const handleToggleStyle = (styleId) => {
+        setFormData((current) => {
+            const alreadySelected = current.IdsEstiloDanca.includes(styleId);
+
+            return {
+                ...current,
+                IdsEstiloDanca: alreadySelected
+                    ? current.IdsEstiloDanca.filter((entry) => entry !== styleId)
+                    : [...current.IdsEstiloDanca, styleId]
+            };
+        });
+    };
+
     const handleSubmit = async () => {
         if (submitLockRef.current) {
             return;
@@ -164,6 +185,7 @@ const UserManagement = () => {
 
             if (payload.Permissoes !== PERMISSOES.PROFESSOR) {
                 payload.Iban = '';
+                payload.IdsEstiloDanca = [];
             }
 
             if (!payload.PalavraPasse && editingUser) {
@@ -307,10 +329,21 @@ const UserManagement = () => {
                                     <p>{user.Morada || '-'}</p>
                                 </div>
                                 {user.Permissoes === PERMISSOES.PROFESSOR && (
-                                    <div>
-                                        <span>IBAN</span>
-                                        <p>{user.Professor?.Iban || '-'}</p>
-                                    </div>
+                                    <>
+                                        <div>
+                                            <span>IBAN</span>
+                                            <p>{user.Professor?.Iban || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <span>Estilos</span>
+                                            <p>
+                                                {(user.Professor?.EstiloProfessor || [])
+                                                    .map((entry) => entry.EstiloDanca?.Nome)
+                                                    .filter(Boolean)
+                                                    .join(', ') || '-'}
+                                            </p>
+                                        </div>
+                                    </>
                                 )}
                             </div>
 
@@ -412,10 +445,32 @@ const UserManagement = () => {
                             </label>
 
                             {Number(formData.Permissoes) === PERMISSOES.PROFESSOR && (
-                                <label>
-                                    <span>IBAN *</span>
-                                    <input value={formData.Iban} onChange={(event) => handleChange('Iban', event.target.value)} />
-                                </label>
+                                <>
+                                    <label>
+                                        <span>IBAN *</span>
+                                        <input value={formData.Iban} onChange={(event) => handleChange('Iban', event.target.value)} />
+                                    </label>
+
+                                    <div className="user-admin-style-picker">
+                                        <span>Estilos do professor *</span>
+                                        <div className="user-admin-style-list">
+                                            {styles.map((style) => {
+                                                const checked = formData.IdsEstiloDanca.includes(style.IdEstiloDanca);
+
+                                                return (
+                                                    <label key={style.IdEstiloDanca} className={`user-admin-style-chip ${checked ? 'user-admin-style-chip--active' : ''}`}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={checked}
+                                                            onChange={() => handleToggleStyle(style.IdEstiloDanca)}
+                                                        />
+                                                        <span>{style.Nome}</span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </>
                             )}
                         </div>
 

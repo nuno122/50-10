@@ -73,6 +73,15 @@ const classRepository = {
         });
     },
 
+    findClassesByDate: async (data) => {
+        return await prisma.aula.findMany({
+            where: {
+                Data: normalizeDateOnly(data),
+                EstaAtivo: true
+            }
+        });
+    },
+
     findProfessorAvailabilityByDate: async (idProfessor, data) => {
         return await prisma.disponibilidade.findMany({
             where: {
@@ -152,7 +161,8 @@ const classRepository = {
                         EstaAtivo: true
                     },
                     include: {
-                        Aluno: true
+                        Aluno: true,
+                        Pagamento: true
                     }
                 }
             }
@@ -176,6 +186,18 @@ const classRepository = {
     findEstudioById: async (idEstudio) => {
         return await prisma.estudio.findUnique({
             where: { IdEstudio: idEstudio },
+            include: {
+                EstudioEstilo: {
+                    include: {
+                        EstiloDanca: true
+                    }
+                }
+            }
+        });
+    },
+
+    findAllStudios: async () => {
+        return await prisma.estudio.findMany({
             include: {
                 EstudioEstilo: {
                     include: {

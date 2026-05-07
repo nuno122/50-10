@@ -151,7 +151,7 @@ const InventoryManagement = () => {
                     <p className="inventory-eyebrow">Direcao</p>
                     <h1>Gestao de Inventario</h1>
                     <p className="inventory-subtitle">
-                        Consulta artigos, imagens e tamanhos atualmente disponiveis.
+                        Acompanha os anuncios publicados no marketplace e o stock associado.
                     </p>
                 </div>
 
@@ -256,6 +256,10 @@ const InventoryManagement = () => {
                                         <span>Total em stock</span>
                                         <strong>{totalStock}</strong>
                                     </div>
+                                    <div className="inventory-meta-row">
+                                        <span>Email do anunciante</span>
+                                        <strong>{item.Criador?.Email || 'Anuncio legacy'}</strong>
+                                    </div>
                                 </div>
 
                                 <div className="inventory-sizes">
@@ -337,6 +341,16 @@ const InventoryManagement = () => {
                                     <p>Pre-visualizacao da imagem.</p>
                                     <div className="inventory-detail-media">
                                         <img className="inventory-detail-image" src={previewImageUrl} alt={formData.Nome || 'Pre-visualizacao do artigo'} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {selectedItem && (
+                                <div className="inventory-form-note">
+                                    <p>Publicacao atual.</p>
+                                    <div className="inventory-meta-row">
+                                        <span>Email do anunciante</span>
+                                        <strong>{selectedItem.Criador?.Email || 'Anuncio legacy'}</strong>
                                     </div>
                                 </div>
                             )}

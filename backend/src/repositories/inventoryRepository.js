@@ -39,10 +39,42 @@ const normalizeBoolean = (value) => {
 };
 
 const inventoryRepository = {
+    findById: async (id) => {
+        return await prisma.artigo.findUnique({
+            where: { IdArtigo: id },
+            include: {
+                Criador: {
+                    select: {
+                        IdUtilizador: true,
+                        NomeCompleto: true,
+                        Email: true,
+                        Permissoes: true
+                    }
+                },
+                TamanhoArtigo: {
+                    select: {
+                        IdTamanhoArtigo: true,
+                        Tamanho: true,
+                        Quantidade: true,
+                        Condicao: true
+                    }
+                }
+            }
+        });
+    },
+
     // Buscar todos os artigos
     findAll: async () => {
         return await prisma.artigo.findMany({
             include: {
+                Criador: {
+                    select: {
+                        IdUtilizador: true,
+                        NomeCompleto: true,
+                        Email: true,
+                        Permissoes: true
+                    }
+                },
                 TamanhoArtigo: {
                     select: {
                         IdTamanhoArtigo: true,
@@ -61,7 +93,26 @@ const inventoryRepository = {
             data: {
                 Nome: dados.Nome,
                 CustoPorDia: parseFloat(dados.CustoPorDia),
-                ImagemPath: normalizeImagePath(dados.ImagemPath)
+                ImagemPath: normalizeImagePath(dados.ImagemPath),
+                IdUtilizadorCriador: dados.IdUtilizadorCriador || null
+            },
+            include: {
+                Criador: {
+                    select: {
+                        IdUtilizador: true,
+                        NomeCompleto: true,
+                        Email: true,
+                        Permissoes: true
+                    }
+                },
+                TamanhoArtigo: {
+                    select: {
+                        IdTamanhoArtigo: true,
+                        Tamanho: true,
+                        Quantidade: true,
+                        Condicao: true
+                    }
+                }
             }
         });
     },
@@ -78,6 +129,24 @@ const inventoryRepository = {
                 CustoPorDia: payload.CustoPorDia ? parseFloat(payload.CustoPorDia) : undefined,
                 EstadoArtigo: normalizeBoolean(payload.EstadoArtigo),
                 ImagemPath: hasImagemPath ? normalizeImagePath(payload.ImagemPath) : undefined
+            },
+            include: {
+                Criador: {
+                    select: {
+                        IdUtilizador: true,
+                        NomeCompleto: true,
+                        Email: true,
+                        Permissoes: true
+                    }
+                },
+                TamanhoArtigo: {
+                    select: {
+                        IdTamanhoArtigo: true,
+                        Tamanho: true,
+                        Quantidade: true,
+                        Condicao: true
+                    }
+                }
             }
         });
     },

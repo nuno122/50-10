@@ -20,6 +20,7 @@ const verificarToken = async (req, res, next) => {
     try {
         const utilizadorDecodificado = jwt.verify(token, JWT_SECRET);
         const idUtilizador = utilizadorDecodificado.IdUtilizador || utilizadorDecodificado.id;
+        const permissaoDoToken = utilizadorDecodificado.Permissoes;
 
         if (!idUtilizador) {
             return responderTokenInvalido(res);
@@ -28,6 +29,14 @@ const verificarToken = async (req, res, next) => {
         const utilizadorAtual = await userRepository.findAuthById(idUtilizador);
 
         if (!utilizadorAtual || utilizadorAtual.EstaAtivo === false) {
+            return responderTokenInvalido(res);
+        }
+
+        if (
+            permissaoDoToken !== undefined
+            && permissaoDoToken !== null
+            && utilizadorAtual.Permissoes !== permissaoDoToken
+        ) {
             return responderTokenInvalido(res);
         }
 
