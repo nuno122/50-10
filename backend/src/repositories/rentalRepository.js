@@ -45,7 +45,10 @@ const getAluguerById = async (idAluguer) => {
 
 const buscarStockArtigo = async (idTamanhoArtigo) => {
     return await prisma.tamanhoArtigo.findUnique({
-        where: { IdTamanhoArtigo: idTamanhoArtigo }
+        where: { IdTamanhoArtigo: idTamanhoArtigo },
+        include: {
+            Artigo: true
+        }
     });
 };
 

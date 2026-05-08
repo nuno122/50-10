@@ -7,10 +7,6 @@ const criarErro = (mensagem, statusCode) => {
     return erro;
 };
 
-const listarArtigos = async () => {
-    return await inventoryRepo.findAll();
-};
-
 const podeGerirArtigo = (utilizador, artigo) => {
     if (!utilizador || !artigo) {
         return false;
@@ -18,6 +14,18 @@ const podeGerirArtigo = (utilizador, artigo) => {
 
     return utilizador.Permissoes === PERMISSOES.DIRECAO
         || artigo.IdUtilizadorCriador === utilizador.IdUtilizador;
+};
+
+const podeVerArtigoInativo = (utilizador, artigo) => (
+    utilizador?.IdUtilizador && artigo?.IdUtilizadorCriador === utilizador.IdUtilizador
+);
+
+const listarArtigos = async (utilizador) => {
+    const artigos = await inventoryRepo.findAll();
+
+    return artigos.filter((artigo) => (
+        artigo.EstadoArtigo !== false || podeVerArtigoInativo(utilizador, artigo)
+    ));
 };
 
 const criarArtigo = async (dados, utilizador) => {

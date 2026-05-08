@@ -10,7 +10,11 @@ const listarAlugueres = async () => {
     return await rentalRepository.buscarTodos();
 };
 
-const criarAluguer = async ({ IdUtilizador, DataLevantamento, DataEntrega, ListaArtigos }) => {
+const podeUsarArtigoInativo = (utilizador, artigo) => (
+    utilizador?.IdUtilizador && artigo?.IdUtilizadorCriador === utilizador.IdUtilizador
+);
+
+const criarAluguer = async ({ IdUtilizador, DataLevantamento, DataEntrega, ListaArtigos }, utilizador) => {
     if (!IdUtilizador || !DataLevantamento || !DataEntrega) {
         throw criarErro('IdUtilizador, DataLevantamento e DataEntrega sao obrigatorios.', 400);
     }
@@ -39,6 +43,10 @@ const criarAluguer = async ({ IdUtilizador, DataLevantamento, DataEntrega, Lista
 
         if (!stock) {
             throw criarErro(`Artigo/Tamanho nao encontrado: ${artigo.IdTamanhoArtigo}`, 404);
+        }
+
+        if (stock.Artigo?.EstadoArtigo === false && !podeUsarArtigoInativo(utilizador, stock.Artigo)) {
+            throw criarErro(`Artigo indisponivel para aluguer: ${artigo.IdTamanhoArtigo}.`, 403);
         }
 
         if (stock.Quantidade < artigo.Quantidade) {

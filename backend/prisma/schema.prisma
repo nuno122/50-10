@@ -30,16 +30,16 @@ model Aluno {
 }
 
 model Artigo {
-  IdArtigo      String          @id(map: "PK__Artigo__A420008D2C73DFA3") @default(dbgenerated("newsequentialid()"), map: "DF__Artigo__IdArtigo__0F624AF8") @db.UniqueIdentifier
-  IdUtilizadorCriador String?   @db.UniqueIdentifier
-  Nome          String          @db.NVarChar(100)
-  CustoPorDia   Decimal         @db.Decimal(18, 2)
-  EstadoArtigo  Boolean         @default(true, map: "DF__Artigo__EstadoAr__10566F31")
-  ImagemPath    String?         @db.NVarChar(500)
-  Criador       Utilizador?     @relation("ArtigoCriador", fields: [IdUtilizadorCriador], references: [IdUtilizador], onUpdate: NoAction)
-  TamanhoArtigo TamanhoArtigo[]
+  IdArtigo            String          @id(map: "PK__Artigo__A420008D2C73DFA3") @default(dbgenerated("newsequentialid()"), map: "DF__Artigo__IdArtigo__0F624AF8") @db.UniqueIdentifier
+  Nome                String          @db.NVarChar(100)
+  CustoPorDia         Decimal         @db.Decimal(18, 2)
+  EstadoArtigo        Boolean         @default(true, map: "DF__Artigo__EstadoAr__10566F31")
+  ImagemPath          String?         @db.NVarChar(500)
+  IdUtilizadorCriador String?         @db.UniqueIdentifier
+  Criador             Utilizador?     @relation("ArtigoCriador", fields: [IdUtilizadorCriador], references: [IdUtilizador], onDelete: NoAction, onUpdate: NoAction)
+  TamanhoArtigo       TamanhoArtigo[]
 
-  @@index([IdUtilizadorCriador], map: "Artigo_IdUtilizadorCriador_idx")
+  @@index([IdUtilizadorCriador])
 }
 
 model ArtigoAluguer {
@@ -54,23 +54,23 @@ model ArtigoAluguer {
 }
 
 model Aula {
-  IdAula               String      @id(map: "PK__Aula__2C89573C7FD193B4") @default(dbgenerated("newsequentialid()"), map: "DF__Aula__IdAula__7F2BE32F") @db.UniqueIdentifier
-  IdProfessor          String      @db.UniqueIdentifier
-  IdEstudio            String      @db.UniqueIdentifier
-  IdEstiloDanca        String      @db.UniqueIdentifier
-  Data                 DateTime    @db.Date
-  HoraInicio           DateTime    @db.Time
-  HoraFim              DateTime    @db.Time
-  ConfirmacaoProfessor Boolean     @default(false, map: "DF__Aula__Confirmaca__00200768")
-  ValidacaoDirecao     Boolean     @default(false, map: "DF__Aula__ValidacaoD__01142BA1")
-  Preco                Decimal     @db.Decimal(18, 2)
-  EstaAtivo            Boolean     @default(true, map: "DF__Aula__EstaAtivo__02084FDA")
+  IdAula               String       @id(map: "PK__Aula__2C89573C7FD193B4") @default(dbgenerated("newsequentialid()"), map: "DF__Aula__IdAula__7F2BE32F") @db.UniqueIdentifier
+  IdProfessor          String       @db.UniqueIdentifier
+  IdEstudio            String       @db.UniqueIdentifier
+  IdEstiloDanca        String       @db.UniqueIdentifier
+  Data                 DateTime     @db.Date
+  HoraInicio           DateTime     @db.Time
+  HoraFim              DateTime     @db.Time
+  ConfirmacaoProfessor Boolean      @default(false, map: "DF__Aula__Confirmaca__00200768")
+  ValidacaoDirecao     Boolean      @default(false, map: "DF__Aula__ValidacaoD__01142BA1")
+  Preco                Decimal      @db.Decimal(18, 2)
+  EstaAtivo            Boolean      @default(true, map: "DF__Aula__EstaAtivo__02084FDA")
   CapacidadeMaxima     Int
-  TipoAula             String      @default("Regular", map: "DF_Aula_TipoAula") @db.NVarChar(50)
-  OrigemAula           String      @default("Direcao") @db.NVarChar(50)
-  EstiloDanca          EstiloDanca @relation(fields: [IdEstiloDanca], references: [IdEstiloDanca], onUpdate: NoAction, map: "FK__Aula__IdEstiloDa__04E4BC85")
-  Estudio              Estudio     @relation(fields: [IdEstudio], references: [IdEstudio], onUpdate: NoAction, map: "FK__Aula__IdEstudio__03F0984C")
-  Professor            Professor   @relation(fields: [IdProfessor], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Aula__IdProfesso__02FC7413")
+  TipoAula             String       @default("Regular", map: "DF_Aula_TipoAula") @db.NVarChar(50)
+  OrigemAula           String       @default("Direcao") @db.NVarChar(50)
+  EstiloDanca          EstiloDanca  @relation(fields: [IdEstiloDanca], references: [IdEstiloDanca], onUpdate: NoAction, map: "FK__Aula__IdEstiloDa__04E4BC85")
+  Estudio              Estudio      @relation(fields: [IdEstudio], references: [IdEstudio], onUpdate: NoAction, map: "FK__Aula__IdEstudio__03F0984C")
+  Professor            Professor    @relation(fields: [IdProfessor], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Aula__IdProfesso__02FC7413")
   Marcacao             Marcacao[]
   PedidoAula           PedidoAula[]
 }
@@ -164,19 +164,19 @@ model EstudioEstilo {
 }
 
 model Evento {
-  IdEvento              String            @id @default(dbgenerated("newsequentialid()")) @db.UniqueIdentifier
-  IdUtilizadorCriador   String            @db.UniqueIdentifier
-  Titulo                String            @db.NVarChar(200)
-  Descricao             String            @db.NVarChar(Max)
-  DataPublicacaoInicio  DateTime
-  DataPublicacaoFim     DateTime
-  DataEvento            DateTime          @db.Date
-  Local                 String            @db.NVarChar(200)
-  TipoEvento            String            @db.NVarChar(100)
-  Link                  String            @db.NVarChar(500)
-  EstadoEvento          Boolean           @default(true)
-  Criador               Utilizador        @relation("EventoCriador", fields: [IdUtilizadorCriador], references: [IdUtilizador], onUpdate: NoAction)
-  EventoComentario      EventoComentario[]
+  IdEvento             String             @id(map: "PK_Evento") @default(dbgenerated("newsequentialid()"), map: "DF_Evento_IdEvento") @db.UniqueIdentifier
+  IdUtilizadorCriador  String             @db.UniqueIdentifier
+  Titulo               String             @db.NVarChar(200)
+  Descricao            String             @db.NVarChar(Max)
+  DataPublicacaoInicio DateTime
+  DataPublicacaoFim    DateTime
+  DataEvento           DateTime           @db.Date
+  Local                String             @db.NVarChar(200)
+  TipoEvento           String             @db.NVarChar(100)
+  Link                 String             @db.NVarChar(500)
+  EstadoEvento         Boolean            @default(true, map: "DF_Evento_EstadoEvento")
+  Criador              Utilizador         @relation("EventoCriador", fields: [IdUtilizadorCriador], references: [IdUtilizador], onUpdate: NoAction)
+  EventoComentario     EventoComentario[]
 
   @@index([EstadoEvento, DataPublicacaoInicio, DataPublicacaoFim])
   @@index([DataEvento])
@@ -184,13 +184,13 @@ model Evento {
 }
 
 model EventoComentario {
-  IdEventoComentario String    @id @default(dbgenerated("newsequentialid()")) @db.UniqueIdentifier
+  IdEventoComentario String    @id(map: "PK_EventoComentario") @default(dbgenerated("newsequentialid()"), map: "DF_EventoComentario_IdEventoComentario") @db.UniqueIdentifier
   IdEvento           String    @db.UniqueIdentifier
   IdProfessor        String    @db.UniqueIdentifier
   Comentario         String    @db.NVarChar(Max)
-  DataComentario     DateTime  @default(now())
+  DataComentario     DateTime  @default(now(), map: "DF_EventoComentario_DataComentario")
   Evento             Evento    @relation(fields: [IdEvento], references: [IdEvento], onDelete: Cascade, onUpdate: NoAction)
-  Professor          Professor @relation(fields: [IdProfessor], references: [IdUtilizador], onDelete: NoAction, onUpdate: NoAction)
+  Professor          Professor @relation(fields: [IdProfessor], references: [IdUtilizador], onUpdate: NoAction)
 
   @@index([IdEvento, DataComentario])
   @@index([IdProfessor, DataComentario])
@@ -250,9 +250,9 @@ model Professor {
   Disponibilidade    Disponibilidade[]
   EstiloProfessor    EstiloProfessor[]
   EventoComentario   EventoComentario[]
-  Utilizador         Utilizador         @relation(fields: [IdUtilizador], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Professor__IdUti__66603565")
-  PedidosSolicitados PedidoAula[]       @relation("ProfessorSolicitadoPedidoAula")
   PedidosConfirmados PedidoAula[]       @relation("ProfessorConfirmadoPedidoAula")
+  PedidosSolicitados PedidoAula[]       @relation("ProfessorSolicitadoPedidoAula")
+  Utilizador         Utilizador         @relation(fields: [IdUtilizador], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Professor__IdUti__66603565")
 }
 
 model sysdiagrams {
@@ -289,9 +289,9 @@ model Utilizador {
   EstaAtivo                                          Boolean      @default(true, map: "DF__Utilizado__EstaA__5CD6CB2B")
   NumeroCartaoCidadao                                String?      @db.VarChar(30)
   ValidadeCartaoCidadao                              DateTime?    @db.Date
-  ArtigosCriados                                     Artigo[]     @relation("ArtigoCriador")
   Aluguer                                            Aluguer[]
   Aluno                                              Aluno?
+  ArtigosCriados                                     Artigo[]     @relation("ArtigoCriador")
   Encarregado                                        Encarregado?
   EventosCriados                                     Evento[]     @relation("EventoCriador")
   Marcacao                                           Marcacao[]
@@ -301,32 +301,32 @@ model Utilizador {
 }
 
 model PedidoAula {
-  IdPedidoAulaPrivada  String      @id @default(dbgenerated("newsequentialid()")) @db.UniqueIdentifier
-  IdEncarregado        String      @db.UniqueIdentifier
-  IdAluno              String      @db.UniqueIdentifier
-  IdEstiloDanca        String      @db.UniqueIdentifier
+  IdPedidoAulaPrivada   String      @id @default(dbgenerated("newsequentialid()")) @db.UniqueIdentifier
+  IdEncarregado         String      @db.UniqueIdentifier
+  IdAluno               String      @db.UniqueIdentifier
+  IdEstiloDanca         String      @db.UniqueIdentifier
+  IdAulaCriada          String?     @db.UniqueIdentifier
+  IdDiretorDecisao      String?     @db.UniqueIdentifier
+  DataPretendida        DateTime    @db.Date
+  HoraPretendida        DateTime    @db.Time
+  DuracaoMinutos        Int
+  CapacidadePretendida  Int         @default(1)
+  Observacoes           String?     @db.NVarChar(Max)
+  EstadoPedido          String      @default("N'PendenteProfessor'", map: "DF_PedidoAula_EstadoPedido") @db.NVarChar(50)
+  ObservacaoDirecao     String?     @db.NVarChar(Max)
+  DataPedido            DateTime    @default(now())
+  DataDecisao           DateTime?
   IdProfessorSolicitado String?     @db.UniqueIdentifier
   IdProfessorConfirmado String?     @db.UniqueIdentifier
-  IdAulaCriada         String?     @db.UniqueIdentifier
-  IdDiretorDecisao     String?     @db.UniqueIdentifier
-  DataPretendida       DateTime    @db.Date
-  HoraPretendida       DateTime    @db.Time
-  DuracaoMinutos       Int
-  CapacidadePretendida Int         @default(1)
-  Observacoes          String?     @db.NVarChar(Max)
-  EstadoPedido         String      @default("PendenteProfessor") @db.NVarChar(50)
-  ObservacaoProfessor  String?     @db.NVarChar(Max)
-  ObservacaoDirecao    String?     @db.NVarChar(Max)
-  DataPedido           DateTime    @default(now())
+  ObservacaoProfessor   String?     @db.NVarChar(Max)
   DataRespostaProfessor DateTime?
-  DataDecisao          DateTime?
-  Aluno                Aluno       @relation(fields: [IdAluno], references: [IdUtilizador], onUpdate: NoAction)
-  Aula                 Aula?       @relation(fields: [IdAulaCriada], references: [IdAula], onUpdate: NoAction)
-  Utilizador           Utilizador? @relation(fields: [IdDiretorDecisao], references: [IdUtilizador], onUpdate: NoAction)
-  Encarregado          Encarregado @relation(fields: [IdEncarregado], references: [IdUtilizador], onUpdate: NoAction)
-  EstiloDanca          EstiloDanca @relation(fields: [IdEstiloDanca], references: [IdEstiloDanca], onUpdate: NoAction)
-  ProfessorSolicitado  Professor?  @relation("ProfessorSolicitadoPedidoAula", fields: [IdProfessorSolicitado], references: [IdUtilizador], onDelete: NoAction, onUpdate: NoAction)
-  ProfessorConfirmado  Professor?  @relation("ProfessorConfirmadoPedidoAula", fields: [IdProfessorConfirmado], references: [IdUtilizador], onDelete: NoAction, onUpdate: NoAction)
+  Aluno                 Aluno       @relation(fields: [IdAluno], references: [IdUtilizador], onUpdate: NoAction)
+  Aula                  Aula?       @relation(fields: [IdAulaCriada], references: [IdAula], onUpdate: NoAction)
+  Utilizador            Utilizador? @relation(fields: [IdDiretorDecisao], references: [IdUtilizador], onUpdate: NoAction)
+  Encarregado           Encarregado @relation(fields: [IdEncarregado], references: [IdUtilizador], onUpdate: NoAction)
+  EstiloDanca           EstiloDanca @relation(fields: [IdEstiloDanca], references: [IdEstiloDanca], onUpdate: NoAction)
+  ProfessorConfirmado   Professor?  @relation("ProfessorConfirmadoPedidoAula", fields: [IdProfessorConfirmado], references: [IdUtilizador], onDelete: NoAction, onUpdate: NoAction)
+  ProfessorSolicitado   Professor?  @relation("ProfessorSolicitadoPedidoAula", fields: [IdProfessorSolicitado], references: [IdUtilizador], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([EstadoPedido, DataPedido])
   @@index([IdAluno, DataPedido])
