@@ -7,6 +7,7 @@ jest.mock('../../backend/src/repositories/inventoryRepository');
 describe('Inventory Service', () => {
     const direcao = { IdUtilizador: 'dir-1', Permissoes: PERMISSOES.DIRECAO };
     const anunciante = { IdUtilizador: 'user-1', Permissoes: PERMISSOES.ENCARREGADO };
+    const outroUtilizador = { IdUtilizador: 'user-2', Permissoes: PERMISSOES.ENCARREGADO };
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -36,6 +37,31 @@ describe('Inventory Service', () => {
                 ...dados,
                 IdUtilizadorCriador: 'user-1'
             });
+        });
+    });
+
+    describe('listarArtigos', () => {
+        it('hides inactive articles from users that do not own them', async () => {
+            inventoryRepository.findAll.mockResolvedValue([
+                { IdArtigo: 'active-1', EstadoArtigo: true, IdUtilizadorCriador: 'user-1' },
+                { IdArtigo: 'inactive-own', EstadoArtigo: false, IdUtilizadorCriador: 'user-2' },
+                { IdArtigo: 'inactive-other', EstadoArtigo: false, IdUtilizadorCriador: 'user-3' }
+            ]);
+
+            const resultado = await inventoryService.listarArtigos(outroUtilizador);
+
+            expect(resultado.map((artigo) => artigo.IdArtigo)).toEqual(['active-1', 'inactive-own']);
+        });
+
+        it('hides inactive articles from Direcao when they do not own them', async () => {
+            inventoryRepository.findAll.mockResolvedValue([
+                { IdArtigo: 'active-1', EstadoArtigo: true, IdUtilizadorCriador: 'user-1' },
+                { IdArtigo: 'inactive-1', EstadoArtigo: false, IdUtilizadorCriador: 'user-2' }
+            ]);
+
+            const resultado = await inventoryService.listarArtigos(direcao);
+
+            expect(resultado.map((artigo) => artigo.IdArtigo)).toEqual(['active-1']);
         });
     });
 

@@ -14,7 +14,7 @@ const getAlugueres = async (req, res) => {
 
 const criarAluguer = async (req, res) => {
     try {
-        const resultado = await rentalService.criarAluguer(req.body);
+        const resultado = await rentalService.criarAluguer(req.body, req.utilizador);
         res.status(201).json(resultado);
     } catch (erro) {
         console.error(erro);

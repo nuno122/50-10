@@ -1,9 +1,14 @@
 const rentalService = require('../../backend/src/services/rentalService');
 const rentalRepository = require('../../backend/src/repositories/rentalRepository');
+const PERMISSOES = require('../../backend/src/config/permissions');
 
 jest.mock('../../backend/src/repositories/rentalRepository');
 
 describe('Rental Service', () => {
+    const anunciante = { IdUtilizador: 'user-1', Permissoes: PERMISSOES.ENCARREGADO };
+    const outroUtilizador = { IdUtilizador: 'user-2', Permissoes: PERMISSOES.ENCARREGADO };
+    const direcao = { IdUtilizador: 'dir-1', Permissoes: PERMISSOES.DIRECAO };
+
     beforeEach(() => {
         // Arrange (Comum)
         jest.clearAllMocks();
@@ -62,6 +67,73 @@ describe('Rental Service', () => {
             await expect(rentalService.criarAluguer(dadosAluguerValidos))
                 .rejects
                 .toThrow('Prisma: Transaction Deadlock');
+        });
+
+        it('deve bloquear artigo inativo quando o utilizador nao e proprietario', async () => {
+            const dadosAluguer = {
+                IdUtilizador: 'user-2',
+                DataLevantamento: '2026-05-10',
+                DataEntrega: '2026-05-12',
+                ListaArtigos: [{ IdTamanhoArtigo: 'size-1', Quantidade: 1 }]
+            };
+
+            rentalRepository.buscarStockArtigo.mockResolvedValue({
+                IdTamanhoArtigo: 'size-1',
+                Quantidade: 1,
+                Artigo: {
+                    EstadoArtigo: false,
+                    IdUtilizadorCriador: 'user-1'
+                }
+            });
+
+            await expect(rentalService.criarAluguer(dadosAluguer, outroUtilizador))
+                .rejects
+                .toMatchObject({ statusCode: 403, message: 'Artigo indisponivel para aluguer: size-1.' });
+        });
+
+        it('deve permitir artigo inativo ao proprietario', async () => {
+            const dadosAluguer = {
+                IdUtilizador: 'user-1',
+                DataLevantamento: '2026-05-10',
+                DataEntrega: '2026-05-12',
+                ListaArtigos: [{ IdTamanhoArtigo: 'size-1', Quantidade: 1 }]
+            };
+
+            rentalRepository.buscarStockArtigo.mockResolvedValue({
+                IdTamanhoArtigo: 'size-1',
+                Quantidade: 1,
+                Artigo: {
+                    EstadoArtigo: false,
+                    IdUtilizadorCriador: 'user-1'
+                }
+            });
+            rentalRepository.criarComTransacao.mockResolvedValue({ IdAluguer: 'rent-1' });
+
+            const resultado = await rentalService.criarAluguer(dadosAluguer, anunciante);
+
+            expect(resultado.aluguer).toEqual({ IdAluguer: 'rent-1' });
+        });
+
+        it('deve bloquear artigo inativo para direcao quando nao e proprietaria', async () => {
+            const dadosAluguer = {
+                IdUtilizador: 'dir-1',
+                DataLevantamento: '2026-05-10',
+                DataEntrega: '2026-05-12',
+                ListaArtigos: [{ IdTamanhoArtigo: 'size-1', Quantidade: 1 }]
+            };
+
+            rentalRepository.buscarStockArtigo.mockResolvedValue({
+                IdTamanhoArtigo: 'size-1',
+                Quantidade: 1,
+                Artigo: {
+                    EstadoArtigo: false,
+                    IdUtilizadorCriador: 'user-1'
+                }
+            });
+
+            await expect(rentalService.criarAluguer(dadosAluguer, direcao))
+                .rejects
+                .toMatchObject({ statusCode: 403, message: 'Artigo indisponivel para aluguer: size-1.' });
         });
     });
 
