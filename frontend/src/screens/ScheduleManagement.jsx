@@ -1695,9 +1695,6 @@ const ScheduleManagement = () => {
                                                         : `${day.lessons.length} aula(s) em ${day.groups.length} bloco(s)`}
                                                 </small>
                                             </div>
-                                            <button type="button" className="schedule-day-add schedule-day-add--panel" onClick={() => handleQuickBook(day.date)}>
-                                                +
-                                            </button>
                                         </div>
 
                                         {day.groups.length === 0 ? (

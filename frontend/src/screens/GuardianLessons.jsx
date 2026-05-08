@@ -6,6 +6,7 @@ import {
     getAulas,
     getMarcacoesEncarregado
 } from '../services/api';
+import { useNotifications } from '../contexts/NotificationContext';
 
 const formatDate = (value) => {
     const date = new Date(value);
@@ -79,6 +80,7 @@ const getStatusMeta = (booking) => {
 };
 
 const GuardianLessons = () => {
+    const { notify } = useNotifications();
     const [students, setStudents] = useState([]);
     const [selectedStudentId, setSelectedStudentId] = useState('');
     const [bookings, setBookings] = useState([]);
@@ -174,6 +176,11 @@ const GuardianLessons = () => {
         try {
             const result = await cancelarMarcacaoEncarregado(selectedBooking.IdMarcacao, cancelReason);
             setFeedback(result?.mensagem || 'Pedido de cancelamento enviado.');
+            notify({
+                title: 'Cancelamento registado',
+                message: result?.mensagem || 'O pedido de cancelamento foi enviado com sucesso.',
+                tone: 'success'
+            });
             setSelectedBooking(null);
             await loadBookings(selectedStudentId);
         } catch (err) {
@@ -196,6 +203,11 @@ const GuardianLessons = () => {
                 IdAula: idAula
             });
             setFeedback(result?.mensagem || 'Inscricao efetuada com sucesso.');
+            notify({
+                title: 'Marcacao criada',
+                message: result?.mensagem || 'O educando foi inscrito com sucesso na aula.',
+                tone: 'success'
+            });
             await loadBookings(selectedStudentId);
         } catch (err) {
             setError(err.message || 'Nao foi possivel efetuar a inscricao.');

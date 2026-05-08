@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNotifications } from '../contexts/NotificationContext';
 import { criarArtigo, editarArtigo, getInventario } from '../services/api';
 import { resolveInventoryImageUrl } from '../utils/imagePaths';
 
@@ -22,6 +23,7 @@ const getConditionSummary = (item) => {
 const getFallbackLabel = (name) => String(name || '?').trim().charAt(0).toUpperCase() || '?';
 
 const InventoryManagement = () => {
+    const { notify, refreshSnapshot } = useNotifications();
     const [inventory, setInventory] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
@@ -122,6 +124,12 @@ const InventoryManagement = () => {
                     ImagemPath: formData.ImagemPath,
                     ImagemFile: selectedImageFile
                 });
+                await refreshSnapshot();
+                notify({
+                    title: 'Artigo publicado',
+                    message: `${formData.Nome || 'O artigo'} ficou visivel no marketplace.`,
+                    tone: 'success'
+                });
             } else if (selectedItem) {
                 await editarArtigo(selectedItem.IdArtigo, {
                     Nome: formData.Nome,
@@ -129,6 +137,12 @@ const InventoryManagement = () => {
                     ImagemPath: formData.ImagemPath,
                     EstadoArtigo: formData.EstadoArtigo,
                     ImagemFile: selectedImageFile
+                });
+                await refreshSnapshot();
+                notify({
+                    title: 'Artigo atualizado',
+                    message: `${formData.Nome || 'O artigo'} foi atualizado no marketplace.`,
+                    tone: 'success'
                 });
             }
 

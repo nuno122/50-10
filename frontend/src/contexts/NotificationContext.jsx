@@ -3,7 +3,9 @@ import { useAuth } from './AuthContext';
 import {
     getAulas,
     getEventos,
+    getInventario,
     getPagamentosEncarregado,
+    getPedidosCancelamentoPendentes,
     getPedidosAulaPrivada,
     getPedidosAulaPrivadaEncarregado,
     getPedidosAulaPrivadaProfessor
@@ -53,6 +55,28 @@ const isPendingPayment = (payment) => {
         && status !== 'cancelado';
 };
 
+const countActiveBookings = (lesson) => (
+    Array.isArray(lesson?.Marcacao)
+        ? lesson.Marcacao.filter((booking) => booking?.EstaAtivo !== false).length
+        : 0
+);
+
+const hasAvailableSeats = (lesson) => (
+    countActiveBookings(lesson) < Number(lesson?.CapacidadeMaxima || 0)
+);
+
+const countInventoryStock = (item) => (
+    Array.isArray(item?.TamanhoArtigo)
+        ? item.TamanhoArtigo.reduce((sum, entry) => sum + Number(entry?.Quantidade || 0), 0)
+        : 0
+);
+
+const isMarketplaceItemAvailable = (item) => (
+    Boolean(item)
+    && item.EstadoArtigo !== false
+    && countInventoryStock(item) > 0
+);
+
 const isFutureRegularLesson = (lesson) => {
     if (!lesson || lesson.EstaAtivo === false) return false;
     if ((lesson.TipoAula || 'Regular') !== 'Regular') return false;
@@ -98,10 +122,38 @@ const mapPublishedEvent = (eventItem) => ({
     when: formatDateOnly(eventItem.DataEvento)
 });
 
+const mapMarketplaceItem = (item) => ({
+    id: item.IdArtigo,
+    title: item.Nome || 'Artigo',
+    email: item.Criador?.Email || '',
+    stock: countInventoryStock(item)
+});
+
+const buildMarketplaceNotifications = (previousItems = [], nextItems = []) => {
+    const previousIds = new Set(previousItems.map((item) => item.id));
+    const newItems = nextItems.filter((item) => !previousIds.has(item.id));
+
+    if (newItems.length === 0) {
+        return [];
+    }
+
+    const firstItem = newItems[0];
+
+    return [{
+        title: newItems.length === 1 ? 'Novo artigo disponivel para aluguer' : 'Novos artigos disponiveis para aluguer',
+        message: newItems.length === 1
+            ? `${firstItem.title}${firstItem.email ? ` publicado por ${firstItem.email}` : ''}.`
+            : `${newItems.length} artigos ficaram disponiveis no marketplace.`,
+        tone: 'info'
+    }];
+};
+
 const buildDirectorSnapshot = async () => {
-    const [aulas, requests] = await Promise.all([
+    const [aulas, requests, inventory, cancellationRequests] = await Promise.all([
         getAulas(),
-        getPedidosAulaPrivada()
+        getPedidosAulaPrivada(),
+        getInventario(),
+        getPedidosCancelamentoPendentes()
     ]);
 
     const activeLessons = (aulas || []).filter((lesson) => lesson.EstaAtivo !== false);
@@ -115,18 +167,24 @@ const buildDirectorSnapshot = async () => {
             id: lesson.IdAula,
             label: lesson.EstiloDanca?.Nome || 'Aula',
             when: formatDateTime(lesson.Data, lesson.HoraInicio),
-            validated: Boolean(lesson.ValidacaoDirecao)
+            validated: Boolean(lesson.ValidacaoDirecao),
+            bookingCount: countActiveBookings(lesson)
         })),
         pendingValidationCount: activeLessons.filter((lesson) => !lesson.ValidacaoDirecao).length,
-        coachingRequests
+        coachingRequests,
+        pendingCancellationCount: (cancellationRequests || []).length,
+        marketplaceItems: (inventory || [])
+            .filter(isMarketplaceItemAvailable)
+            .map(mapMarketplaceItem)
     };
 };
 
 const buildTeacherSnapshot = async (user) => {
-    const [aulas, requests, events] = await Promise.all([
+    const [aulas, requests, events, inventory] = await Promise.all([
         getAulas(),
         getPedidosAulaPrivadaProfessor(),
-        getEventos()
+        getEventos(),
+        getInventario()
     ]);
 
     const ownLessons = normalizeLessonsForRole(aulas, user);
@@ -141,23 +199,29 @@ const buildTeacherSnapshot = async (user) => {
             label: lesson.EstiloDanca?.Nome || 'Aula',
             when: formatDateTime(lesson.Data, lesson.HoraInicio),
             active: lesson.EstaAtivo !== false,
-            validated: Boolean(lesson.ValidacaoDirecao)
+            validated: Boolean(lesson.ValidacaoDirecao),
+            bookingCount: countActiveBookings(lesson)
         })),
         events: (events || []).map(mapPublishedEvent),
-        coachingRequests
+        coachingRequests,
+        marketplaceItems: (inventory || [])
+            .filter(isMarketplaceItemAvailable)
+            .map(mapMarketplaceItem)
     };
 };
 
 const buildGuardianSnapshot = async () => {
-    const [aulas, pagamentos, requests, events] = await Promise.all([
+    const [aulas, pagamentos, requests, events, inventory] = await Promise.all([
         getAulas(),
         getPagamentosEncarregado(),
         getPedidosAulaPrivadaEncarregado(),
-        getEventos()
+        getEventos(),
+        getInventario()
     ]);
 
     const availableLessons = (aulas || [])
-        .filter((lesson) => isFutureRegularLesson(lesson));
+        .filter((lesson) => isFutureRegularLesson(lesson))
+        .filter(hasAvailableSeats);
 
     return {
         role: 'guardian',
@@ -170,7 +234,10 @@ const buildGuardianSnapshot = async () => {
             .filter(isPendingPayment)
             .map((payment) => payment.IdPagamento),
         coachingRequests: (requests || []).map(mapCoachingRequest),
-        events: (events || []).map(mapPublishedEvent)
+        events: (events || []).map(mapPublishedEvent),
+        marketplaceItems: (inventory || [])
+            .filter(isMarketplaceItemAvailable)
+            .map(mapMarketplaceItem)
     };
 };
 
@@ -194,6 +261,7 @@ const buildSnapshot = async (user) => {
 
 const buildDirectorNotifications = (previousSnapshot, nextSnapshot) => {
     const notifications = [];
+    const previousLessons = new Map((previousSnapshot.lessons || []).map((lesson) => [lesson.id, lesson]));
     const previousIds = new Set((previousSnapshot.lessons || []).map((lesson) => lesson.id));
     const newLessons = (nextSnapshot.lessons || []).filter((lesson) => !previousIds.has(lesson.id));
 
@@ -208,10 +276,36 @@ const buildDirectorNotifications = (previousSnapshot, nextSnapshot) => {
         });
     }
 
+    (nextSnapshot.lessons || []).forEach((lesson) => {
+        const previousLesson = previousLessons.get(lesson.id);
+        if (!previousLesson) {
+            return;
+        }
+
+        if ((lesson.bookingCount || 0) > (previousLesson.bookingCount || 0)) {
+            const newBookings = lesson.bookingCount - previousLesson.bookingCount;
+            notifications.push({
+                title: newBookings === 1 ? 'Nova marcacao em aula' : 'Novas marcacoes em aula',
+                message: newBookings === 1
+                    ? `${lesson.label} recebeu uma nova inscricao.`
+                    : `${lesson.label} recebeu ${newBookings} novas inscricoes.`,
+                tone: 'info'
+            });
+        }
+    });
+
     if ((nextSnapshot.pendingValidationCount || 0) > (previousSnapshot.pendingValidationCount || 0)) {
         notifications.push({
             title: 'Novas validacoes pendentes',
             message: 'A Direcao tem novas aulas por validar.',
+            tone: 'warning'
+        });
+    }
+
+    if ((nextSnapshot.pendingCancellationCount || 0) > (previousSnapshot.pendingCancellationCount || 0)) {
+        notifications.push({
+            title: 'Novos cancelamentos pendentes',
+            message: 'Existem novos pedidos de cancelamento para validar.',
             tone: 'warning'
         });
     }
@@ -229,6 +323,8 @@ const buildDirectorNotifications = (previousSnapshot, nextSnapshot) => {
             tone: 'warning'
         });
     }
+
+    notifications.push(...buildMarketplaceNotifications(previousSnapshot.marketplaceItems, nextSnapshot.marketplaceItems));
 
     return notifications;
 };
@@ -251,6 +347,22 @@ const buildTeacherNotifications = (previousSnapshot, nextSnapshot) => {
             tone: 'info'
         });
     }
+
+    nextLessons.forEach((lesson) => {
+        const previousLesson = previousLessons.get(lesson.id);
+        if (!previousLesson) return;
+
+        if ((lesson.bookingCount || 0) > (previousLesson.bookingCount || 0)) {
+            const newBookings = lesson.bookingCount - previousLesson.bookingCount;
+            notifications.push({
+                title: newBookings === 1 ? 'Nova marcacao na tua aula' : 'Novas marcacoes nas tuas aulas',
+                message: newBookings === 1
+                    ? `${lesson.label} recebeu uma nova inscricao.`
+                    : `${lesson.label} recebeu ${newBookings} novas inscricoes.`,
+                tone: 'info'
+            });
+        }
+    });
 
     if (newEvents.length > 0) {
         const firstEvent = newEvents[0];
@@ -290,6 +402,8 @@ const buildTeacherNotifications = (previousSnapshot, nextSnapshot) => {
         });
     }
 
+    notifications.push(...buildMarketplaceNotifications(previousSnapshot.marketplaceItems, nextSnapshot.marketplaceItems));
+
     return notifications;
 };
 
@@ -321,6 +435,8 @@ const buildGuardianNotifications = (previousSnapshot, nextSnapshot) => {
             tone: 'info'
         });
     }
+
+    notifications.push(...buildMarketplaceNotifications(previousSnapshot.marketplaceItems, nextSnapshot.marketplaceItems));
 
     if ((nextSnapshot.pendingPaymentIds || []).length > (previousSnapshot.pendingPaymentIds || []).length) {
         notifications.push({
@@ -435,6 +551,16 @@ export const NotificationProvider = ({ children }) => {
 
     const markAllAsRead = useCallback(() => {
         setNotificationFeed((current) => current.map((item) => ({ ...item, read: true })));
+    }, []);
+
+    const removeNotification = useCallback((id) => {
+        setNotificationFeed((current) => current.filter((item) => item.id !== id));
+        setPopupNotifications((current) => current.filter((item) => item.id !== id));
+    }, []);
+
+    const clearNotifications = useCallback(() => {
+        setNotificationFeed([]);
+        setPopupNotifications([]);
     }, []);
 
     const notify = useCallback(({ title, message = '', tone = 'info', duration = 6000, persist = true }) => {
@@ -580,8 +706,10 @@ export const NotificationProvider = ({ children }) => {
         notifications: notificationFeed,
         unreadCount,
         markAsRead,
-        markAllAsRead
-    }), [dismiss, markAllAsRead, markAsRead, notificationFeed, notify, refreshSnapshot, unreadCount]);
+        markAllAsRead,
+        removeNotification,
+        clearNotifications
+    }), [clearNotifications, dismiss, markAllAsRead, markAsRead, notificationFeed, notify, refreshSnapshot, removeNotification, unreadCount]);
 
     return (
         <NotificationContext.Provider value={contextValue}>

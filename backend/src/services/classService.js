@@ -50,6 +50,9 @@ const construirDataHoraAula = (aula, campoHora = 'HoraFim') => {
 };
 
 const aulaTerminou = (aula) => construirDataHoraAula(aula, 'HoraFim') <= new Date();
+const descreverQuantidadePagamentos = (quantidade) => (
+    `${quantidade} ${quantidade === 1 ? 'pagamento gerado' : 'pagamentos gerados'}`
+);
 
 const intervaloCabeNaDisponibilidade = (horaInicio, horaFim, disponibilidades = []) => {
     const inicioAula = toMinutes(horaInicio);
@@ -346,7 +349,7 @@ const cancelarAula = async (idAula, utilizador) => {
     };
 };
 
-const validarAula = async (idAula) => {
+const validarAula = async (idAula, opcoes = {}) => {
     const aula = await classRepo.findByIdComAlunos(idAula);
     if (!aula) {
         throw criarErro('Aula nao encontrada.', 404);
@@ -356,8 +359,14 @@ const validarAula = async (idAula) => {
         throw criarErro('Nao e possivel validar uma aula cancelada.', 400);
     }
 
-    if (!aula.ConfirmacaoProfessor) {
+    const concluirPorExcecao = opcoes?.ConcluirPorExcecao === true;
+
+    if (!aula.ConfirmacaoProfessor && !concluirPorExcecao) {
         throw criarErro('A aula tem de ser confirmada pelo professor antes da validacao da Direcao.', 400);
+    }
+
+    if (!aula.ConfirmacaoProfessor && concluirPorExcecao && !aulaTerminou(aula)) {
+        throw criarErro('A Direcao so pode concluir por excecao depois da aula terminar.', 400);
     }
 
     const marcacoesAtivas = aula.Marcacao;
@@ -369,11 +378,17 @@ const validarAula = async (idAula) => {
 
     const paymentService = require('./paymentService');
     const resultadoPagamentos = await paymentService.GerarPagamento(marcacoesAtivas, aula.Preco);
+    const resumoPagamentos = descreverQuantidadePagamentos(resultadoPagamentos.pagamentos.length);
+
+    const mensagem = concluirPorExcecao && !aula.ConfirmacaoProfessor
+        ? `Aula concluida por excecao pela Direcao e ${resumoPagamentos}.`
+        : `Aula validada e ${resumoPagamentos}.`;
 
     return {
-        mensagem: `Aula validada e ${resultadoPagamentos.pagamentos.length} pagamentos gerados.`,
+        mensagem,
         aula,
-        pagamentos: resultadoPagamentos.pagamentos
+        pagamentos: resultadoPagamentos.pagamentos,
+        concluidaPorExcecao: concluirPorExcecao && !aula.ConfirmacaoProfessor
     };
 };
 

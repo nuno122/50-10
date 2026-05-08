@@ -683,6 +683,12 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
 
         try {
             await confirmarPedidoAulaPrivadaProfessor(request.IdPedidoAulaPrivada);
+            await refreshSnapshot();
+            notify({
+                title: 'Pedido de Coaching confirmado',
+                message: `${request.EstiloDanca?.Nome || 'O pedido'} segue agora para validacao da Direcao.`,
+                tone: 'success'
+            });
             setFeedback('Disponibilidade confirmada. O pedido de Coaching segue para a Direcao validar o estudio.');
             await loadData();
         } catch (err) {
@@ -698,6 +704,12 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
 
         try {
             await rejeitarPedidoAulaPrivadaProfessor(request.IdPedidoAulaPrivada, 'Professor indisponivel no horario pedido.');
+            await refreshSnapshot();
+            notify({
+                title: 'Pedido de Coaching rejeitado',
+                message: `${request.EstiloDanca?.Nome || 'O pedido'} foi rejeitado por indisponibilidade.`,
+                tone: 'info'
+            });
             setFeedback('Pedido de Coaching rejeitado.');
             await loadData();
         } catch (err) {

@@ -216,8 +216,11 @@ export const confirmarAulaProfessor = async (idAula) =>
 export const cancelarAulaProfessor = async (idAula) =>
     request(`/aulas/${idAula}/cancelar`, { method: 'PATCH' });
 
-export const validarAulaDirecao = async (idAula) =>
-    request(`/aulas/${idAula}/validar-direcao`, { method: 'PATCH' });
+export const validarAulaDirecao = async (idAula, dados = {}) =>
+    request(`/aulas/${idAula}/validar-direcao`, {
+        method: 'PATCH',
+        body: JSON.stringify(dados)
+    });
 
 export const getPagamentos = async () => request('/pagamentos');
 

@@ -496,5 +496,49 @@ describe('Class Service', () => {
             expect(classRepo.atualizarValidacaoDirecao).not.toHaveBeenCalled();
             expect(paymentService.GerarPagamento).not.toHaveBeenCalled();
         });
+
+        it('deve permitir a conclusao por excecao da Direcao quando o professor nao confirmou mas a aula ja terminou', async () => {
+            classRepo.findByIdComAlunos.mockResolvedValue({
+                IdAula: 89,
+                EstaAtivo: true,
+                ConfirmacaoProfessor: false,
+                Data: '2020-01-01T00:00:00.000Z',
+                HoraFim: '1970-01-01T10:00:00.000Z',
+                Marcacao: [{ IdMarcacao: 13, Pagamento: [] }],
+                Preco: 22
+            });
+            classRepo.atualizarValidacaoDirecao.mockResolvedValue({ IdAula: 89, ValidacaoDirecao: true });
+            paymentService.GerarPagamento.mockResolvedValue({
+                pagamentos: [{ IdPagamento: 5 }]
+            });
+
+            const resultado = await classService.validarAula(89, { ConcluirPorExcecao: true });
+
+            expect(classRepo.atualizarValidacaoDirecao).toHaveBeenCalledWith(89);
+            expect(paymentService.GerarPagamento).toHaveBeenCalledWith([
+                { IdMarcacao: 13, Pagamento: [] }
+            ], 22);
+            expect(resultado.concluidaPorExcecao).toBe(true);
+            expect(resultado.mensagem).toBe('Aula concluida por excecao pela Direcao e 1 pagamento gerado.');
+        });
+
+        it('deve bloquear a conclusao por excecao se a aula ainda nao terminou', async () => {
+            classRepo.findByIdComAlunos.mockResolvedValue({
+                IdAula: 90,
+                EstaAtivo: true,
+                ConfirmacaoProfessor: false,
+                Data: '2999-01-01T00:00:00.000Z',
+                HoraFim: '1970-01-01T10:00:00.000Z',
+                Marcacao: [{ IdMarcacao: 14, Pagamento: [] }],
+                Preco: 22
+            });
+
+            await expect(classService.validarAula(90, { ConcluirPorExcecao: true }))
+                .rejects
+                .toThrow('A Direcao so pode concluir por excecao depois da aula terminar.');
+
+            expect(classRepo.atualizarValidacaoDirecao).not.toHaveBeenCalled();
+            expect(paymentService.GerarPagamento).not.toHaveBeenCalled();
+        });
     });
 });

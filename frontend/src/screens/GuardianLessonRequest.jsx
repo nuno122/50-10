@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { criarPedidoAulaPrivada, getAlunosEncarregado, getAulas, getDisponibilidades, getEstilos, getPedidosAulaPrivadaEncarregado, getProfessores } from '../services/api';
+import { useNotifications } from '../contexts/NotificationContext';
 
 const emptyForm = {
     studentId: '',
@@ -142,6 +143,7 @@ const getStatusTone = (status) => {
 };
 
 const GuardianLessonRequest = () => {
+    const { notify } = useNotifications();
     const [formData, setFormData] = useState(emptyForm);
     const [styles, setStyles] = useState([]);
     const [teachers, setTeachers] = useState([]);
@@ -300,6 +302,11 @@ const GuardianLessonRequest = () => {
             });
 
             setFeedback('Pedido de Coaching enviado com sucesso para confirmacao do professor.');
+            notify({
+                title: 'Pedido de Coaching enviado',
+                message: 'O pedido foi enviado para confirmacao do professor.',
+                tone: 'success'
+            });
             resetForm();
             await loadData();
         } catch (err) {

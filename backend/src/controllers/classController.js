@@ -62,7 +62,7 @@ const cancelarAula = async (req, res) => {
 const validarAula = async (req, res) => {
     try {
         const idAula = req.params.id;
-        const resultado = await classService.validarAula(idAula);
+        const resultado = await classService.validarAula(idAula, req.body);
         res.json(resultado);
     } catch (erro) {
         console.error(erro);

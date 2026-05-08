@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import { PERMISSOES, ROLE_LABELS } from '../utils/permissions';
 import { criarArtigo, editarArtigo, getAlugueres, getInventario, solicitarExtensaoAluguer } from '../services/api';
 import { resolveInventoryImageUrl } from '../utils/imagePaths';
@@ -66,6 +67,7 @@ const getRoleSubtitle = (permission) => {
 
 const RoleInventory = () => {
     const { user } = useAuth();
+    const { notify, refreshSnapshot } = useNotifications();
     const [inventory, setInventory] = useState([]);
     const [rentals, setRentals] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -201,6 +203,11 @@ const RoleInventory = () => {
 
         try {
             await solicitarExtensaoAluguer(selectedRental.IdAluguer, extensionDate);
+            notify({
+                title: 'Pedido de extensao enviado',
+                message: 'O pedido de extensao foi enviado para aprovacao.',
+                tone: 'success'
+            });
             setFeedback('Pedido de extensao enviado com sucesso para aprovacao.');
             setIsExtensionOpen(false);
             setSelectedRental(null);
@@ -242,9 +249,21 @@ const RoleInventory = () => {
 
             if (editingAd) {
                 await editarArtigo(editingAd.IdArtigo, payload);
+                await refreshSnapshot();
+                notify({
+                    title: 'Anuncio atualizado',
+                    message: `${adFormData.Nome || 'O anuncio'} foi atualizado no marketplace.`,
+                    tone: 'success'
+                });
                 setFeedback('Anuncio atualizado com sucesso.');
             } else {
                 await criarArtigo(payload);
+                await refreshSnapshot();
+                notify({
+                    title: 'Anuncio publicado',
+                    message: `${adFormData.Nome || 'O anuncio'} ficou disponivel no marketplace.`,
+                    tone: 'success'
+                });
                 setFeedback('Anuncio publicado com sucesso.');
             }
 

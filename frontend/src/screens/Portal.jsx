@@ -41,7 +41,14 @@ const getNotificationToneLabel = (tone) => {
 
 const Portal = () => {
     const { user, logout } = useAuth();
-    const { notifications, unreadCount, markAllAsRead, markAsRead } = useNotifications();
+    const {
+        notifications,
+        unreadCount,
+        markAllAsRead,
+        markAsRead,
+        removeNotification,
+        clearNotifications
+    } = useNotifications();
     const userIsDirecao = isDirecao(user);
     const userIsProfessor = isProfessor(user);
     const userIsEncarregado = isEncarregado(user);
@@ -247,9 +254,14 @@ const Portal = () => {
                                     <h2>Centro de Notificacoes</h2>
                                     <p>Alertas recentes da tua atividade na aplicacao.</p>
                                 </div>
-                                <button type="button" className="portal-notification-action" onClick={markAllAsRead}>
-                                    Marcar tudo
-                                </button>
+                                <div className="portal-notification-panel-actions">
+                                    <button type="button" className="portal-notification-action" onClick={markAllAsRead}>
+                                        Marcar lidas
+                                    </button>
+                                    <button type="button" className="portal-notification-action portal-notification-action--danger" onClick={clearNotifications}>
+                                        Limpar tudo
+                                    </button>
+                                </div>
                             </div>
 
                             {visibleNotifications.length === 0 ? (
@@ -259,11 +271,18 @@ const Portal = () => {
                             ) : (
                                 <div className="portal-notification-list">
                                     {visibleNotifications.map((notification) => (
-                                        <button
+                                        <article
                                             key={notification.id}
-                                            type="button"
                                             className={`portal-notification-item ${notification.read ? '' : 'portal-notification-item--unread'}`}
                                             onClick={() => markAsRead(notification.id)}
+                                            onKeyDown={(event) => {
+                                                if (event.key === 'Enter' || event.key === ' ') {
+                                                    event.preventDefault();
+                                                    markAsRead(notification.id);
+                                                }
+                                            }}
+                                            role="button"
+                                            tabIndex={0}
                                         >
                                             <div className="portal-notification-meta">
                                                 <strong>{notification.title}</strong>
@@ -272,8 +291,20 @@ const Portal = () => {
                                                 </span>
                                             </div>
                                             {notification.message && <p>{notification.message}</p>}
-                                            <span className="portal-notification-time">{formatNotificationTime(notification.createdAt)}</span>
-                                        </button>
+                                            <div className="portal-notification-item-actions">
+                                                <span className="portal-notification-time">{formatNotificationTime(notification.createdAt)}</span>
+                                                <button
+                                                    type="button"
+                                                    className="portal-notification-remove"
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        removeNotification(notification.id);
+                                                    }}
+                                                >
+                                                    Remover
+                                                </button>
+                                            </div>
+                                        </article>
                                     ))}
                                 </div>
                             )}

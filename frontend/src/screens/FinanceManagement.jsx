@@ -353,13 +353,13 @@ const FinanceManagement = () => {
         return sorted;
     }, [lessons, sortDirection, sortField]);
 
-    const handleValidateDirector = async (lesson) => {
+    const handleValidateDirector = async (lesson, options = {}) => {
         setSubmittingId(lesson.id);
         setError('');
 
         try {
-            await validarAulaDirecao(lesson.id);
-            setFeedback('Aula concluida pela Direcao e pagamentos gerados para as marcacoes ativas.');
+            const result = await validarAulaDirecao(lesson.id, options);
+            setFeedback(result?.mensagem || 'Aula concluida pela Direcao e pagamentos gerados para as marcacoes ativas.');
             await loadData();
         } catch (err) {
             setError(err.message || 'Nao foi possivel validar a aula.');
@@ -474,6 +474,7 @@ const FinanceManagement = () => {
                                             const timeRemaining = calculateTimeRemaining(lesson.deadlineDate, currentTime);
                                             const isFullyValidated = lesson.validation.teacher && lesson.validation.director;
                                             const canValidate = isDirector && lesson.operationalStatus === 'awaiting-director';
+                                            const canValidateByException = isDirector && lesson.operationalStatus === 'awaiting-teacher';
                                             const canRegisterPayment = isDirector && isFullyValidated && !lesson.paid;
 
                                             return (
@@ -530,6 +531,15 @@ const FinanceManagement = () => {
                                                                 disabled={submittingId === lesson.id}
                                                             >
                                                                 {submittingId === lesson.id ? 'A concluir...' : 'Concluir Aula'}
+                                                            </button>
+                                                        ) : canValidateByException ? (
+                                                            <button
+                                                                type="button"
+                                                                className="finance-button finance-button--primary"
+                                                                onClick={() => handleValidateDirector(lesson, { ConcluirPorExcecao: true })}
+                                                                disabled={submittingId === lesson.id}
+                                                            >
+                                                                {submittingId === lesson.id ? 'A concluir...' : 'Concluir por excecao'}
                                                             </button>
                                                         ) : canRegisterPayment ? (
                                                             <button
