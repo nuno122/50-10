@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { loginUtilizador, loginAutenticacao } from '../services/api';
+import { loginAutenticacao } from '../services/api';
 import Portal from './Portal';
 import logo from '../../Images/logo.png';
 
@@ -8,8 +8,7 @@ const Login = () => {
     const { login, isAuthenticated } = useAuth();
     const [credentials, setCredentials] = useState({
         Email: 'geral@entartes.pt',
-        Password: '123456',
-        useUtilizadores: true
+        Password: '123456'
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -20,18 +19,7 @@ const Login = () => {
         setError('');
 
         try {
-            let result;
-
-            if (credentials.useUtilizadores) {
-                await loginUtilizador({
-                    Email: credentials.Email,
-                    PalavraPasseHash: credentials.Password
-                });
-                setError('Validacao concluida sem token. Desativa este modo para testar login JWT.');
-                return;
-            }
-
-            result = await loginAutenticacao({
+            const result = await loginAutenticacao({
                 Email: credentials.Email,
                 Password: credentials.Password
             });
@@ -66,14 +54,14 @@ const Login = () => {
                                 <p className="login-eyebrow">Sistema de Gestao</p>
                                 <h1>Ent'Artes</h1>
                                 <p className="login-copy login-copy--dark">
-                                    Autentica-te para aceder ao painel interno e aos testes da plataforma.
+                                    Autentica-te para aceder ao painel interno da plataforma.
                                 </p>
                             </div>
                         </div>
 
                         <div className="login-card-header">
                             <h2>Autenticacao</h2>
-                            <p>Usa as tuas credenciais para entrar nos testes da API e no painel interno.</p>
+                            <p>Usa as tuas credenciais para entrar no painel interno.</p>
                         </div>
 
                         <form onSubmit={handleSubmit} className="login-form">
@@ -90,7 +78,7 @@ const Login = () => {
                             />
 
                             <label className="login-label" htmlFor="password">
-                                Password / PalavraPasseHash
+                                Password
                             </label>
                             <input
                                 id="password"
@@ -101,15 +89,6 @@ const Login = () => {
                                 required
                             />
 
-                            <label className="login-checkbox">
-                                <input
-                                    type="checkbox"
-                                    checked={credentials.useUtilizadores}
-                                    onChange={(e) => setCredentials({ ...credentials, useUtilizadores: e.target.checked })}
-                                />
-                                <span>Modo sem token: apenas valida utilizador e mantem este ecra aberto.</span>
-                            </label>
-
                             {error && <div className="login-error">{error}</div>}
 
                             <button
@@ -117,7 +96,7 @@ const Login = () => {
                                 disabled={loading}
                                 className="login-submit"
                             >
-                                {loading ? 'A autenticar...' : 'Entrar nos Testes'}
+                                {loading ? 'A autenticar...' : 'Login'}
                             </button>
                         </form>
                     </div>

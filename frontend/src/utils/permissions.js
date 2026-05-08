@@ -3,15 +3,12 @@ import PERMISSOES from '../../../shared/permissions.json';
 export { PERMISSOES };
 
 export const ROLE_LABELS = {
-    [PERMISSOES.ALUNO]: 'Aluno',
     [PERMISSOES.PROFESSOR]: 'Professor',
     [PERMISSOES.DIRECAO]: 'Direcao',
     [PERMISSOES.ENCARREGADO]: 'Encarregado'
 };
 
 export const getRoleLabel = (permission) => ROLE_LABELS[permission] || 'Utilizador';
-
-export const isAluno = (user) => user?.Permissoes === PERMISSOES.ALUNO;
 
 export const isProfessor = (user) => user?.Permissoes === PERMISSOES.PROFESSOR;
 

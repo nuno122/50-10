@@ -34,7 +34,7 @@ const cancelarMarcacao = async (req, res) => {
         const idAluno = req.utilizador ? req.utilizador.IdUtilizador : null;
 
         const resultado = await bookingService.CancelarMarcacao(idMarcacao, idAluno, Motivo);
-        res.status(200).json({ mensagem: 'Marcacao cancelada com sucesso.', marcacao: resultado });
+        res.status(200).json(resultado);
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 400).json({
@@ -50,7 +50,7 @@ const cancelarMarcacaoEncarregado = async (req, res) => {
         const idEncarregado = req.utilizador ? req.utilizador.IdUtilizador : null;
 
         const resultado = await bookingService.CancelarMarcacaoComoEncarregado(idMarcacao, idEncarregado, Motivo);
-        res.status(200).json({ mensagem: 'Marcacao cancelada com sucesso.', marcacao: resultado });
+        res.status(200).json(resultado);
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 400).json({
@@ -109,6 +109,48 @@ const getMarcacoesDoEncarregado = async (req, res) => {
     }
 };
 
+const getPedidosCancelamentoPendentes = async (req, res) => {
+    try {
+        const pedidos = await bookingService.listarPedidosCancelamentoPendentes();
+        res.json(pedidos);
+    } catch (erro) {
+        console.error(erro);
+        res.status(erro.statusCode || 500).json({
+            erro: erro.message || 'Erro ao carregar pedidos de cancelamento pendentes.'
+        });
+    }
+};
+
+const aprovarPedidoCancelamento = async (req, res) => {
+    try {
+        const idMarcacao = req.params.idMarcacao;
+        const observacao = req.body?.ObservacaoDirecao;
+        const idDiretor = req.utilizador ? req.utilizador.IdUtilizador : null;
+        const resultado = await bookingService.aprovarPedidoCancelamento(idMarcacao, idDiretor, observacao);
+        res.json(resultado);
+    } catch (erro) {
+        console.error(erro);
+        res.status(erro.statusCode || 500).json({
+            erro: erro.message || 'Erro ao aprovar o pedido de cancelamento.'
+        });
+    }
+};
+
+const rejeitarPedidoCancelamento = async (req, res) => {
+    try {
+        const idMarcacao = req.params.idMarcacao;
+        const observacao = req.body?.ObservacaoDirecao;
+        const idDiretor = req.utilizador ? req.utilizador.IdUtilizador : null;
+        const resultado = await bookingService.rejeitarPedidoCancelamento(idMarcacao, idDiretor, observacao);
+        res.json(resultado);
+    } catch (erro) {
+        console.error(erro);
+        res.status(erro.statusCode || 500).json({
+            erro: erro.message || 'Erro ao rejeitar o pedido de cancelamento.'
+        });
+    }
+};
+
 module.exports = {
     criarMarcacao,
     criarMarcacaoEncarregado,
@@ -117,5 +159,8 @@ module.exports = {
     getMarcacoes,
     getMarcacoesDoAluno,
     getAlunosDoEncarregado,
-    getMarcacoesDoEncarregado
+    getMarcacoesDoEncarregado,
+    getPedidosCancelamentoPendentes,
+    aprovarPedidoCancelamento,
+    rejeitarPedidoCancelamento
 };

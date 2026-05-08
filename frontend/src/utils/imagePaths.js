@@ -27,5 +27,10 @@ export const resolveInventoryImageUrl = (imagePath) => {
         return '';
     }
 
-    return new URL(`/images/${relativePath}`, API_ORIGIN).toString();
+    const encodedPath = relativePath
+        .split('/')
+        .map((segment) => encodeURIComponent(segment))
+        .join('/');
+
+    return new URL(`/images/${encodedPath}`, API_ORIGIN).toString();
 };

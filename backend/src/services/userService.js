@@ -11,9 +11,13 @@ const criarErro = (mensagem, statusCode) => {
     return erro;
 };
 
-const hashPassword = (password) => {
-    return crypto.createHash('sha256').update(password).digest('hex');
-};
+const hashPassword = (password) => crypto.createHash('sha256').update(password).digest('hex');
+
+const permissoesDePortalAtivas = [
+    PERMISSOES.PROFESSOR,
+    PERMISSOES.ENCARREGADO,
+    PERMISSOES.DIRECAO
+];
 
 const listarUtilizadores = async () => {
     const utilizadores = await userRepository.findAll();
@@ -24,41 +28,47 @@ const listarUtilizadores = async () => {
 };
 
 const validarPermissaoGerivel = (permissao) => {
-    const permissoesGeriveis = [
-        PERMISSOES.PROFESSOR,
-        PERMISSOES.ENCARREGADO,
-        PERMISSOES.DIRECAO
-    ];
-
-    if (!permissoesGeriveis.includes(permissao)) {
+    if (!permissoesDePortalAtivas.includes(permissao)) {
         throw criarErro('So e permitido gerir Encarregados, Professores e Direcao.', 400);
     }
 };
 
 const validarCamposBase = (dados) => {
     if (!dados.NomeCompleto) {
-        throw criarErro('NomeCompleto é obrigatório.', 400);
+        throw criarErro('NomeCompleto e obrigatorio.', 400);
     }
 
     if (!dados.Email) {
-        throw criarErro('Email é obrigatório.', 400);
+        throw criarErro('Email e obrigatorio.', 400);
     }
 
     if (!dados.NomeUtilizador) {
-        throw criarErro('NomeUtilizador é obrigatório.', 400);
+        throw criarErro('NomeUtilizador e obrigatorio.', 400);
     }
 
     if (!dados.CodigoPostal) {
-        throw criarErro('CodigoPostal é obrigatório.', 400);
+        throw criarErro('CodigoPostal e obrigatorio.', 400);
     }
 
     if (!dados.Morada) {
-        throw criarErro('Morada é obrigatória.', 400);
+        throw criarErro('Morada e obrigatoria.', 400);
     }
 
     if (!dados.Nif) {
-        throw criarErro('NIF é obrigatório.', 400);
+        throw criarErro('NIF e obrigatorio.', 400);
     }
+};
+
+const normalizarIdsEstilo = (value) => {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+
+    return [...new Set(
+        value
+            .map((entry) => String(entry || '').trim())
+            .filter(Boolean)
+    )];
 };
 
 const extrairCampoUnico = (erro) => {
@@ -106,22 +116,21 @@ const traduzirErroRepositorio = (erro) => {
 const criarUtilizador = async (dados) => {
     validarCamposBase(dados);
 
-    const permissoesValidas = Object.values(PERMISSOES);
-    if (dados.Permissoes === undefined || dados.Permissoes === null || !permissoesValidas.includes(dados.Permissoes)) {
-        throw criarErro('Nível de permissão inválido.', 400);
-    }
-
-    if (dados.Permissoes === PERMISSOES.ALUNO && !dados.DataNascimento) {
-        throw criarErro('Data de Nascimento é obrigatória para alunos.', 400);
+    if (dados.Permissoes === undefined || dados.Permissoes === null || !permissoesDePortalAtivas.includes(dados.Permissoes)) {
+        throw criarErro('So e permitido criar Encarregados, Professores e membros da Direcao.', 400);
     }
 
     if (dados.Permissoes === PERMISSOES.PROFESSOR && !dados.Iban) {
-        throw criarErro('IBAN é obrigatório para professores.', 400);
+        throw criarErro('IBAN e obrigatorio para professores.', 400);
+    }
+
+    if (dados.Permissoes === PERMISSOES.PROFESSOR && normalizarIdsEstilo(dados.IdsEstiloDanca).length === 0) {
+        throw criarErro('Define pelo menos um estilo para o professor.', 400);
     }
 
     const plainPassword = dados.PalavraPasse || dados.PalavraPasseHash || '';
     if (!plainPassword) {
-        throw criarErro('PalavraPasse é obrigatória.', 400);
+        throw criarErro('PalavraPasse e obrigatoria.', 400);
     }
 
     const hash = hashPassword(plainPassword);
@@ -139,20 +148,24 @@ const criarUtilizador = async (dados) => {
 
 const atualizarUtilizador = async (idUtilizador, dados) => {
     if (!idUtilizador) {
-        throw criarErro('IdUtilizador é obrigatório.', 400);
+        throw criarErro('IdUtilizador e obrigatorio.', 400);
     }
 
     validarCamposBase(dados);
 
     const utilizadorAtual = await userRepository.findById(idUtilizador);
     if (!utilizadorAtual) {
-        throw criarErro('Utilizador não encontrado.', 404);
+        throw criarErro('Utilizador nao encontrado.', 404);
     }
 
     validarPermissaoGerivel(utilizadorAtual.Permissoes);
 
     if (utilizadorAtual.Permissoes === PERMISSOES.PROFESSOR && !dados.Iban) {
-        throw criarErro('IBAN é obrigatório para professores.', 400);
+        throw criarErro('IBAN e obrigatorio para professores.', 400);
+    }
+
+    if (utilizadorAtual.Permissoes === PERMISSOES.PROFESSOR && normalizarIdsEstilo(dados.IdsEstiloDanca).length === 0) {
+        throw criarErro('Define pelo menos um estilo para o professor.', 400);
     }
 
     const plainPassword = dados.PalavraPasse || '';
@@ -176,12 +189,12 @@ const atualizarUtilizador = async (idUtilizador, dados) => {
 
 const atualizarEstadoUtilizador = async (idUtilizador, estaAtivo) => {
     if (!idUtilizador) {
-        throw criarErro('IdUtilizador é obrigatório.', 400);
+        throw criarErro('IdUtilizador e obrigatorio.', 400);
     }
 
     const utilizadorAtual = await userRepository.findById(idUtilizador);
     if (!utilizadorAtual) {
-        throw criarErro('Utilizador não encontrado.', 404);
+        throw criarErro('Utilizador nao encontrado.', 404);
     }
 
     validarPermissaoGerivel(utilizadorAtual.Permissoes);
@@ -193,23 +206,27 @@ const atualizarEstadoUtilizador = async (idUtilizador, estaAtivo) => {
 
 const autenticarUtilizador = async (email, palavraPasse) => {
     if (!email || !palavraPasse) {
-        throw criarErro('Email e palavra-passe são obrigatórios.', 400);
+        throw criarErro('Email e palavra-passe sao obrigatorios.', 400);
     }
 
     const utilizador = await userRepository.findByEmail(email);
 
     if (!utilizador) {
-        throw criarErro('Credenciais inválidas.', 401);
+        throw criarErro('Credenciais invalidas.', 401);
     }
 
     if (!utilizador.EstaAtivo) {
-        throw criarErro('Conta desativada. Contacte a direção.', 403);
+        throw criarErro('Conta desativada. Contacte a direcao.', 403);
+    }
+
+    if (!permissoesDePortalAtivas.includes(utilizador.Permissoes)) {
+        throw criarErro('O perfil de Aluno ja nao esta disponivel no portal. Utilize a conta do Encarregado.', 403);
     }
 
     const hashDaEntrada = hashPassword(palavraPasse);
 
     if (hashDaEntrada !== utilizador.PalavraPasseHash) {
-        throw criarErro('Credenciais inválidas.', 401);
+        throw criarErro('Credenciais invalidas.', 401);
     }
 
     const token = jwt.sign(

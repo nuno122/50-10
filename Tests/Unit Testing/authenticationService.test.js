@@ -40,6 +40,19 @@ describe('Authentication Service', () => {
                 .toThrow('Credenciais invalidas.');
         });
 
+        it('deve emitir erro 403 quando a conta esta desativada', async () => {
+            userRepository.findByEmail.mockResolvedValue({
+                IdUtilizador: 1,
+                Email: 'inativo@teste.com',
+                PalavraPasseHash: hashPassword('senhaCerta123'),
+                EstaAtivo: false
+            });
+
+            await expect(authenticationService.login('inativo@teste.com', 'senhaCerta123'))
+                .rejects
+                .toThrow('Conta desativada. Contacte a direcao.');
+        });
+
         it('deve processar o login e devolver um token de 8h quando as credenciais estiverem corretas', async () => {
             const passwordCerta = 'senhaCerta123';
 

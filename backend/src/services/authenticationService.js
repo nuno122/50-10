@@ -25,6 +25,10 @@ const login = async (email, password) => {
         throw criarErro('Credenciais invalidas.', 401);
     }
 
+    if (utilizador.EstaAtivo === false) {
+        throw criarErro('Conta desativada. Contacte a direcao.', 403);
+    }
+
     const passwordHash = hashPassword(password);
     const storedPassword = String(utilizador.PalavraPasseHash || '');
     const passwordValida = storedPassword === passwordHash || storedPassword === password;

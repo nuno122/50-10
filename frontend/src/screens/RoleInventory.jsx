@@ -1,8 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import { PERMISSOES, ROLE_LABELS } from '../utils/permissions';
-import { getAlugueres, getInventario, solicitarExtensaoAluguer } from '../services/api';
+import { criarArtigo, editarArtigo, getAlugueres, getInventario, solicitarExtensaoAluguer } from '../services/api';
 import { resolveInventoryImageUrl } from '../utils/imagePaths';
+
+const emptyAdForm = {
+    Nome: '',
+    CustoPorDia: '',
+    ImagemPath: '',
+    EstadoArtigo: true
+};
 
 const formatCurrency = (value) => new Intl.NumberFormat('pt-PT', {
     style: 'currency',
@@ -50,19 +58,16 @@ const getRentalItems = (rental) => (
 );
 
 const getRoleSubtitle = (permission) => {
-    if (permission === PERMISSOES.ALUNO) {
-        return 'Consulta o inventario disponivel da escola e acompanha os teus alugueres reais.';
-    }
-
     if (permission === PERMISSOES.PROFESSOR) {
-        return 'Consulta os artigos disponiveis e acompanha os alugueres associados a esta conta.';
+        return 'Publica anuncios, consulta o marketplace e acompanha os alugueres associados a esta conta.';
     }
 
-    return 'Consulta o inventario da escola e acompanha os alugueres reais da tua conta.';
+    return 'Consulta o marketplace, publica anuncios e acompanha os alugueres reais da tua conta.';
 };
 
 const RoleInventory = () => {
     const { user } = useAuth();
+    const { notify, refreshSnapshot } = useNotifications();
     const [inventory, setInventory] = useState([]);
     const [rentals, setRentals] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -71,6 +76,10 @@ const RoleInventory = () => {
     const [selectedRental, setSelectedRental] = useState(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [isExtensionOpen, setIsExtensionOpen] = useState(false);
+    const [isAdModalOpen, setIsAdModalOpen] = useState(false);
+    const [editingAd, setEditingAd] = useState(null);
+    const [adFormData, setAdFormData] = useState(emptyAdForm);
+    const [selectedImageFile, setSelectedImageFile] = useState(null);
     const [extensionDate, setExtensionDate] = useState('');
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -102,6 +111,17 @@ const RoleInventory = () => {
         loadData();
     }, []);
 
+    const selectedImagePreviewUrl = useMemo(() => (
+        selectedImageFile ? URL.createObjectURL(selectedImageFile) : ''
+    ), [selectedImageFile]);
+    const previewImageUrl = selectedImagePreviewUrl || resolveInventoryImageUrl(adFormData.ImagemPath);
+
+    useEffect(() => () => {
+        if (selectedImagePreviewUrl) {
+            URL.revokeObjectURL(selectedImagePreviewUrl);
+        }
+    }, [selectedImagePreviewUrl]);
+
     const ownRentals = useMemo(() => (
         rentals.filter((rental) => rental.IdUtilizador === user?.Id || rental.Utilizador?.IdUtilizador === user?.Id)
     ), [rentals, user]);
@@ -113,6 +133,10 @@ const RoleInventory = () => {
     const pendingRentals = useMemo(() => (
         ownRentals.filter((rental) => isPendingRental(rental))
     ), [ownRentals]);
+
+    const ownPublishedAds = useMemo(() => (
+        inventory.filter((item) => item.IdUtilizadorCriador === user?.Id || item.Criador?.IdUtilizador === user?.Id)
+    ), [inventory, user]);
 
     const filteredInventory = useMemo(() => (
         inventory.filter((item) => {
@@ -132,6 +156,29 @@ const RoleInventory = () => {
     const availableCount = useMemo(() => (
         inventory.filter((item) => item.EstadoArtigo !== false && getTotalStock(item) > 0).length
     ), [inventory]);
+
+    const openCreateAd = () => {
+        setEditingAd(null);
+        setAdFormData(emptyAdForm);
+        setSelectedImageFile(null);
+        setIsAdModalOpen(true);
+        setError('');
+        setFeedback('');
+    };
+
+    const openEditAd = (item) => {
+        setEditingAd(item);
+        setAdFormData({
+            Nome: item.Nome || '',
+            CustoPorDia: item.CustoPorDia ?? '',
+            ImagemPath: item.ImagemPath || '',
+            EstadoArtigo: item.EstadoArtigo !== false
+        });
+        setSelectedImageFile(null);
+        setIsAdModalOpen(true);
+        setError('');
+        setFeedback('');
+    };
 
     const openItemDetails = (item) => {
         setSelectedItem(item);
@@ -156,6 +203,11 @@ const RoleInventory = () => {
 
         try {
             await solicitarExtensaoAluguer(selectedRental.IdAluguer, extensionDate);
+            notify({
+                title: 'Pedido de extensao enviado',
+                message: 'O pedido de extensao foi enviado para aprovacao.',
+                tone: 'success'
+            });
             setFeedback('Pedido de extensao enviado com sucesso para aprovacao.');
             setIsExtensionOpen(false);
             setSelectedRental(null);
@@ -168,18 +220,81 @@ const RoleInventory = () => {
         }
     };
 
+    const handleImageChange = (event) => {
+        const file = event.target.files?.[0] || null;
+
+        setSelectedImageFile(file);
+        if (file) {
+            setAdFormData((current) => ({ ...current, ImagemPath: file.name }));
+        }
+    };
+
+    const handleSaveAd = async () => {
+        if (!adFormData.Nome.trim() || !adFormData.CustoPorDia) {
+            setError('Indica pelo menos o nome do artigo e o custo por dia.');
+            return;
+        }
+
+        setSubmitting(true);
+        setError('');
+
+        try {
+            const payload = {
+                Nome: adFormData.Nome,
+                CustoPorDia: adFormData.CustoPorDia,
+                ImagemPath: adFormData.ImagemPath,
+                EstadoArtigo: adFormData.EstadoArtigo,
+                ImagemFile: selectedImageFile
+            };
+
+            if (editingAd) {
+                await editarArtigo(editingAd.IdArtigo, payload);
+                await refreshSnapshot();
+                notify({
+                    title: 'Anuncio atualizado',
+                    message: `${adFormData.Nome || 'O anuncio'} foi atualizado no marketplace.`,
+                    tone: 'success'
+                });
+                setFeedback('Anuncio atualizado com sucesso.');
+            } else {
+                await criarArtigo(payload);
+                await refreshSnapshot();
+                notify({
+                    title: 'Anuncio publicado',
+                    message: `${adFormData.Nome || 'O anuncio'} ficou disponivel no marketplace.`,
+                    tone: 'success'
+                });
+                setFeedback('Anuncio publicado com sucesso.');
+            }
+
+            setIsAdModalOpen(false);
+            setEditingAd(null);
+            setAdFormData(emptyAdForm);
+            setSelectedImageFile(null);
+            await loadData();
+        } catch (err) {
+            setError(err.message || 'Nao foi possivel guardar o anuncio.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     return (
         <div className="inventory-page">
             <div className="inventory-header">
                 <div>
                     <p className="inventory-eyebrow">{ROLE_LABELS[user?.Permissoes] || 'Portal'}</p>
-                    <h1>Inventario e Aluguer</h1>
+                    <h1>Marketplace e Aluguer</h1>
                     <p className="inventory-subtitle">{getRoleSubtitle(user?.Permissoes)}</p>
                 </div>
+
+                <button type="button" className="inventory-primary-button" onClick={openCreateAd}>
+                    Publicar anuncio
+                </button>
             </div>
 
             <div className="inventory-banner inventory-banner--info">
-                Os novos alugueres continuam a ser pedidos presencialmente na secretaria. Nesta pagina podes consultar o stock real e gerir extensoes dos teus alugueres.
+                Os anuncios do marketplace mostram o email de quem publicou. Os alugueres e pedidos de extensao continuam a ser geridos neste mesmo espaco.
             </div>
 
             {feedback && <div className="inventory-banner inventory-banner--success">{feedback}</div>}
@@ -206,6 +321,13 @@ const RoleInventory = () => {
                         <strong>{ownRentals.length}</strong>
                     </div>
                     <span>AL</span>
+                </article>
+                <article className="inventory-card inventory-stat-card">
+                    <div>
+                        <p>Meus Anuncios</p>
+                        <strong>{ownPublishedAds.length}</strong>
+                    </div>
+                    <span>AD</span>
                 </article>
             </div>
 
@@ -419,6 +541,10 @@ const RoleInventory = () => {
                                         <span>Tamanhos</span>
                                         <strong>{(item.TamanhoArtigo || []).length}</strong>
                                     </div>
+                                    <div className="inventory-meta-row">
+                                        <span>Email do anunciante</span>
+                                        <strong>{item.Criador?.Email || 'Anuncio legacy'}</strong>
+                                    </div>
                                 </div>
 
                                 <div className="inventory-sizes">
@@ -437,9 +563,16 @@ const RoleInventory = () => {
                                     )}
                                 </div>
 
-                                <button type="button" className="inventory-secondary-button" onClick={() => openItemDetails(item)}>
-                                    Ver detalhes
-                                </button>
+                                <div className="inventory-modal-actions inventory-modal-actions--inline">
+                                    <button type="button" className="inventory-secondary-button" onClick={() => openItemDetails(item)}>
+                                        Ver detalhes
+                                    </button>
+                                    {(item.IdUtilizadorCriador === user?.Id || item.Criador?.IdUtilizador === user?.Id) && (
+                                        <button type="button" className="inventory-primary-button" onClick={() => openEditAd(item)}>
+                                            Editar anuncio
+                                        </button>
+                                    )}
+                                </div>
                             </article>
                         );
                     })}
@@ -494,6 +627,10 @@ const RoleInventory = () => {
                                 <div className="inventory-meta-row">
                                     <span>Condicao</span>
                                     <strong>{getConditionSummary(selectedItem)}</strong>
+                                </div>
+                                <div className="inventory-meta-row">
+                                    <span>Email do anunciante</span>
+                                    <strong>{selectedItem.Criador?.Email || 'Anuncio legacy'}</strong>
                                 </div>
                             </div>
                         </div>
@@ -569,6 +706,84 @@ const RoleInventory = () => {
                             </button>
                             <button type="button" className="inventory-primary-button" onClick={handleSubmitExtension} disabled={submitting}>
                                 {submitting ? 'A enviar...' : 'Enviar pedido'}
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            )}
+
+            {isAdModalOpen && (
+                <div className="inventory-modal-backdrop" onClick={() => setIsAdModalOpen(false)}>
+                    <section className="inventory-modal inventory-modal--narrow" onClick={(event) => event.stopPropagation()}>
+                        <div className="inventory-modal-header">
+                            <div>
+                                <p className="inventory-eyebrow">{editingAd ? 'Editar anuncio' : 'Novo anuncio'}</p>
+                                <h2>{editingAd ? adFormData.Nome : 'Publicar anuncio'}</h2>
+                            </div>
+                            <button type="button" className="inventory-close" onClick={() => setIsAdModalOpen(false)}>
+                                Fechar
+                            </button>
+                        </div>
+
+                        <div className="inventory-form">
+                            <label>
+                                <span>Nome do artigo</span>
+                                <input
+                                    value={adFormData.Nome}
+                                    onChange={(event) => setAdFormData((current) => ({ ...current, Nome: event.target.value }))}
+                                    placeholder="Ex: Vestido contemporaneo"
+                                />
+                            </label>
+
+                            <label>
+                                <span>Custo por dia (EUR)</span>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={adFormData.CustoPorDia}
+                                    onChange={(event) => setAdFormData((current) => ({ ...current, CustoPorDia: event.target.value }))}
+                                    placeholder="Ex: 8"
+                                />
+                            </label>
+
+                            <label>
+                                <span>Imagem</span>
+                                <input type="file" accept="image/*" onChange={handleImageChange} />
+                                {adFormData.ImagemPath && (
+                                    <small className="inventory-field-hint">
+                                        {selectedImageFile ? `Selecionada: ${selectedImageFile.name}` : `Atual: ${adFormData.ImagemPath}`}
+                                    </small>
+                                )}
+                            </label>
+
+                            {previewImageUrl && (
+                                <div className="inventory-form-note">
+                                    <p>Pre-visualizacao da imagem.</p>
+                                    <div className="inventory-detail-media">
+                                        <img className="inventory-detail-image" src={previewImageUrl} alt={adFormData.Nome || 'Pre-visualizacao do anuncio'} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {editingAd && (
+                                <label className="inventory-switch">
+                                    <span>Anuncio ativo</span>
+                                    <input
+                                        type="checkbox"
+                                        checked={adFormData.EstadoArtigo !== false}
+                                        onChange={(event) => setAdFormData((current) => ({ ...current, EstadoArtigo: event.target.checked }))}
+                                    />
+                                </label>
+                            )}
+                        </div>
+
+                        <div className="inventory-modal-actions">
+                            <button type="button" className="inventory-secondary-button" onClick={() => setIsAdModalOpen(false)}>
+                                Cancelar
+                            </button>
+                            <button type="button" className="inventory-primary-button" onClick={handleSaveAd} disabled={submitting}>
+                                {submitting ? 'A guardar...' : editingAd ? 'Guardar anuncio' : 'Publicar anuncio'}
                             </button>
                         </div>
                     </section>

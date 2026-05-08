@@ -91,14 +91,17 @@ describe('Booking Service', () => {
             bookingRepo.findAulaWithMarcacoes.mockResolvedValue(buildMockAula());
             bookingRepo.findExisting.mockResolvedValue(null);
             bookingRepo.create.mockResolvedValue({ IdMarcacao: 1, IdAluno: 1, IdAula: 1 });
-            bookingRepo.criarPagamento.mockResolvedValue({});
 
             const resultado = await bookingService.criarMarcacao(1, 1);
 
             expect(resultado.mensagem).toBe('Lugar reservado!');
             expect(resultado.marcacao).toBeDefined();
             expect(bookingRepo.create).toHaveBeenCalledWith(1, 1);
+<<<<<<< HEAD
             expect(bookingRepo.criarPagamento).toHaveBeenCalledWith(1, 15, expect.any(Date));
+=======
+            expect(bookingRepo.criarPagamento).not.toHaveBeenCalled();
+>>>>>>> 18118ca0d054dec66f49986c273baa96687f735c
         });
 
         it('deve propagar a falha se o registo da transacao falhar na base de dados', async () => {
@@ -130,6 +133,7 @@ describe('Booking Service', () => {
                 IdMarcacao: 1,
                 IdAluno: 1,
                 EstaAtivo: true,
+                EstadoCancelamento: 'SemPedido',
                 Aula: {
                     Data: dataAulaLonga,
                     HoraInicio: new Date(dataAulaLonga.setHours(10, 0, 0, 0))
@@ -150,19 +154,24 @@ describe('Booking Service', () => {
                 IdMarcacao: 1,
                 IdAluno: 1,
                 EstaAtivo: true,
+                EstadoCancelamento: 'SemPedido',
                 Aula: {
                     Data: dataAulaCurta,
                     HoraInicio: new Date(dataAulaCurta.setHours(10, 0, 0, 0))
                 }
             });
-            bookingRepo.cancelar.mockResolvedValue({});
+            bookingRepo.RegistarPedidoCancelamento.mockResolvedValue({});
 
             const resultado = await bookingService.cancelarMarcacao(1, 1, 'Imprevisto');
 
             expect(resultado.sucesso).toBe(false);
             expect(resultado.mensagem).toMatch(/Prazo de 24h expirou/);
+<<<<<<< HEAD
             expect(bookingRepo.RegistarPedidoCancelamento).toHaveBeenCalledWith(1, false);
             expect(bookingRepo.cancelar).not.toHaveBeenCalled();
+=======
+            expect(bookingRepo.RegistarPedidoCancelamento).toHaveBeenCalledWith(1, 'Imprevisto');
+>>>>>>> 18118ca0d054dec66f49986c273baa96687f735c
         });
     });
 });

@@ -4,13 +4,37 @@ const prisma = new PrismaClient();
 const findAllEstudios = async () => {
     return await prisma.estudio.findMany({
         include: {
-            EstudioEstilo: true
+            EstudioEstilo: {
+                include: {
+                    EstiloDanca: true
+                }
+            }
         }
     });
 };
 
 const findAllEstilos = async () => {
     return await prisma.estiloDanca.findMany();
+};
+
+const findAllProfessores = async () => {
+    return await prisma.professor.findMany({
+        include: {
+            Utilizador: {
+                select: {
+                    IdUtilizador: true,
+                    NomeCompleto: true,
+                    Email: true,
+                    EstaAtivo: true
+                }
+            },
+            EstiloProfessor: {
+                include: {
+                    EstiloDanca: true
+                }
+            }
+        }
+    });
 };
 
 const findAllPaises = async () => {
@@ -26,6 +50,7 @@ const findAllDistritos = async () => {
 module.exports = {
     findAllEstudios,
     findAllEstilos,
+    findAllProfessores,
     findAllPaises,
     findAllDistritos
 };

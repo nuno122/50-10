@@ -22,6 +22,17 @@ const getEstilos = async (req, res) => {
     }
 };
 
+const getProfessores = async (req, res) => {
+    try {
+        const professores = await masterService.listarProfessores();
+        res.json(professores);
+    } catch (erro) {
+        console.error("Erro em masterController.getProfessores:", erro);
+        const status = erro.statusCode || 500;
+        res.status(status).json({ erro: erro.message || "Erro interno do servidor." });
+    }
+};
+
 const getGeografia = async (req, res) => {
     try {
         const geografia = await masterService.listarGeografia();
@@ -36,5 +47,6 @@ const getGeografia = async (req, res) => {
 module.exports = {
     getEstudios,
     getEstilos,
+    getProfessores,
     getGeografia
 };

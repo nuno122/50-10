@@ -1,6 +1,21 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+const normalizeDateOnly = (value) => {
+    const dateOnlyMatch = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dateOnlyMatch) {
+        const [, year, month, day] = dateOnlyMatch;
+        return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 0, 0, 0, 0));
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return date;
+    }
+
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0, 0));
+};
+
 const GetAulasDisponiveis = async () => {
     return await prisma.aula.findMany({
         include: {
@@ -42,7 +57,27 @@ const classRepository = {
         return await prisma.aula.findMany({
             where: {
                 IdEstudio: idEstudio,
-                Data: new Date(data)
+                Data: normalizeDateOnly(data),
+                EstaAtivo: true
+            }
+        });
+    },
+
+    findProfessorClassesByDate: async (idProfessor, data) => {
+        return await prisma.aula.findMany({
+            where: {
+                IdProfessor: idProfessor,
+                Data: normalizeDateOnly(data),
+                EstaAtivo: true
+            }
+        });
+    },
+
+    findClassesByDate: async (data) => {
+        return await prisma.aula.findMany({
+            where: {
+                Data: normalizeDateOnly(data),
+                EstaAtivo: true
             }
         });
     },
@@ -51,7 +86,7 @@ const classRepository = {
         return await prisma.disponibilidade.findMany({
             where: {
                 IdProfessor: idProfessor,
-                Data: new Date(data)
+                Data: normalizeDateOnly(data)
             },
             orderBy: {
                 HoraInicio: 'asc'
@@ -62,7 +97,7 @@ const classRepository = {
     create: async (dados) => {
         return await prisma.aula.create({
             data: {
-                Data: new Date(dados.Data),
+                Data: normalizeDateOnly(dados.Data),
                 HoraInicio: new Date(dados.HoraInicio),
                 HoraFim: new Date(dados.HoraFim),
                 CapacidadeMaxima: dados.CapacidadeMaxima,
@@ -71,6 +106,7 @@ const classRepository = {
                 ValidacaoDirecao: false,
                 EstaAtivo: true,
                 TipoAula: dados.TipoAula || 'Regular',
+                OrigemAula: dados.OrigemAula || 'Direcao',
                 IdProfessor: dados.IdProfessor,
                 IdEstudio: dados.IdEstudio,
                 IdEstiloDanca: dados.IdEstiloDanca
@@ -125,7 +161,8 @@ const classRepository = {
                         EstaAtivo: true
                     },
                     include: {
-                        Aluno: true
+                        Aluno: true,
+                        Pagamento: true
                     }
                 }
             }
@@ -137,7 +174,11 @@ const classRepository = {
         return await prisma.professor.findUnique({
             where: { IdUtilizador: idProfessor },
             include: {
-                EstiloProfessor: true
+                EstiloProfessor: {
+                    include: {
+                        EstiloDanca: true
+                    }
+                }
             }
         });
     },
@@ -146,7 +187,23 @@ const classRepository = {
         return await prisma.estudio.findUnique({
             where: { IdEstudio: idEstudio },
             include: {
-                EstudioEstilo: true
+                EstudioEstilo: {
+                    include: {
+                        EstiloDanca: true
+                    }
+                }
+            }
+        });
+    },
+
+    findAllStudios: async () => {
+        return await prisma.estudio.findMany({
+            include: {
+                EstudioEstilo: {
+                    include: {
+                        EstiloDanca: true
+                    }
+                }
             }
         });
     },

@@ -4,7 +4,8 @@ const getDisponibilidades = async (req, res) => {
     try {
         const disponibilidades = await availabilityService.listarDisponibilidades({
             from: req.query.from,
-            to: req.query.to
+            to: req.query.to,
+            idProfessor: req.query.idProfessor
         });
         res.json(disponibilidades);
     } catch (erro) {

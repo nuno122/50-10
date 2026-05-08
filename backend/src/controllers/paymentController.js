@@ -52,6 +52,10 @@ const pagar = async (req, res) => {
             return res.status(400).json({ erro: 'Este pagamento ja se encontra liquidado.' });
         }
 
+        if (pagamento.EstadoPagamento === 'Cancelado') {
+            return res.status(400).json({ erro: 'Nao e possivel liquidar um pagamento cancelado.' });
+        }
+
         const pagamentoAtualizado = await paymentRepository.registarRecebimento(id);
 
         res.json({

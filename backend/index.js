@@ -11,6 +11,8 @@ const authenticationRoutes = require('./src/routes/authenticationRoutes');
 const rentalRoutes = require('./src/routes/rentalRoutes');
 const availabilityRoutes = require('./src/routes/availabilityRoutes');
 const masterRoutes = require('./src/routes/masterRoutes');
+const privateLessonRequestRoutes = require('./src/routes/privateLessonRequestRoutes');
+const eventRoutes = require('./src/routes/eventRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -30,9 +32,11 @@ app.use('/api/aulas', classRoutes);
 app.use('/api/pagamentos', require('./src/routes/paymentRoutes'));
 
 app.use('/api/marcacoes', bookingRoutes);
+app.use('/api/pedidos-aula-privada', privateLessonRequestRoutes);
 app.use('/api/autenticacao', authenticationRoutes);
 app.use('/api/alugueres', rentalRoutes);
 app.use('/api/disponibilidades', availabilityRoutes);
+app.use('/api/eventos', eventRoutes);
 
 app.use('/api/master', masterRoutes);
 

@@ -1,8 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
     cancelarAulaProfessor,
+    confirmarPedidoAulaPrivadaProfessor,
+    confirmarAulaProfessor,
     getAulas,
+    getPedidosAulaPrivadaProfessor,
     getMinhasDisponibilidades,
+    rejeitarPedidoAulaPrivadaProfessor,
     guardarMinhasDisponibilidades
 } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -124,6 +128,23 @@ const getDateKey = (value) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '';
     return toDateInputValue(date);
+};
+
+const buildLessonDateTime = (dateValue, timeValue) => {
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return new Date(0);
+
+    const time = extractTime(timeValue);
+    const [hours, minutes] = time.split(':').map(Number);
+    date.setHours(Number(hours || 0), Number(minutes || 0), 0, 0);
+    return date;
+};
+
+const getLessonCompletionLabel = (lesson, now = new Date()) => {
+    if (lesson.confirmed) return 'Concluida';
+    if (lesson.endDateTime > now) return 'Agendada';
+    if (lesson.students.length === 0) return 'Expirada sem inscritos';
+    return 'Por concluir';
 };
 
 const buildWeeklyDates = (weekday, startDate, endDate) => {
@@ -465,12 +486,13 @@ const getInitialImportForm = () => {
     };
 };
 
-const TeacherSchedule = () => {
+const TeacherSchedule = ({ initialTab = 'lessons' }) => {
     const { user } = useAuth();
     const { notify, refreshSnapshot } = useNotifications();
-    const [activeTab, setActiveTab] = useState('lessons');
+    const [activeTab, setActiveTab] = useState(initialTab);
     const [availabilityMode, setAvailabilityMode] = useState('calendar');
     const [lessons, setLessons] = useState([]);
+    const [privateRequests, setPrivateRequests] = useState([]);
     const [savedAvailability, setSavedAvailability] = useState([]);
     const [monthlyMonth, setMonthlyMonth] = useState(getMonthInputValue(new Date()));
     const [monthlyDraft, setMonthlyDraft] = useState([]);
@@ -499,9 +521,10 @@ const TeacherSchedule = () => {
         setError('');
 
         try {
-            const [aulas, disponibilidades] = await Promise.all([
+            const [aulas, disponibilidades, pedidosPrivados] = await Promise.all([
                 getAulas(),
-                getMinhasDisponibilidades()
+                getMinhasDisponibilidades(),
+                getPedidosAulaPrivadaProfessor()
             ]);
 
             const ownLessons = aulas
@@ -510,12 +533,15 @@ const TeacherSchedule = () => {
                     id: lesson.IdAula,
                     title: lesson.EstiloDanca?.Nome || 'Aula',
                     date: formatDate(lesson.Data),
+                    endDateTime: buildLessonDateTime(lesson.Data, lesson.HoraFim),
                     time: `${extractTime(lesson.HoraInicio) || '--:--'} - ${extractTime(lesson.HoraFim) || '--:--'}`,
                     studio: lesson.Estudio?.Numero ? `Estudio ${lesson.Estudio.Numero}` : lesson.IdEstudio,
                     students: (lesson.Marcacao || []).map((booking) => ({
                         id: booking.IdAluno,
                         name: booking.Aluno?.Utilizador?.NomeCompleto || booking.IdAluno
                     })),
+                    confirmed: Boolean(lesson.ConfirmacaoProfessor),
+                    validated: Boolean(lesson.ValidacaoDirecao),
                     status: lesson.EstaAtivo === false ? 'cancelled' : 'scheduled'
                 }));
 
@@ -525,6 +551,7 @@ const TeacherSchedule = () => {
 
             setLessons(ownLessons);
             setSavedAvailability(availabilityView);
+            setPrivateRequests(pedidosPrivados || []);
         } catch (err) {
             setError(err.message || 'Nao foi possivel carregar os dados do professor.');
         } finally {
@@ -535,6 +562,10 @@ const TeacherSchedule = () => {
     useEffect(() => {
         loadData();
     }, [user?.Id]);
+
+    useEffect(() => {
+        setActiveTab(initialTab);
+    }, [initialTab]);
 
     useEffect(() => {
         setMonthlyDraft(buildMonthlyDraft(monthlyMonth, savedAvailability));
@@ -548,6 +579,10 @@ const TeacherSchedule = () => {
             lesson.studio.toLowerCase().includes(term)
         ));
     }, [lessons, searchQuery]);
+
+    const pendingPrivateRequests = useMemo(() => (
+        privateRequests.filter((request) => request.EstadoPedido === 'PendenteProfessor')
+    ), [privateRequests]);
 
     const monthlyDraftWithSelection = useMemo(() => {
         try {
@@ -616,6 +651,69 @@ const TeacherSchedule = () => {
             await loadData();
         } catch (err) {
             setError(err.message || 'Nao foi possivel cancelar a aula.');
+        } finally {
+            setSavingLesson(false);
+        }
+    };
+
+    const handleConfirmLesson = async (lesson) => {
+        setSavingLesson(true);
+        setError('');
+
+        try {
+            await confirmarAulaProfessor(lesson.id);
+            await refreshSnapshot();
+            notify({
+                title: 'Conclusao confirmada',
+                message: `${lesson.title} foi marcada como concluida.`,
+                tone: 'success'
+            });
+            setFeedback('Conclusao da aula confirmada. A Direcao ja pode validar no Financeiro.');
+            await loadData();
+        } catch (err) {
+            setError(err.message || 'Nao foi possivel confirmar a aula.');
+        } finally {
+            setSavingLesson(false);
+        }
+    };
+
+    const handleConfirmPrivateRequest = async (request) => {
+        setSavingLesson(true);
+        setError('');
+
+        try {
+            await confirmarPedidoAulaPrivadaProfessor(request.IdPedidoAulaPrivada);
+            await refreshSnapshot();
+            notify({
+                title: 'Pedido de Coaching confirmado',
+                message: `${request.EstiloDanca?.Nome || 'O pedido'} segue agora para validacao da Direcao.`,
+                tone: 'success'
+            });
+            setFeedback('Disponibilidade confirmada. O pedido de Coaching segue para a Direcao validar o estudio.');
+            await loadData();
+        } catch (err) {
+            setError(err.message || 'Nao foi possivel confirmar o pedido de Coaching.');
+        } finally {
+            setSavingLesson(false);
+        }
+    };
+
+    const handleRejectPrivateRequest = async (request) => {
+        setSavingLesson(true);
+        setError('');
+
+        try {
+            await rejeitarPedidoAulaPrivadaProfessor(request.IdPedidoAulaPrivada, 'Professor indisponivel no horario pedido.');
+            await refreshSnapshot();
+            notify({
+                title: 'Pedido de Coaching rejeitado',
+                message: `${request.EstiloDanca?.Nome || 'O pedido'} foi rejeitado por indisponibilidade.`,
+                tone: 'info'
+            });
+            setFeedback('Pedido de Coaching rejeitado.');
+            await loadData();
+        } catch (err) {
+            setError(err.message || 'Nao foi possivel rejeitar o pedido de Coaching.');
         } finally {
             setSavingLesson(false);
         }
@@ -1002,6 +1100,13 @@ const TeacherSchedule = () => {
                 >
                     Disponibilidade
                 </button>
+                <button
+                    type="button"
+                    className={`teacher-tab ${activeTab === 'privateRequests' ? 'teacher-tab--active' : ''}`}
+                    onClick={() => setActiveTab('privateRequests')}
+                >
+                    Pedidos de Coaching
+                </button>
             </div>
 
             {activeTab === 'lessons' && (
@@ -1025,30 +1130,53 @@ const TeacherSchedule = () => {
                         </div>
                     ) : (
                         <div className="teacher-grid">
-                            {filteredLessons.filter((lesson) => lesson.status !== 'cancelled').map((lesson) => (
-                                <article key={lesson.id} className="teacher-card">
-                                    <div className="teacher-card-header">
-                                        <span className="teacher-badge teacher-badge--primary">Aula</span>
-                                        <h2>{lesson.title}</h2>
-                                    </div>
+                            {filteredLessons.filter((lesson) => lesson.status !== 'cancelled').map((lesson) => {
+                                const now = new Date();
+                                const lessonEnded = lesson.endDateTime <= now;
+                                const hasStudents = lesson.students.length > 0;
+                                const canConfirmCompletion = !lesson.confirmed && lessonEnded && hasStudents;
+                                const canCancelLesson = !lesson.confirmed && !lessonEnded;
+                                const completionLabel = getLessonCompletionLabel(lesson, now);
 
-                                    <div className="teacher-card-body">
-                                        <p>{lesson.date}</p>
-                                        <p>{lesson.time}</p>
-                                        <p>{lesson.studio}</p>
-                                        <p>{lesson.students.length} aluno(s) inscrito(s)</p>
-                                    </div>
+                                return (
+                                    <article key={lesson.id} className="teacher-card">
+                                        <div className="teacher-card-header">
+                                            <span className="teacher-badge teacher-badge--primary">
+                                                {completionLabel}
+                                            </span>
+                                            <h2>{lesson.title}</h2>
+                                        </div>
 
-                                    <div className="teacher-card-actions">
-                                        <button type="button" className="teacher-button teacher-button--ghost" onClick={() => openStudentsModal(lesson)}>
-                                            Ver Inscritos
-                                        </button>
-                                        <button type="button" className="teacher-button teacher-button--danger" onClick={() => openCancelModal(lesson)}>
-                                            Cancelar Aula
-                                        </button>
-                                    </div>
-                                </article>
-                            ))}
+                                        <div className="teacher-card-body">
+                                            <p>{lesson.date}</p>
+                                            <p>{lesson.time}</p>
+                                            <p>{lesson.studio}</p>
+                                            <p>{lesson.students.length} aluno(s) inscrito(s)</p>
+                                        </div>
+
+                                        <div className="teacher-card-actions">
+                                            <button type="button" className="teacher-button teacher-button--ghost" onClick={() => openStudentsModal(lesson)}>
+                                                Ver Inscritos
+                                            </button>
+                                            {canConfirmCompletion && (
+                                                <button
+                                                    type="button"
+                                                    className="teacher-button teacher-button--primary"
+                                                    onClick={() => handleConfirmLesson(lesson)}
+                                                    disabled={savingLesson}
+                                                >
+                                                    {savingLesson ? 'A confirmar...' : 'Confirmar Conclusao'}
+                                                </button>
+                                            )}
+                                            {canCancelLesson && (
+                                                <button type="button" className="teacher-button teacher-button--danger" onClick={() => openCancelModal(lesson)}>
+                                                    Cancelar Aula
+                                                </button>
+                                            )}
+                                        </div>
+                                    </article>
+                                );
+                            })}
 
                             {filteredLessons.filter((lesson) => lesson.status === 'cancelled').map((lesson) => (
                                 <article key={lesson.id} className="teacher-card teacher-card--cancelled">
@@ -1059,6 +1187,56 @@ const TeacherSchedule = () => {
                                     <div className="teacher-card-body">
                                         <p>{lesson.date}</p>
                                         <p>{lesson.time}</p>
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {activeTab === 'privateRequests' && (
+                <div className="teacher-section">
+                    {loading ? (
+                        <div className="teacher-empty">
+                            <p className="teacher-empty-title">A carregar pedidos...</p>
+                        </div>
+                    ) : pendingPrivateRequests.length === 0 ? (
+                        <div className="teacher-empty">
+                            <p className="teacher-empty-title">Sem pedidos de Coaching pendentes</p>
+                            <p>Quando um encarregado pedir um Coaching contigo, aparece aqui para confirmares a disponibilidade.</p>
+                        </div>
+                    ) : (
+                        <div className="teacher-grid">
+                            {pendingPrivateRequests.map((request) => (
+                                <article key={request.IdPedidoAulaPrivada} className="teacher-card">
+                                    <div className="teacher-card-header">
+                                        <span className="teacher-badge teacher-badge--primary">A confirmar</span>
+                                        <h2>{request.EstiloDanca?.Nome || 'Coaching'}</h2>
+                                    </div>
+                                    <div className="teacher-card-body">
+                                        <p>{formatDate(request.DataPretendida)} - {extractTime(request.HoraPretendida)}</p>
+                                        <p>{request.DuracaoMinutos} min - {request.CapacidadePretendida} participante(s)</p>
+                                        <p>{request.Aluno?.Utilizador?.NomeCompleto || 'Aluno'}</p>
+                                        {request.Observacoes && <p>{request.Observacoes}</p>}
+                                    </div>
+                                    <div className="teacher-card-actions">
+                                        <button
+                                            type="button"
+                                            className="teacher-button teacher-button--ghost"
+                                            onClick={() => handleRejectPrivateRequest(request)}
+                                            disabled={savingLesson}
+                                        >
+                                            Rejeitar
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="teacher-button teacher-button--primary"
+                                            onClick={() => handleConfirmPrivateRequest(request)}
+                                            disabled={savingLesson}
+                                        >
+                                            Confirmar Disponibilidade
+                                        </button>
                                     </div>
                                 </article>
                             ))}

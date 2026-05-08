@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNotifications } from '../contexts/NotificationContext';
 import { criarArtigo, editarArtigo, getInventario } from '../services/api';
 import { resolveInventoryImageUrl } from '../utils/imagePaths';
 
@@ -22,6 +23,7 @@ const getConditionSummary = (item) => {
 const getFallbackLabel = (name) => String(name || '?').trim().charAt(0).toUpperCase() || '?';
 
 const InventoryManagement = () => {
+    const { notify, refreshSnapshot } = useNotifications();
     const [inventory, setInventory] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
@@ -29,6 +31,7 @@ const InventoryManagement = () => {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [formData, setFormData] = useState(emptyForm);
+    const [selectedImageFile, setSelectedImageFile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
@@ -68,12 +71,22 @@ const InventoryManagement = () => {
 
     const availableCount = inventory.filter((item) => item.EstadoArtigo !== false && (item.TamanhoArtigo || []).some((size) => Number(size.Quantidade || 0) > 0)).length;
     const outOfStockCount = inventory.filter((item) => item.EstadoArtigo !== false && getTotalStock(item) === 0).length;
-    const previewImageUrl = resolveInventoryImageUrl(formData.ImagemPath);
+    const selectedImagePreviewUrl = useMemo(() => (
+        selectedImageFile ? URL.createObjectURL(selectedImageFile) : ''
+    ), [selectedImageFile]);
+    const previewImageUrl = selectedImagePreviewUrl || resolveInventoryImageUrl(formData.ImagemPath);
+
+    useEffect(() => () => {
+        if (selectedImagePreviewUrl) {
+            URL.revokeObjectURL(selectedImagePreviewUrl);
+        }
+    }, [selectedImagePreviewUrl]);
 
     const openCreate = () => {
         setIsCreating(true);
         setSelectedItem(null);
         setFormData(emptyForm);
+        setSelectedImageFile(null);
         setIsDialogOpen(true);
     };
 
@@ -86,7 +99,17 @@ const InventoryManagement = () => {
             ImagemPath: item.ImagemPath || '',
             EstadoArtigo: item.EstadoArtigo !== false
         });
+        setSelectedImageFile(null);
         setIsDialogOpen(true);
+    };
+
+    const handleImageChange = (event) => {
+        const file = event.target.files?.[0] || null;
+
+        setSelectedImageFile(file);
+        if (file) {
+            setFormData((current) => ({ ...current, ImagemPath: file.name }));
+        }
     };
 
     const handleSave = async () => {
@@ -98,20 +121,35 @@ const InventoryManagement = () => {
                 await criarArtigo({
                     Nome: formData.Nome,
                     CustoPorDia: formData.CustoPorDia,
-                    ImagemPath: formData.ImagemPath
+                    ImagemPath: formData.ImagemPath,
+                    ImagemFile: selectedImageFile
+                });
+                await refreshSnapshot();
+                notify({
+                    title: 'Artigo publicado',
+                    message: `${formData.Nome || 'O artigo'} ficou visivel no marketplace.`,
+                    tone: 'success'
                 });
             } else if (selectedItem) {
                 await editarArtigo(selectedItem.IdArtigo, {
                     Nome: formData.Nome,
                     CustoPorDia: formData.CustoPorDia,
                     ImagemPath: formData.ImagemPath,
-                    EstadoArtigo: formData.EstadoArtigo
+                    EstadoArtigo: formData.EstadoArtigo,
+                    ImagemFile: selectedImageFile
+                });
+                await refreshSnapshot();
+                notify({
+                    title: 'Artigo atualizado',
+                    message: `${formData.Nome || 'O artigo'} foi atualizado no marketplace.`,
+                    tone: 'success'
                 });
             }
 
             setIsDialogOpen(false);
             setSelectedItem(null);
             setFormData(emptyForm);
+            setSelectedImageFile(null);
             await loadInventory();
         } catch (err) {
             setError(err.message || 'Nao foi possivel guardar o artigo.');
@@ -127,7 +165,7 @@ const InventoryManagement = () => {
                     <p className="inventory-eyebrow">Direcao</p>
                     <h1>Gestao de Inventario</h1>
                     <p className="inventory-subtitle">
-                        Consulta artigos, imagens e tamanhos atualmente disponiveis.
+                        Acompanha os anuncios publicados no marketplace e o stock associado.
                     </p>
                 </div>
 
@@ -232,6 +270,10 @@ const InventoryManagement = () => {
                                         <span>Total em stock</span>
                                         <strong>{totalStock}</strong>
                                     </div>
+                                    <div className="inventory-meta-row">
+                                        <span>Email do anunciante</span>
+                                        <strong>{item.Criador?.Email || 'Anuncio legacy'}</strong>
+                                    </div>
                                 </div>
 
                                 <div className="inventory-sizes">
@@ -295,15 +337,17 @@ const InventoryManagement = () => {
                             </label>
 
                             <label>
-                                <span>ImagemPath</span>
+                                <span>Imagem</span>
                                 <input
-                                    value={formData.ImagemPath}
-                                    onChange={(event) => setFormData((current) => ({ ...current, ImagemPath: event.target.value }))}
-                                    placeholder="Ex: Saia.jpg ou /images/Saia.jpg"
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageChange}
                                 />
-                                <small className="inventory-field-hint">
-                                    Usa o nome do ficheiro ou o caminho `/images/...`.
-                                </small>
+                                {formData.ImagemPath && (
+                                    <small className="inventory-field-hint">
+                                        {selectedImageFile ? `Selecionada: ${selectedImageFile.name}` : `Atual: ${formData.ImagemPath}`}
+                                    </small>
+                                )}
                             </label>
 
                             {previewImageUrl && (
@@ -311,6 +355,16 @@ const InventoryManagement = () => {
                                     <p>Pre-visualizacao da imagem.</p>
                                     <div className="inventory-detail-media">
                                         <img className="inventory-detail-image" src={previewImageUrl} alt={formData.Nome || 'Pre-visualizacao do artigo'} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {selectedItem && (
+                                <div className="inventory-form-note">
+                                    <p>Publicacao atual.</p>
+                                    <div className="inventory-meta-row">
+                                        <span>Email do anunciante</span>
+                                        <strong>{selectedItem.Criador?.Email || 'Anuncio legacy'}</strong>
                                     </div>
                                 </div>
                             )}
