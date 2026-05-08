@@ -1,7 +1,7 @@
 /** @type {import('jest').Config} */
 const config = {
     // Run tests from the saved Tests folder (relative to this config file in backend/)
-    roots: ['<rootDir>/../Tests/Unit Testing'],
+    roots: ['<rootDir>/tests/unit'],
 
     // Tell Jest to resolve node_modules from the backend directory
     // This fixes "Cannot find module 'jsonwebtoken'" when tests live outside backend/

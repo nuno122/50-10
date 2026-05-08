@@ -1,6 +1,6 @@
 /** @type {import('jest').Config} */
 const config = {
-    roots: ['<rootDir>/../Tests/IntegrationTests'],
+    roots: ['<rootDir>/tests/integration'],
     modulePaths: ['<rootDir>/node_modules'],
     testEnvironment: 'node',
     verbose: true,

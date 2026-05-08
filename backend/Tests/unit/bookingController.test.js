@@ -1,0 +1,92 @@
+const bookingController = require('../../src/controllers/bookingController');
+const bookingService = require('../../src/services/bookingService');
+
+jest.mock('../../src/services/bookingService');
+
+describe('Booking Controller', () => {
+    let req;
+    let res;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        req = {
+            body: {},
+            params: {},
+            utilizador: null
+        };
+        res = {
+            status: jest.fn().mockReturnThis(),
+            json: jest.fn()
+        };
+    });
+
+    describe('criarMarcacao', () => {
+        it('deve retornar 201 em caso de sucesso', async () => {
+            req.body = { IdAluno: 1, IdAula: 1 };
+            bookingService.criarMarcacao.mockResolvedValue({ mensagem: 'Sucesso' });
+
+            await bookingController.criarMarcacao(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(201);
+            expect(res.json).toHaveBeenCalledWith({ mensagem: 'Sucesso' });
+        });
+
+        it('deve retornar erro 400 se faltarem parametros', async () => {
+            req.body = {};
+            const mockErro = new Error('Erro mock');
+            mockErro.statusCode = 400;
+            bookingService.criarMarcacao.mockRejectedValue(mockErro);
+
+            await bookingController.criarMarcacao(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalledWith({ erro: 'Erro mock' });
+        });
+    });
+
+    describe('cancelarMarcacao', () => {
+        it('deve retornar 200 ao cancelar com sucesso', async () => {
+            req.params.idMarcacao = 1;
+            req.body = { Motivo: 'Gripe' };
+            req.utilizador = { IdUtilizador: 2 };
+
+            bookingService.cancelarMarcacao.mockResolvedValue({
+                sucesso: true,
+                mensagem: 'Cancelamento aprovado automaticamente.'
+            });
+
+            await bookingController.cancelarMarcacao(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(bookingService.cancelarMarcacao).toHaveBeenCalledWith(1, 2, 'Gripe');
+            expect(res.json).toHaveBeenCalledWith({
+                sucesso: true,
+                mensagem: 'Cancelamento aprovado automaticamente.'
+            });
+        });
+
+        it('deve retornar erro 403 quando nao autorizado', async () => {
+            req.params.idMarcacao = 1;
+            req.utilizador = { IdUtilizador: 2 };
+            const erroMock = new Error('Nao tens permissao');
+            erroMock.statusCode = 403;
+            bookingService.cancelarMarcacao.mockRejectedValue(erroMock);
+
+            await bookingController.cancelarMarcacao(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(403);
+            expect(res.json).toHaveBeenCalledWith({ erro: 'Nao tens permissao' });
+        });
+
+        it('deve retornar erro 400 como fallback quando o serviço lança erro sem statusCode definido', async () => {
+            req.params.idMarcacao = 1;
+            req.utilizador = { IdUtilizador: 2 };
+            bookingService.cancelarMarcacao.mockRejectedValue(new Error('Erro inesperado do Prisma'));
+
+            await bookingController.cancelarMarcacao(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalledWith({ erro: 'Erro inesperado do Prisma' });
+        });
+    });
+});
