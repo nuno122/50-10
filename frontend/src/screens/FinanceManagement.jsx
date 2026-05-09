@@ -235,10 +235,10 @@ const exportLessonsCsv = (lessons) => {
         'Professor',
         'TipoAula',
         'Estilo',
-        'DuracaoMin',
+        'DuraçãoMin',
         'Valor',
         'ProfessorValidou',
-        'DirecaoValidou',
+        'DireçãoValidou',
         'Prazo',
         'Pago'
     ];
@@ -257,11 +257,23 @@ const exportLessonsCsv = (lessons) => {
         lesson.paid ? 'Sim' : 'Não'
     ]);
 
-    const csv = [header, ...rows]
+    const csvBody = [header, ...rows]
         .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(';'))
-        .join('\n');
+        .join('\r\n');
+    const csv = `sep=;\r\n${csvBody}`;
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const encodeUtf16Le = (text) => {
+        const bytes = new Uint8Array(text.length * 2);
+        for (let i = 0; i < text.length; i += 1) {
+            const code = text.charCodeAt(i);
+            bytes[i * 2] = code & 0xff;
+            bytes[i * 2 + 1] = code >> 8;
+        }
+        return bytes;
+    };
+
+    const bom = new Uint8Array([0xff, 0xfe]);
+    const blob = new Blob([bom, encodeUtf16Le(csv)], { type: 'text/csv;charset=utf-16le;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
