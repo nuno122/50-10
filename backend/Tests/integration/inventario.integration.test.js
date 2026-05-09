@@ -1,21 +1,40 @@
-const { makeRequest, getAdminToken, ensureDatabaseReady } = require('./setup');
+const { makeRequest, getAdminToken, ensureDatabaseReady, prisma } = require('./setup');
 
 describe('Integracao - Inventario', () => {
     let token = null;
     let artigoCriadoId = null;
+    let artigoCriadoNome = null;
 
     beforeAll(async () => {
         await ensureDatabaseReady();
         token = await getAdminToken();
+        artigoCriadoNome = `Artigo Teste Integracao ${Date.now()}`;
 
-        const res = await makeRequest('/inventario', 'POST', {
-            Nome: `Artigo Teste Integracao ${Date.now()}`,
-            CustoPorDia: 12.5
+        const createRes = await makeRequest('/inventario', 'POST', {
+            Nome: artigoCriadoNome,
+            CustoPorDia: 12.5,
+            TamanhoArtigo: [
+                {
+                    Tamanho: 'M',
+                    Quantidade: 2,
+                    Condicao: 'Bom'
+                }
+            ]
         }, token);
 
-        if (res.status === 201 && res.data?.IdArtigo) {
-            artigoCriadoId = res.data.IdArtigo;
+        if (createRes.status !== 201) {
+            throw new Error(`Falha ao criar artigo de teste do inventario: status ${createRes.status} - ${JSON.stringify(createRes.data)}`);
         }
+
+        const artigoCriado = await prisma.artigo.findFirst({
+            where: { Nome: artigoCriadoNome },
+            orderBy: { Nome: 'asc' }
+        });
+
+        if (!artigoCriado?.IdArtigo) {
+            throw new Error(`Artigo de teste criado mas sem IdArtigo recuperavel na BD: ${artigoCriadoNome}; resposta POST: ${JSON.stringify(createRes.data)}`);
+        }
+        artigoCriadoId = artigoCriado.IdArtigo;
     });
 
     afterAll(async () => {
@@ -48,7 +67,7 @@ describe('Integracao - Inventario', () => {
 
     describe('PUT /inventario/:id', () => {
         it('3 Deve editar o artigo criado com sucesso', async () => {
-            expect(artigoCriadoId).toBeDefined();
+            expect(artigoCriadoId).toBeTruthy();
 
             const res = await makeRequest(`/inventario/${artigoCriadoId}`, 'PUT', {
                 Nome: 'Artigo Teste Editado',
@@ -62,7 +81,7 @@ describe('Integracao - Inventario', () => {
 
     describe('DELETE /inventario/:id', () => {
         it('4 Deve apagar o artigo criado com sucesso', async () => {
-            expect(artigoCriadoId).toBeDefined();
+            expect(artigoCriadoId).toBeTruthy();
 
             const res = await makeRequest(`/inventario/${artigoCriadoId}`, 'DELETE', null, token);
 

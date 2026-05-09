@@ -3,8 +3,6 @@ const logControllerError = (context, erro) => {
 
     if (status >= 500) {
         console.error(`[${context}]`, erro);
-    } else {
-        console.warn(`[${context}] ${status} ${erro?.message || 'Erro esperado.'}`);
     }
 
     return status;

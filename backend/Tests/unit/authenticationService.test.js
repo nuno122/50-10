@@ -72,6 +72,9 @@ describe('Authentication Service', () => {
             expect(resultado.mensagem).toBe('Login efetuado com sucesso!');
             expect(resultado.token).toBe(fakeToken);
             expect(resultado.utilizador.Id).toBe(99);
+            expect(resultado.utilizador.IdUtilizador).toBe(99);
+            expect(resultado.utilizador.NomeCompleto).toBe('Aluno Teste');
+            expect(resultado.utilizador.Email).toBe('aluno@teste.com');
             expect(jwt.sign).toHaveBeenCalledWith(
                 { IdUtilizador: 99, Permissoes: 'User' },
                 expect.any(String),

@@ -77,7 +77,7 @@ const buildSizePayload = (sizes = []) => (
 
 const RoleInventory = () => {
     const { user } = useAuth();
-    const { notify, refreshSnapshot } = useNotifications();
+    const { refreshSnapshot } = useNotifications();
     const [inventory, setInventory] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
@@ -246,11 +246,6 @@ const RoleInventory = () => {
             if (editingAd) {
                 await editarArtigo(editingAd.IdArtigo, payload);
                 await refreshSnapshot();
-                notify({
-                    title: 'Artigo atualizado',
-                    message: `${adFormData.Nome || 'O artigo'} foi atualizado com sucesso.`,
-                    tone: 'success'
-                });
                 setFeedback('Artigo atualizado com sucesso.');
             } else {
                 await criarArtigo(payload);

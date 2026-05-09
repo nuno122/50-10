@@ -1,14 +1,12 @@
 const classService = require('../services/classService');
+const { handleControllerError } = require('./controllerError');
 
 const getAulas = async (req, res) => {
     try {
         const aulas = await classService.ConsultarVagas();
         res.json(aulas);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao carregar as aulas.'
-        });
+        handleControllerError(res, erro, 'Erro ao carregar as aulas.', 'classController.getAulas');
     }
 };
 
@@ -17,10 +15,7 @@ const criarAula = async (req, res) => {
         const resultado = await classService.criarAula(req.body);
         res.status(201).json(resultado);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Não foi possível agendar a aula.'
-        });
+        handleControllerError(res, erro, 'Nao foi possivel agendar a aula.', 'classController.criarAula');
     }
 };
 
@@ -30,10 +25,7 @@ const criarAulasEmLote = async (req, res) => {
         const statusCode = resultado.totalFalhas === 0 ? 201 : 200;
         res.status(statusCode).json(resultado);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Não foi possível importar as aulas.'
-        });
+        handleControllerError(res, erro, 'Nao foi possivel importar as aulas.', 'classController.criarAulasEmLote');
     }
 };
 
@@ -43,8 +35,7 @@ const confirmarAula = async (req, res) => {
         const resultado = await classService.ConfirmarPresenca(idAula);
         res.json({ mensagem: 'Aula confirmada pelo professor.', aula: resultado });
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({ erro: erro.message });
+        handleControllerError(res, erro, 'Erro ao confirmar a aula.', 'classController.confirmarAula');
     }
 };
 
@@ -54,8 +45,7 @@ const cancelarAula = async (req, res) => {
         const resultado = await classService.cancelarAula(idAula, req.utilizador);
         res.json(resultado);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({ erro: erro.message || 'Erro ao cancelar a aula.' });
+        handleControllerError(res, erro, 'Erro ao cancelar a aula.', 'classController.cancelarAula');
     }
 };
 
@@ -65,8 +55,7 @@ const validarAula = async (req, res) => {
         const resultado = await classService.validarAula(idAula, req.body);
         res.json(resultado);
     } catch (erro) {
-        console.error(erro);
-        res.status(400).json({ erro: erro.message || 'Erro na validação da aula.' });
+        handleControllerError(res, erro, 'Erro na validacao da aula.', 'classController.validarAula');
     }
 };
 

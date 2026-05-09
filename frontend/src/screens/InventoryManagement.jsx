@@ -103,15 +103,11 @@ const InventoryManagement = ({ inventoryType = 'marketplace' }) => {
             const data = await getInventario(
                 isRentalCatalog
                     ? { disponivelParaAluguer: true }
-                    : { disponivelParaAluguer: false }
+                    : { mine: true }
             );
             const visibleData = (data || []).filter((item) => {
                 if (isRentalCatalog) {
                     return item.EstadoArtigo !== false;
-                }
-
-                if (item.EstadoArtigo === false && item.IdUtilizadorCriador !== user?.IdUtilizador) {
-                    return false;
                 }
 
                 return true;

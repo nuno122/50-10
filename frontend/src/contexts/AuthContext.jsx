@@ -2,6 +2,21 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 
 const AuthContext = createContext();
 
+const normalizeUserData = (userData) => {
+    if (!userData || typeof userData !== 'object') {
+        return userData;
+    }
+
+    const idUtilizador = userData.IdUtilizador || userData.Id || null;
+    const nomeCompleto = userData.NomeCompleto || userData.Nome || '';
+
+    return {
+        ...userData,
+        ...(idUtilizador ? { Id: idUtilizador, IdUtilizador: idUtilizador } : {}),
+        ...(nomeCompleto ? { Nome: nomeCompleto, NomeCompleto: nomeCompleto } : {})
+    };
+};
+
 export const useAuth = () => {
     const context = useContext(AuthContext);
     if (!context) {
@@ -16,10 +31,11 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     const login = useCallback((newToken, userData) => {
+        const normalizedUser = normalizeUserData(userData);
         setToken(newToken);
-        setUser(userData);
+        setUser(normalizedUser);
         localStorage.setItem('authToken', newToken);
-        localStorage.setItem('authUser', JSON.stringify(userData));
+        localStorage.setItem('authUser', JSON.stringify(normalizedUser));
     }, []);
 
     const logout = useCallback(() => {
@@ -35,7 +51,7 @@ export const AuthProvider = ({ children }) => {
         const savedUser = localStorage.getItem('authUser');
         if (savedToken) {
             setToken(savedToken);
-            if (savedUser) setUser(JSON.parse(savedUser));
+            if (savedUser) setUser(normalizeUserData(JSON.parse(savedUser)));
         }
         setLoading(false);
     }, []);

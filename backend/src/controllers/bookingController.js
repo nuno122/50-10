@@ -1,4 +1,5 @@
 const bookingService = require('../services/bookingService');
+const { handleControllerError } = require('./controllerError');
 
 const criarMarcacao = async (req, res) => {
     try {
@@ -6,10 +7,7 @@ const criarMarcacao = async (req, res) => {
         const resultado = await bookingService.FazerMarcacao(IdAula, IdAluno);
         res.status(201).json(resultado);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao processar a marcação.'
-        });
+        handleControllerError(res, erro, 'Erro ao processar a marcacao.', 'bookingController.criarMarcacao');
     }
 };
 
@@ -20,10 +18,7 @@ const criarMarcacaoEncarregado = async (req, res) => {
         const resultado = await bookingService.FazerMarcacaoComoEncarregado(IdAula, IdAluno, idEncarregado);
         res.status(201).json(resultado);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao processar a marcação.'
-        });
+        handleControllerError(res, erro, 'Erro ao processar a marcacao.', 'bookingController.criarMarcacaoEncarregado');
     }
 };
 
@@ -36,10 +31,8 @@ const cancelarMarcacao = async (req, res) => {
         const resultado = await bookingService.CancelarMarcacao(idMarcacao, idAluno, Motivo);
         res.status(200).json(resultado);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 400).json({
-            erro: erro.message || 'Erro ao cancelar a marcação.'
-        });
+        erro.statusCode = erro.statusCode || 400;
+        handleControllerError(res, erro, 'Erro ao cancelar a marcacao.', 'bookingController.cancelarMarcacao');
     }
 };
 
@@ -52,10 +45,8 @@ const cancelarMarcacaoEncarregado = async (req, res) => {
         const resultado = await bookingService.CancelarMarcacaoComoEncarregado(idMarcacao, idEncarregado, Motivo);
         res.status(200).json(resultado);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 400).json({
-            erro: erro.message || 'Erro ao cancelar a marcação.'
-        });
+        erro.statusCode = erro.statusCode || 400;
+        handleControllerError(res, erro, 'Erro ao cancelar a marcacao.', 'bookingController.cancelarMarcacaoEncarregado');
     }
 };
 
@@ -64,8 +55,7 @@ const getMarcacoes = async (req, res) => {
         const marcacoes = await bookingService.listarMarcacoes();
         res.json(marcacoes);
     } catch (erro) {
-        console.error(erro);
-        res.status(500).json({ erro: 'Erro ao carregar marcacoes.' });
+        handleControllerError(res, erro, 'Erro ao carregar marcacoes.', 'bookingController.getMarcacoes');
     }
 };
 
@@ -75,10 +65,7 @@ const getMarcacoesDoAluno = async (req, res) => {
         const marcacoes = await bookingService.listarMarcacoesDoAluno(idAluno);
         res.json(marcacoes);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao carregar marcacoes do aluno.'
-        });
+        handleControllerError(res, erro, 'Erro ao carregar marcacoes do aluno.', 'bookingController.getMarcacoesDoAluno');
     }
 };
 
@@ -88,10 +75,7 @@ const getAlunosDoEncarregado = async (req, res) => {
         const alunos = await bookingService.listarAlunosDoEncarregado(idEncarregado);
         res.json(alunos);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao carregar os alunos do encarregado.'
-        });
+        handleControllerError(res, erro, 'Erro ao carregar os alunos do encarregado.', 'bookingController.getAlunosDoEncarregado');
     }
 };
 
@@ -102,10 +86,7 @@ const getMarcacoesDoEncarregado = async (req, res) => {
         const marcacoes = await bookingService.listarMarcacoesDoEncarregado(idEncarregado, idAluno);
         res.json(marcacoes);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao carregar marcacoes do encarregado.'
-        });
+        handleControllerError(res, erro, 'Erro ao carregar marcacoes do encarregado.', 'bookingController.getMarcacoesDoEncarregado');
     }
 };
 
@@ -114,10 +95,7 @@ const getPedidosCancelamentoPendentes = async (req, res) => {
         const pedidos = await bookingService.listarPedidosCancelamentoPendentes();
         res.json(pedidos);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao carregar pedidos de cancelamento pendentes.'
-        });
+        handleControllerError(res, erro, 'Erro ao carregar pedidos de cancelamento pendentes.', 'bookingController.getPedidosCancelamentoPendentes');
     }
 };
 
@@ -129,10 +107,7 @@ const aprovarPedidoCancelamento = async (req, res) => {
         const resultado = await bookingService.aprovarPedidoCancelamento(idMarcacao, idDiretor, observacao);
         res.json(resultado);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao aprovar o pedido de cancelamento.'
-        });
+        handleControllerError(res, erro, 'Erro ao aprovar o pedido de cancelamento.', 'bookingController.aprovarPedidoCancelamento');
     }
 };
 
@@ -144,10 +119,7 @@ const rejeitarPedidoCancelamento = async (req, res) => {
         const resultado = await bookingService.rejeitarPedidoCancelamento(idMarcacao, idDiretor, observacao);
         res.json(resultado);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao rejeitar o pedido de cancelamento.'
-        });
+        handleControllerError(res, erro, 'Erro ao rejeitar o pedido de cancelamento.', 'bookingController.rejeitarPedidoCancelamento');
     }
 };
 

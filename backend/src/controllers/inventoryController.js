@@ -1,4 +1,5 @@
 const inventoryService = require('../services/inventoryService');
+const { handleControllerError } = require('./controllerError');
 
 const parseInventoryPayload = (body = {}) => {
     const dados = { ...body };
@@ -7,7 +8,7 @@ const parseInventoryPayload = (body = {}) => {
         try {
             dados.TamanhoArtigo = JSON.parse(dados.TamanhoArtigo);
         } catch (erro) {
-            const invalidPayloadError = new Error('Formato inválido para os tamanhos do artigo.');
+            const invalidPayloadError = new Error('Formato invalido para os tamanhos do artigo.');
             invalidPayloadError.statusCode = 400;
             throw invalidPayloadError;
         }
@@ -24,10 +25,7 @@ const getInventario = async (req, res) => {
         });
         res.json(artigos);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Não foi possível carregar os artigos.'
-        });
+        handleControllerError(res, erro, 'Nao foi possivel carregar os artigos.', 'inventoryController.getInventario');
     }
 };
 
@@ -40,10 +38,7 @@ const criarArtigo = async (req, res) => {
         const novoArtigo = await inventoryService.criarArtigo(dados, req.utilizador);
         res.status(201).json(novoArtigo);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Não foi possível gravar o artigo.'
-        });
+        handleControllerError(res, erro, 'Nao foi possivel gravar o artigo.', 'inventoryController.criarArtigo');
     }
 };
 
@@ -56,10 +51,7 @@ const editarArtigo = async (req, res) => {
         const artigoAtualizado = await inventoryService.editarArtigo(req.params.id, dados, req.utilizador);
         res.json(artigoAtualizado);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Não foi possível atualizar o artigo.'
-        });
+        handleControllerError(res, erro, 'Nao foi possivel atualizar o artigo.', 'inventoryController.editarArtigo');
     }
 };
 
@@ -68,10 +60,7 @@ const removerArtigo = async (req, res) => {
         const resultado = await inventoryService.removerArtigo(req.params.id, req.utilizador);
         res.json(resultado);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Não foi possível remover o artigo.'
-        });
+        handleControllerError(res, erro, 'Nao foi possivel remover o artigo.', 'inventoryController.removerArtigo');
     }
 };
 

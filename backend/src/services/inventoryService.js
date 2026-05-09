@@ -1,6 +1,8 @@
 const inventoryRepo = require('../repositories/inventoryRepository');
 const PERMISSOES = require('../config/permissions');
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const criarErro = (mensagem, statusCode) => {
     const erro = new Error(mensagem);
     erro.statusCode = statusCode;
@@ -36,6 +38,10 @@ const normalizeRentalFlag = (value) => {
     return Boolean(value);
 };
 
+const isValidArticleId = (id) => (
+    typeof id === 'string' && UUID_REGEX.test(id.trim())
+);
+
 const normalizeSizeEntries = (value, { required = false } = {}) => {
     if (value === undefined) {
         if (required) {
@@ -56,7 +62,7 @@ const normalizeSizeEntries = (value, { required = false } = {}) => {
 
             return {
                 IdTamanhoArtigo: entry?.IdTamanhoArtigo ? String(entry.IdTamanhoArtigo) : undefined,
-                Tamanho: tamanhoRaw || (quantidade > 0 ? 'Único' : ''),
+                Tamanho: tamanhoRaw || (quantidade > 0 ? '\u00danico' : ''),
                 Quantidade: quantidade,
                 Condicao: String(entry?.Condicao || 'Bom').trim() || 'Bom'
             };
@@ -78,7 +84,7 @@ const normalizeSizeEntries = (value, { required = false } = {}) => {
         }
 
         if (!Number.isInteger(entry.Quantidade) || entry.Quantidade < 0) {
-            throw criarErro('A quantidade de cada tamanho deve ser um número inteiro igual ou superior a zero.', 400);
+            throw criarErro('A quantidade de cada tamanho deve ser um n\u00famero inteiro igual ou superior a zero.', 400);
         }
     });
 
@@ -103,7 +109,7 @@ const criarArtigo = async (dados, utilizador) => {
     const tamanhos = normalizeSizeEntries(dados?.TamanhoArtigo, { required: true });
 
     if (!Nome) {
-        throw criarErro('Nome do artigo é obrigatório.', 400);
+        throw criarErro('Nome do artigo \u00e9 obrigat\u00f3rio.', 400);
     }
 
     if (CustoPorDia === undefined || CustoPorDia === null || CustoPorDia === '' || Number(CustoPorDia) <= 0) {
@@ -111,7 +117,7 @@ const criarArtigo = async (dados, utilizador) => {
     }
 
     if (!utilizador?.IdUtilizador) {
-        throw criarErro('Sessão inválida para publicar o anúncio.', 401);
+        throw criarErro('Sess\u00e3o inv\u00e1lida para publicar o an\u00fancio.', 401);
     }
 
     return await inventoryRepo.create({
@@ -124,21 +130,25 @@ const criarArtigo = async (dados, utilizador) => {
 
 const editarArtigo = async (id, dados, utilizador) => {
     if (!id) {
-        throw criarErro('ID do artigo é obrigatório para edição.', 400);
+        throw criarErro('ID do artigo \u00e9 obrigat\u00f3rio para edi\u00e7\u00e3o.', 400);
+    }
+
+    if (!isValidArticleId(id)) {
+        throw criarErro('ID do artigo inv\u00e1lido.', 400);
     }
 
     if (!dados || typeof dados !== 'object') {
-        throw criarErro('Os dados do artigo são obrigatórios para edição.', 400);
+        throw criarErro('Os dados do artigo s\u00e3o obrigat\u00f3rios para edi\u00e7\u00e3o.', 400);
     }
 
     const artigoAtual = await inventoryRepo.findById(id);
 
     if (!artigoAtual) {
-        throw criarErro('Artigo não encontrado.', 404);
+        throw criarErro('Artigo n\u00e3o encontrado.', 404);
     }
 
     if (!podeGerirArtigo(utilizador, artigoAtual)) {
-        throw criarErro('Não tens permissão para editar este anúncio.', 403);
+        throw criarErro('N\u00e3o tens permiss\u00e3o para editar este an\u00fancio.', 403);
     }
 
     const payload = { ...dados };
@@ -156,17 +166,21 @@ const editarArtigo = async (id, dados, utilizador) => {
 
 const removerArtigo = async (id, utilizador) => {
     if (!id) {
-        throw criarErro('ID do artigo é obrigatório para remoção.', 400);
+        throw criarErro('ID do artigo \u00e9 obrigat\u00f3rio para remo\u00e7\u00e3o.', 400);
+    }
+
+    if (!isValidArticleId(id)) {
+        throw criarErro('ID do artigo inv\u00e1lido.', 400);
     }
 
     const artigoAtual = await inventoryRepo.findById(id);
 
     if (!artigoAtual) {
-        throw criarErro('Artigo não encontrado.', 404);
+        throw criarErro('Artigo n\u00e3o encontrado.', 404);
     }
 
     if (!podeGerirArtigo(utilizador, artigoAtual)) {
-        throw criarErro('Não tens permissão para remover este anúncio.', 403);
+        throw criarErro('N\u00e3o tens permiss\u00e3o para remover este an\u00fancio.', 403);
     }
 
     return await inventoryRepo.delete(id);

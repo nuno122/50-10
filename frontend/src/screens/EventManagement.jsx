@@ -284,7 +284,10 @@ const EventManagement = () => {
 
     const canEditOwnComment = (comment) => (
         canComment &&
-        (comment.IdProfessor === user?.Id || comment.Professor?.Utilizador?.IdUtilizador === user?.Id)
+        (() => {
+            const userId = user?.IdUtilizador || user?.Id || null;
+            return comment.IdProfessor === userId || comment.Professor?.Utilizador?.IdUtilizador === userId;
+        })()
     );
 
     return (

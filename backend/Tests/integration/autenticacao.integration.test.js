@@ -86,6 +86,9 @@ describe('Integracao - Autenticacao', () => {
             expect(response.status).toBe(200);
             expect(response.data.token).toBeDefined();
             expect(response.data.mensagem).toBe('Login efetuado com sucesso!');
+            expect(response.data.utilizador?.Id).toBe(utilizador.IdUtilizador);
+            expect(response.data.utilizador?.IdUtilizador).toBe(utilizador.IdUtilizador);
+            expect(response.data.utilizador?.Email).toBe(utilizador.Email);
         } finally {
             await prisma.utilizador.delete({
                 where: { IdUtilizador: utilizador.IdUtilizador }

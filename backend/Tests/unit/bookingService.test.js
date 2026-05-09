@@ -1,9 +1,7 @@
 const bookingService = require('../../src/services/bookingService');
 const bookingRepo = require('../../src/repositories/bookingRepository');
-const classRepo = require('../../src/repositories/classRepository');
 
 jest.mock('../../src/repositories/bookingRepository');
-jest.mock('../../src/repositories/classRepository');
 
 describe('Booking Service', () => {
     const amanhaData = new Date(Date.now() + 86400000);
@@ -24,12 +22,6 @@ describe('Booking Service', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        classRepo.findProfessorAvailabilityByDate.mockResolvedValue([
-            {
-                HoraInicio: `${amanhaDataStr}T08:00:00.000Z`,
-                HoraFim: `${amanhaDataStr}T18:00:00.000Z`
-            }
-        ]);
     });
 
     describe('Criar Marcacao', () => {
@@ -37,7 +29,7 @@ describe('Booking Service', () => {
             await expect(bookingService.criarMarcacao(null, 1))
                 .rejects
                 .toThrow('IdAluno e IdAula são obrigatórios.');
-            
+
             expect(bookingRepo.create).not.toHaveBeenCalled();
         });
 
@@ -47,29 +39,24 @@ describe('Booking Service', () => {
             await expect(bookingService.criarMarcacao(1, 1))
                 .rejects
                 .toThrow('Aluno não encontrado.');
-            
+
             expect(bookingRepo.create).not.toHaveBeenCalled();
         });
 
-        it('deve rejeitar quando a aula estiver fora da disponibilidade do professor', async () => {
+        it('deve permitir inscrever numa aula regular mesmo sem disponibilidade registada do professor', async () => {
             bookingRepo.findAlunoById.mockResolvedValue({ IdUtilizador: 1 });
             bookingRepo.findAulaWithMarcacoes.mockResolvedValue(buildMockAula({
                 HoraInicio: new Date(`${amanhaDataStr}T19:00:00.000Z`),
                 HoraFim: new Date(`${amanhaDataStr}T20:00:00.000Z`)
             }));
-            
-            classRepo.findProfessorAvailabilityByDate.mockResolvedValue([
-                {
-                    HoraInicio: `${amanhaDataStr}T08:00:00.000Z`,
-                    HoraFim: `${amanhaDataStr}T18:00:00.000Z`
-                }
-            ]);
+            bookingRepo.findExisting.mockResolvedValue(null);
+            bookingRepo.create.mockResolvedValue({ IdMarcacao: 1, IdAluno: 1, IdAula: 1 });
 
-            await expect(bookingService.criarMarcacao(1, 1))
-                .rejects
-                .toThrow('O professor não tem disponibilidade registada para este horário.');
-            
-            expect(bookingRepo.create).not.toHaveBeenCalled();
+            const resultado = await bookingService.criarMarcacao(1, 1);
+
+            expect(resultado.mensagem).toBe('Lugar reservado!');
+            expect(resultado.marcacao).toEqual({ IdMarcacao: 1, IdAluno: 1, IdAula: 1 });
+            expect(bookingRepo.create).toHaveBeenCalledWith(1, 1);
         });
 
         it('deve rejeitar com erro 400 quando a aula estiver totalmente lotada', async () => {
@@ -82,7 +69,7 @@ describe('Booking Service', () => {
             await expect(bookingService.criarMarcacao(1, 1))
                 .rejects
                 .toThrow('Aula lotada.');
-            
+
             expect(bookingRepo.create).not.toHaveBeenCalled();
         });
 
@@ -119,7 +106,7 @@ describe('Booking Service', () => {
             await expect(bookingService.cancelarMarcacao(1, 1, 'Motivo'))
                 .rejects
                 .toThrow('Marcação não encontrada.');
-            
+
             expect(bookingRepo.cancelar).not.toHaveBeenCalled();
         });
 

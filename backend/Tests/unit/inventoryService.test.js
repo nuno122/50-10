@@ -8,6 +8,7 @@ describe('Inventory Service', () => {
     const direcao = { IdUtilizador: 'dir-1', Permissoes: PERMISSOES.DIRECAO };
     const anunciante = { IdUtilizador: 'user-1', Permissoes: PERMISSOES.ENCARREGADO };
     const stockBase = [{ Tamanho: 'M', Quantidade: 2, Condicao: 'Bom' }];
+    const articleId = '11111111-1111-4111-8111-111111111111';
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -88,12 +89,12 @@ describe('Inventory Service', () => {
 
         it('deve bloquear a edicao por um utilizador que nao e o criador nem Direcao', async () => {
             inventoryRepository.findById.mockResolvedValue({
-                IdArtigo: 'art-1',
+                IdArtigo: articleId,
                 IdUtilizadorCriador: 'other-user',
                 DisponivelParaAluguer: false
             });
 
-            await expect(inventoryService.editarArtigo('art-1', { Nome: 'Novo nome' }, anunciante))
+            await expect(inventoryService.editarArtigo(articleId, { Nome: 'Novo nome' }, anunciante))
                 .rejects
                 .toMatchObject({ statusCode: 403, message: 'Não tens permissão para editar este anúncio.' });
 
@@ -102,11 +103,11 @@ describe('Inventory Service', () => {
 
         it('deve permitir alterar o estado de aluguer e as quantidades', async () => {
             inventoryRepository.findById.mockResolvedValue({
-                IdArtigo: 'art-1',
+                IdArtigo: articleId,
                 IdUtilizadorCriador: 'user-1',
                 DisponivelParaAluguer: false
             });
-            inventoryRepository.update.mockResolvedValue({ IdArtigo: 'art-1', Nome: 'Novo nome' });
+            inventoryRepository.update.mockResolvedValue({ IdArtigo: articleId, Nome: 'Novo nome' });
 
             const payload = {
                 Nome: 'Novo nome',
@@ -114,10 +115,10 @@ describe('Inventory Service', () => {
                 TamanhoArtigo: [{ IdTamanhoArtigo: 'size-1', Tamanho: 'L', Quantidade: 4, Condicao: 'Bom' }]
             };
 
-            const resultado = await inventoryService.editarArtigo('art-1', payload, anunciante);
+            const resultado = await inventoryService.editarArtigo(articleId, payload, anunciante);
 
-            expect(resultado.IdArtigo).toBe('art-1');
-            expect(inventoryRepository.update).toHaveBeenCalledWith('art-1', payload);
+            expect(resultado.IdArtigo).toBe(articleId);
+            expect(inventoryRepository.update).toHaveBeenCalledWith(articleId, payload);
         });
     });
 
@@ -152,6 +153,29 @@ describe('Inventory Service', () => {
                 IdUtilizadorCriador: undefined
             });
         });
+
+        it('deve incluir artigos inativos quando pertencem ao utilizador autenticado', async () => {
+            inventoryRepository.findAll.mockResolvedValue([
+                { IdArtigo: 'art-inactive-own', EstadoArtigo: false, IdUtilizadorCriador: 'user-1' }
+            ]);
+
+            const resultado = await inventoryService.listarArtigos(anunciante, {
+                mine: true
+            });
+
+            expect(resultado).toHaveLength(1);
+            expect(resultado[0].IdArtigo).toBe('art-inactive-own');
+        });
+
+        it('deve esconder artigos inativos de outros utilizadores', async () => {
+            inventoryRepository.findAll.mockResolvedValue([
+                { IdArtigo: 'art-inactive-other', EstadoArtigo: false, IdUtilizadorCriador: 'other-user' }
+            ]);
+
+            const resultado = await inventoryService.listarArtigos(anunciante, {});
+
+            expect(resultado).toHaveLength(0);
+        });
     });
 
     describe('removerArtigo', () => {
@@ -165,15 +189,15 @@ describe('Inventory Service', () => {
 
         it('deve permitir que o criador remova o seu proprio artigo', async () => {
             inventoryRepository.findById.mockResolvedValue({
-                IdArtigo: 'art-1',
+                IdArtigo: articleId,
                 IdUtilizadorCriador: 'user-1'
             });
             inventoryRepository.delete.mockResolvedValue(true);
 
-            const resultado = await inventoryService.removerArtigo('art-1', anunciante);
+            const resultado = await inventoryService.removerArtigo(articleId, anunciante);
 
             expect(resultado).toBe(true);
-            expect(inventoryRepository.delete).toHaveBeenCalledWith('art-1');
+            expect(inventoryRepository.delete).toHaveBeenCalledWith(articleId);
         });
     });
 });

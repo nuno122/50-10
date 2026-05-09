@@ -1,14 +1,12 @@
 const rentalService = require('../services/rentalService');
+const { handleControllerError } = require('./controllerError');
 
 const getAlugueres = async (req, res) => {
     try {
         const alugueres = await rentalService.listarAlugueres(req.utilizador);
         res.json(alugueres);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao carregar alugueres.'
-        });
+        handleControllerError(res, erro, 'Erro ao carregar alugueres.', 'rentalController.getAlugueres');
     }
 };
 
@@ -17,10 +15,7 @@ const criarAluguer = async (req, res) => {
         const resultado = await rentalService.criarAluguer(req.body, req.utilizador);
         res.status(201).json(resultado);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao criar aluguer.'
-        });
+        handleControllerError(res, erro, 'Erro ao criar aluguer.', 'rentalController.criarAluguer');
     }
 };
 
@@ -32,10 +27,7 @@ const solicitarExtensaoController = async (req, res) => {
         });
         res.status(201).json(resultado);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao solicitar extensão.'
-        });
+        handleControllerError(res, erro, 'Erro ao solicitar extensao.', 'rentalController.solicitarExtensao');
     }
 };
 
@@ -48,10 +40,7 @@ const avaliarPedidoController = async (req, res) => {
         });
         res.json(resultado);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao avaliar pedido.'
-        });
+        handleControllerError(res, erro, 'Erro ao avaliar pedido.', 'rentalController.avaliarPedidoExtensao');
     }
 };
 
@@ -64,10 +53,7 @@ const registarDevolucaoController = async (req, res) => {
         });
         res.json(resultado);
     } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao registar devolução.'
-        });
+        handleControllerError(res, erro, 'Erro ao registar devolucao.', 'rentalController.registarDevolucao');
     }
 };
 

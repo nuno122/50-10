@@ -56,7 +56,10 @@ const login = async (email, password) => {
         token,
         utilizador: {
             Id: utilizador.IdUtilizador,
+            IdUtilizador: utilizador.IdUtilizador,
             Nome: utilizador.NomeCompleto,
+            NomeCompleto: utilizador.NomeCompleto,
+            Email: utilizador.Email,
             Permissoes: utilizador.Permissoes
         }
     };

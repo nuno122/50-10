@@ -486,6 +486,8 @@ const getInitialImportForm = () => {
     };
 };
 
+const getUserId = (user) => user?.IdUtilizador || user?.Id || null;
+
 const TeacherSchedule = ({ initialTab = 'lessons' }) => {
     const { user } = useAuth();
     const { notify, refreshSnapshot } = useNotifications();
@@ -515,7 +517,8 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
     const [feedback, setFeedback] = useState('');
 
     const loadData = async () => {
-        if (!user?.Id) return;
+        const userId = getUserId(user);
+        if (!userId) return;
 
         setLoading(true);
         setError('');
@@ -528,7 +531,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
             ]);
 
             const ownLessons = aulas
-                .filter((lesson) => lesson.IdProfessor === user.Id)
+                .filter((lesson) => lesson.IdProfessor === userId)
                 .map((lesson) => ({
                     id: lesson.IdAula,
                     title: lesson.EstiloDanca?.Nome || 'Aula',
@@ -561,7 +564,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
 
     useEffect(() => {
         loadData();
-    }, [user?.Id]);
+    }, [user?.Id, user?.IdUtilizador]);
 
     useEffect(() => {
         setActiveTab(initialTab);

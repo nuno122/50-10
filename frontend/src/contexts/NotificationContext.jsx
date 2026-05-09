@@ -17,15 +17,23 @@ const NotificationContext = createContext();
 const POLL_INTERVAL_MS = 15000;
 const MAX_POPUP_NOTIFICATIONS = 4;
 const MAX_INBOX_NOTIFICATIONS = 40;
+const SUPPRESSED_NOTIFICATION_TITLES = new Set([
+    'Artigo publicado',
+    'Artigo atualizado',
+    'Artigo de aluguer criado',
+    'Artigo de aluguer atualizado'
+]);
+
+const getUserId = (user) => user?.IdUtilizador || user?.Id || null;
 
 const pad = (value) => String(value).padStart(2, '0');
 
 const buildSnapshotStorageKey = (user) => (
-    user?.Id ? `entartes-alert-snapshot-${user.Id}-${user.Permissoes}` : ''
+    getUserId(user) ? `entartes-alert-snapshot-${getUserId(user)}-${user.Permissoes}` : ''
 );
 
 const buildInboxStorageKey = (user) => (
-    user?.Id ? `entartes-notification-feed-${user.Id}-${user.Permissoes}` : ''
+    getUserId(user) ? `entartes-notification-feed-${getUserId(user)}-${user.Permissoes}` : ''
 );
 
 const formatDateTime = (dateValue, timeValue) => {
@@ -96,7 +104,7 @@ const normalizeLessonsForRole = (aulas, user) => {
     const futureLessons = (aulas || []).filter((lesson) => lesson.EstaAtivo !== false);
 
     if (user?.Permissoes === PERMISSOES.PROFESSOR) {
-        return futureLessons.filter((lesson) => lesson.IdProfessor === user?.Id);
+        return futureLessons.filter((lesson) => lesson.IdProfessor === getUserId(user));
     }
 
     return futureLessons;
@@ -152,7 +160,7 @@ const buildDirectorSnapshot = async () => {
     const [aulas, requests, inventory, cancellationRequests] = await Promise.all([
         getAulas(),
         getPedidosAulaPrivada(),
-        getInventario({ disponivelParaAluguer: false }),
+        getInventario({ disponivelParaAluguer: true }),
         getPedidosCancelamentoPendentes()
     ]);
 
@@ -184,7 +192,7 @@ const buildTeacherSnapshot = async (user) => {
         getAulas(),
         getPedidosAulaPrivadaProfessor(),
         getEventos(),
-        getInventario({ disponivelParaAluguer: false })
+        getInventario({ disponivelParaAluguer: true })
     ]);
 
     const ownLessons = normalizeLessonsForRole(aulas, user);
@@ -216,7 +224,7 @@ const buildGuardianSnapshot = async () => {
         getPagamentosEncarregado(),
         getPedidosAulaPrivadaEncarregado(),
         getEventos(),
-        getInventario({ disponivelParaAluguer: false })
+        getInventario({ disponivelParaAluguer: true })
     ]);
 
     const availableLessons = (aulas || [])
@@ -565,6 +573,10 @@ export const NotificationProvider = ({ children }) => {
     }, []);
 
     const notify = useCallback(({ title, message = '', tone = 'info', duration = 6000, persist = true }) => {
+        if (SUPPRESSED_NOTIFICATION_TITLES.has(String(title || '').trim())) {
+            return;
+        }
+
         const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
         const notification = {
             id,
@@ -631,7 +643,7 @@ export const NotificationProvider = ({ children }) => {
     }, [notify]);
 
     const refreshSnapshot = useCallback(async () => {
-        if (!isAuthenticated || !user?.Id) return;
+        if (!isAuthenticated || !getUserId(user)) return;
 
         const nextSnapshot = await buildSnapshot(user);
         if (!nextSnapshot) return;
@@ -645,7 +657,7 @@ export const NotificationProvider = ({ children }) => {
     }, [isAuthenticated, user]);
 
     useEffect(() => {
-        if (!isAuthenticated || !user?.Id) {
+        if (!isAuthenticated || !getUserId(user)) {
             lastSnapshotRef.current = null;
             isHydratingRef.current = true;
             setPopupNotifications([]);
@@ -683,7 +695,7 @@ export const NotificationProvider = ({ children }) => {
     }, [isAuthenticated, user]);
 
     useEffect(() => {
-        if (!isAuthenticated || !user?.Id) {
+        if (!isAuthenticated || !getUserId(user)) {
             return;
         }
 
@@ -694,7 +706,7 @@ export const NotificationProvider = ({ children }) => {
     }, [notificationFeed, isAuthenticated, user]);
 
     useEffect(() => {
-        if (!isAuthenticated || !user?.Id) return undefined;
+        if (!isAuthenticated || !getUserId(user)) return undefined;
 
         let isCancelled = false;
 

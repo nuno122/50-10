@@ -23,6 +23,7 @@ const getTotalStock = (item) => (
 );
 
 const getFallbackLabel = (name) => String(name || '?').trim().charAt(0).toUpperCase() || '?';
+const getUserId = (user) => user?.IdUtilizador || user?.Id || null;
 
 const normalizeStatus = (status) => String(status || '').trim().toLowerCase();
 
@@ -84,7 +85,10 @@ const RoleRental = () => {
     }, []);
 
     const ownRentals = useMemo(() => (
-        rentals.filter((rental) => rental.IdUtilizador === user?.Id || rental.Utilizador?.IdUtilizador === user?.Id)
+        rentals.filter((rental) => {
+            const userId = getUserId(user);
+            return rental.IdUtilizador === userId || rental.Utilizador?.IdUtilizador === userId;
+        })
     ), [rentals, user]);
 
     const activeRentals = useMemo(() => (

@@ -3,6 +3,12 @@ const path = require('path');
 
 const prisma = new PrismaClient();
 
+const criarErroRepositorio = (mensagem, statusCode) => {
+    const erro = new Error(mensagem);
+    erro.statusCode = statusCode;
+    return erro;
+};
+
 const normalizeImagePath = (value) => {
     if (typeof value !== 'string') return null;
 
@@ -150,16 +156,77 @@ const inventoryRepository = {
     },
 
     update: async (id, dados) => {
-        return await prisma.artigo.update({
-            where: { IdArtigo: id },
-            data: buildArticleUpdatePayload(dados || {}),
-            include: articleInclude
+        return await prisma.$transaction(async (tx) => {
+            const payload = dados || {};
+            const hasSizes = Object.prototype.hasOwnProperty.call(payload, 'TamanhoArtigo');
+
+            if (hasSizes) {
+                const existingSizes = await tx.tamanhoArtigo.findMany({
+                    where: { IdArtigo: id },
+                    select: { IdTamanhoArtigo: true }
+                });
+
+                const existingIds = existingSizes.map((size) => size.IdTamanhoArtigo);
+                const nextIds = (Array.isArray(payload.TamanhoArtigo) ? payload.TamanhoArtigo : [])
+                    .map((size) => size.IdTamanhoArtigo)
+                    .filter(Boolean);
+
+                const removedIds = existingIds.filter((sizeId) => !nextIds.includes(sizeId));
+
+                if (removedIds.length > 0) {
+                    const linkedRentals = await tx.artigoAluguer.count({
+                        where: {
+                            IdTamanhoArtigo: { in: removedIds }
+                        }
+                    });
+
+                    if (linkedRentals > 0) {
+                        throw criarErroRepositorio(
+                            'Nao e possivel remover tamanhos que ja foram usados em alugueres.',
+                            400
+                        );
+                    }
+
+                    await tx.tamanhoArtigo.deleteMany({
+                        where: {
+                            IdTamanhoArtigo: { in: removedIds }
+                        }
+                    });
+                }
+            }
+
+            return await tx.artigo.update({
+                where: { IdArtigo: id },
+                data: buildArticleUpdatePayload(payload),
+                include: articleInclude
+            });
         });
     },
 
     delete: async (id) => {
-        return await prisma.artigo.delete({
-            where: { IdArtigo: id }
+        return await prisma.$transaction(async (tx) => {
+            const sizeEntries = await tx.tamanhoArtigo.findMany({
+                where: { IdArtigo: id },
+                select: { IdTamanhoArtigo: true }
+            });
+
+            const sizeIds = sizeEntries.map((size) => size.IdTamanhoArtigo);
+
+            if (sizeIds.length > 0) {
+                await tx.artigoAluguer.deleteMany({
+                    where: {
+                        IdTamanhoArtigo: { in: sizeIds }
+                    }
+                });
+
+                await tx.tamanhoArtigo.deleteMany({
+                    where: { IdArtigo: id }
+                });
+            }
+
+            return await tx.artigo.delete({
+                where: { IdArtigo: id }
+            });
         });
     }
 };

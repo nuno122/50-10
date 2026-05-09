@@ -321,7 +321,8 @@ const buildDirectorDashboard = ({ aulas, estudios, pagamentos }) => {
 const buildTeacherDashboard = ({ aulas, user }) => {
     const now = new Date();
     const { start, end } = getWeekRange();
-    const ownClasses = aulas.filter((aula) => aula.IdProfessor === user?.Id && aula.EstaAtivo !== false);
+    const userId = user?.IdUtilizador || user?.Id || null;
+    const ownClasses = aulas.filter((aula) => aula.IdProfessor === userId && aula.EstaAtivo !== false);
     const weeklyClasses = ownClasses
         .filter((aula) => isWithinRange(getAulaDateTime(aula), start, end))
         .sort((left, right) => getAulaDateTime(left) - getAulaDateTime(right));
