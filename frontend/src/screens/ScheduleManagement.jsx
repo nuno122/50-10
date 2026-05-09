@@ -1,6 +1,22 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNotifications } from '../contexts/NotificationContext';
-import { criarAula, criarAulasEmLote, getAulas, getDisponibilidades, getEstilos, getEstudios, getUtilizadores } from '../services/api';
+import {
+    atualizarEstadoEstilo,
+    atualizarEstadoEstudio,
+    atualizarEstilo,
+    atualizarEstudio,
+    criarAula,
+    criarAulasEmLote,
+    criarEstilo,
+    criarEstudio,
+    getAulas,
+    getDisponibilidades,
+    getEstilos,
+    getEstudios,
+    getUtilizadores,
+    removerEstilo,
+    removerEstudio
+} from '../services/api';
 import { PERMISSOES } from '../utils/permissions';
 
 const FIELD_ALIASES = {
@@ -37,6 +53,16 @@ const initialForm = {
     studioSelectionMode: 'compatible',
     repeatMode: 'weekly',
     repeatUntil: ''
+};
+
+const emptyStyleForm = {
+    Nome: ''
+};
+
+const emptyStudioForm = {
+    Numero: '',
+    Capacidade: '',
+    IdsEstiloDanca: []
 };
 
 const getInitialImportForm = () => {
@@ -142,6 +168,25 @@ const getWeekdayLabel = (value) => (
 
 const getRelationStyleIds = (items = []) => items.map((item) => item.IdEstiloDanca);
 
+const getStudioLinkedStyleIds = (studio) => getRelationStyleIds(studio?.EstudioEstilo || []);
+
+const sortCatalogEntries = (items, secondaryResolver) => (
+    [...items].sort((left, right) => {
+        const leftActive = left?.EstaAtivo !== false;
+        const rightActive = right?.EstaAtivo !== false;
+
+        if (leftActive !== rightActive) {
+            return leftActive ? -1 : 1;
+        }
+
+        return String(secondaryResolver(left) || '').localeCompare(
+            String(secondaryResolver(right) || ''),
+            'pt-PT',
+            { numeric: true, sensitivity: 'base' }
+        );
+    })
+);
+
 const normalizeTimeValue = (value) => {
     const text = String(value || '').trim().replace('.', ':');
     const match = text.match(/^(\d{1,2}):(\d{2})$/);
@@ -187,9 +232,9 @@ const buildLessonDateTime = (dateValue, timeValue) => {
 const getDirectorLessonStatus = (lesson) => {
     if (lesson.validated) return 'Concluida';
     if (lesson.enrolled === 0 && lesson.endDateTime <= new Date()) return 'Expirada sem inscritos';
-    if (!lesson.confirmed && lesson.endDateTime <= new Date()) return 'Aguarda conclusao do professor';
+    if (!lesson.confirmed && lesson.endDateTime <= new Date()) return 'Aguarda conclusão do professor';
     if (!lesson.confirmed) return 'Agendada';
-    return 'Aguarda validacao da direcao';
+    return 'Aguarda validação da direção';
 };
 
 const computeEndTime = (startTime, durationMinutes) => {
@@ -691,18 +736,18 @@ const buildImportDates = (cadence, row, rangeStart, rangeEnd) => {
 
 const getImportTemplateCopy = (cadence) => {
     if (cadence === 'weekly') {
-        return 'Colunas obrigatorias: diaSemana, horaInicio, horaFim, professor/professorId, estudio/estudioId, estilo/estiloId, capacidade, tipoAula, preco';
+        return 'Colunas obrigatórias: diaSemana, horaInicio, horaFim, professor/professorId, estudio/estudioId, estilo/estiloId, capacidade, tipoAula, preco';
     }
 
     if (cadence === 'monthly') {
-        return 'Colunas obrigatorias: diaMes, horaInicio, horaFim, professor/professorId, estudio/estudioId, estilo/estiloId, capacidade, tipoAula, preco';
+        return 'Colunas obrigatórias: diaMes, horaInicio, horaFim, professor/professorId, estudio/estudioId, estilo/estiloId, capacidade, tipoAula, preco';
     }
 
     if (cadence === 'annual') {
-        return 'Colunas obrigatorias: mes, diaMes, horaInicio, horaFim, professor/professorId, estudio/estudioId, estilo/estiloId, capacidade, tipoAula, preco';
+        return 'Colunas obrigatórias: mes, diaMes, horaInicio, horaFim, professor/professorId, estudio/estudioId, estilo/estiloId, capacidade, tipoAula, preco';
     }
 
-    return 'Colunas obrigatorias: data, horaInicio, horaFim, professor/professorId, estudio/estudioId, estilo/estiloId, capacidade, tipoAula, preco';
+    return 'Colunas obrigatórias: data, horaInicio, horaFim, professor/professorId, estudio/estudioId, estilo/estiloId, capacidade, tipoAula, preco';
 };
 
 const ScheduleManagement = () => {
@@ -721,29 +766,54 @@ const ScheduleManagement = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [importing, setImporting] = useState(false);
+    const [catalogSaving, setCatalogSaving] = useState(false);
     const [error, setError] = useState('');
     const [feedback, setFeedback] = useState('');
     const [operationSummary, setOperationSummary] = useState(null);
     const [selectedLesson, setSelectedLesson] = useState(null);
+    const [styleForm, setStyleForm] = useState(emptyStyleForm);
+    const [studioForm, setStudioForm] = useState(emptyStudioForm);
+    const [editingStyleId, setEditingStyleId] = useState('');
+    const [editingStudioId, setEditingStudioId] = useState('');
     const operationSummaryRef = useRef(null);
+
+    const fetchCatalogData = async () => {
+        const [estudiosData, estilosData] = await Promise.all([
+            getEstudios({ incluirInativos: true }),
+            getEstilos({ incluirInativos: true })
+        ]);
+
+        return {
+            estudiosData,
+            estilosData
+        };
+    };
+
+    const applyCatalogData = ({ estudiosData, estilosData }) => {
+        setEstudios(estudiosData || []);
+        setEstilos(estilosData || []);
+    };
+
+    const reloadCatalog = async () => {
+        const catalogData = await fetchCatalogData();
+        applyCatalogData(catalogData);
+    };
 
     const loadData = async () => {
         setLoading(true);
         setError('');
 
         try {
-            const [aulasData, disponibilidadesData, estudiosData, estilosData, utilizadoresData] = await Promise.all([
+            const [aulasData, disponibilidadesData, catalogData, utilizadoresData] = await Promise.all([
                 getAulas(),
                 getDisponibilidades(),
-                getEstudios(),
-                getEstilos(),
+                fetchCatalogData(),
                 getUtilizadores()
             ]);
 
             setAulas(aulasData.filter((aula) => aula.EstaAtivo !== false));
             setDisponibilidades(disponibilidadesData);
-            setEstudios(estudiosData);
-            setEstilos(estilosData);
+            applyCatalogData(catalogData);
             setProfessores(
                 utilizadoresData.filter((user) => (
                     user.Permissoes === PERMISSOES.PROFESSOR &&
@@ -752,7 +822,7 @@ const ScheduleManagement = () => {
                 ))
             );
         } catch (err) {
-            setError(err.message || 'Nao foi possivel carregar os horarios reais.');
+            setError(err.message || 'Não foi possível carregar os horários reais.');
         } finally {
             setLoading(false);
         }
@@ -766,6 +836,22 @@ const ScheduleManagement = () => {
     const weekDays = getDaysOfWeek(startOfWeek);
     const monthName = startOfWeek.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
     const isCoaching = formData.lessonType === 'Particular';
+    const activeEstudios = useMemo(
+        () => estudios.filter((studio) => studio.EstaAtivo !== false),
+        [estudios]
+    );
+    const activeEstilos = useMemo(
+        () => estilos.filter((style) => style.EstaAtivo !== false),
+        [estilos]
+    );
+    const configStyles = useMemo(
+        () => sortCatalogEntries(estilos, (style) => style.Nome),
+        [estilos]
+    );
+    const configStudios = useMemo(
+        () => sortCatalogEntries(estudios, (studio) => studio.Numero),
+        [estudios]
+    );
     const regularFirstOccurrence = useMemo(
         () => getNextOccurrenceDateKey(formData.anchorDate || toDateInputValue(new Date()), formData.dayOfWeek),
         [formData.anchorDate, formData.dayOfWeek]
@@ -890,13 +976,13 @@ const ScheduleManagement = () => {
 
     const studioState = useMemo(() => (
         getStudioOptions({
-            estudios,
+            estudios: activeEstudios,
             aulas,
             formData,
             scheduleDates: recurrencePreviewDates,
             effectiveEndTime
         })
-    ), [aulas, effectiveEndTime, estudios, formData, recurrencePreviewDates]);
+    ), [activeEstudios, aulas, effectiveEndTime, formData, recurrencePreviewDates]);
 
     const selectedTeacherName = useMemo(() => (
         professores.find((teacher) => teacher.IdUtilizador === formData.teacher)?.NomeCompleto || 'O professor selecionado'
@@ -950,6 +1036,35 @@ const ScheduleManagement = () => {
             }));
         }
     }, [formData.studio, formData.teacher, studioState.allAvailableOptions, teacherState.allAvailableOptions]);
+
+    useEffect(() => {
+        const validStyleIds = new Set(activeEstilos.map((style) => style.IdEstiloDanca));
+
+        if (formData.style && !validStyleIds.has(formData.style)) {
+            setFormData((prev) => ({
+                ...prev,
+                style: '',
+                teacher: '',
+                studio: '',
+                teacherSelectionMode: 'compatible',
+                studioSelectionMode: 'compatible'
+            }));
+        }
+
+        if (importForm.defaultStyle && !validStyleIds.has(importForm.defaultStyle)) {
+            setImportForm((prev) => ({
+                ...prev,
+                defaultStyle: ''
+            }));
+        }
+
+        if (studioForm.IdsEstiloDanca.some((id) => !validStyleIds.has(id))) {
+            setStudioForm((prev) => ({
+                ...prev,
+                IdsEstiloDanca: prev.IdsEstiloDanca.filter((id) => validStyleIds.has(id))
+            }));
+        }
+    }, [activeEstilos, formData.style, importForm.defaultStyle, studioForm.IdsEstiloDanca]);
 
     const scheduleItems = useMemo(() => aulas.map((aula) => {
         const lessonDate = new Date(aula.Data);
@@ -1030,6 +1145,168 @@ const ScheduleManagement = () => {
     const resetImportForm = () => {
         setImportForm(getInitialImportForm());
         setImportInputKey((prev) => prev + 1);
+    };
+
+    const resetStyleForm = () => {
+        setStyleForm(emptyStyleForm);
+        setEditingStyleId('');
+    };
+
+    const resetStudioForm = () => {
+        setStudioForm(emptyStudioForm);
+        setEditingStudioId('');
+    };
+
+    const handleEditStyle = (style) => {
+        setActiveAction('config');
+        setEditingStyleId(style.IdEstiloDanca);
+        setStyleForm({
+            Nome: style.Nome || ''
+        });
+        clearMessages();
+    };
+
+    const handleEditStudio = (studio) => {
+        setActiveAction('config');
+        setEditingStudioId(studio.IdEstudio);
+        setStudioForm({
+            Numero: studio.Numero ? String(studio.Numero) : '',
+            Capacidade: studio.Capacidade ? String(studio.Capacidade) : '',
+            IdsEstiloDanca: getStudioLinkedStyleIds(studio)
+        });
+        clearMessages();
+    };
+
+    const toggleStudioStyleSelection = (idEstiloDanca) => {
+        setStudioForm((prev) => ({
+            ...prev,
+            IdsEstiloDanca: prev.IdsEstiloDanca.includes(idEstiloDanca)
+                ? prev.IdsEstiloDanca.filter((id) => id !== idEstiloDanca)
+                : [...prev.IdsEstiloDanca, idEstiloDanca]
+        }));
+    };
+
+    const handleSaveStyle = async () => {
+        if (!styleForm.Nome.trim()) {
+            setError('Indica o nome do estilo.');
+            return;
+        }
+
+        setCatalogSaving(true);
+        clearMessages();
+
+        try {
+            if (editingStyleId) {
+                await atualizarEstilo(editingStyleId, styleForm);
+                setFeedback('Estilo atualizado com sucesso.');
+            } else {
+                await criarEstilo(styleForm);
+                setFeedback('Estilo criado com sucesso.');
+            }
+
+            resetStyleForm();
+            await reloadCatalog();
+        } catch (err) {
+            setError(err.message || 'Não foi possível guardar o estilo.');
+        } finally {
+            setCatalogSaving(false);
+        }
+    };
+
+    const handleSaveStudio = async () => {
+        if (!studioForm.Numero || !studioForm.Capacidade) {
+            setError('Indique o número e a capacidade do estúdio.');
+            return;
+        }
+
+        if (studioForm.IdsEstiloDanca.length === 0) {
+            setError('Selecione pelo menos um estilo para o estúdio.');
+            return;
+        }
+
+        setCatalogSaving(true);
+        clearMessages();
+
+        try {
+            if (editingStudioId) {
+                await atualizarEstudio(editingStudioId, studioForm);
+                setFeedback('Estudio atualizado com sucesso.');
+            } else {
+                await criarEstudio(studioForm);
+                setFeedback('Estudio criado com sucesso.');
+            }
+
+            resetStudioForm();
+            await reloadCatalog();
+        } catch (err) {
+            setError(err.message || 'Não foi possível guardar o estúdio.');
+        } finally {
+            setCatalogSaving(false);
+        }
+    };
+
+    const handleDeleteStyle = async (style) => {
+        const isActive = style.EstaAtivo !== false;
+        const actionLabel = isActive ? 'inativar' : 'reativar';
+
+        if (!window.confirm(`${isActive ? 'Inativar' : 'Reativar'} o estilo "${style.Nome}"?`)) {
+            return;
+        }
+
+        setCatalogSaving(true);
+        clearMessages();
+
+        try {
+            if (isActive) {
+                await removerEstilo(style.IdEstiloDanca);
+            } else {
+                await atualizarEstadoEstilo(style.IdEstiloDanca, true);
+            }
+
+            setFeedback(`Estilo ${isActive ? 'inativado' : 'reativado'} com sucesso.`);
+
+            if (editingStyleId === style.IdEstiloDanca) {
+                resetStyleForm();
+            }
+
+            await reloadCatalog();
+        } catch (err) {
+            setError(err.message || `Não foi possível ${actionLabel} o estilo.`);
+        } finally {
+            setCatalogSaving(false);
+        }
+    };
+
+    const handleDeleteStudio = async (studio) => {
+        const isActive = studio.EstaAtivo !== false;
+        const actionLabel = isActive ? 'inativar' : 'reativar';
+
+        if (!window.confirm(`${isActive ? 'Inativar' : 'Reativar'} o estúdio ${studio.Numero}?`)) {
+            return;
+        }
+
+        setCatalogSaving(true);
+        clearMessages();
+
+        try {
+            if (isActive) {
+                await removerEstudio(studio.IdEstudio);
+            } else {
+                await atualizarEstadoEstudio(studio.IdEstudio, true);
+            }
+
+            setFeedback(`Estudio ${isActive ? 'inativado' : 'reativado'} com sucesso.`);
+
+            if (editingStudioId === studio.IdEstudio) {
+                resetStudioForm();
+            }
+
+            await reloadCatalog();
+        } catch (err) {
+            setError(err.message || `Não foi possível ${actionLabel} o estúdio.`);
+        } finally {
+            setCatalogSaving(false);
+        }
     };
 
     const openLessonModal = (day = new Date(), options = {}) => {
@@ -1202,7 +1479,7 @@ const ScheduleManagement = () => {
         const payloads = buildLessonPayloadsFromForm(effectiveEndTime);
 
         if (payloads.length === 0) {
-            setError('Nao foi possivel gerar nenhuma aula com os dados escolhidos.');
+            setError('Não foi possível gerar nenhuma aula com os dados escolhidos.');
             return;
         }
 
@@ -1224,10 +1501,10 @@ const ScheduleManagement = () => {
             if (result.totalCriadas > 0) {
                 await refreshSnapshot();
                 notify({
-                    title: result.totalCriadas === 1 ? 'Aula criada' : 'Serie criada',
+                    title: result.totalCriadas === 1 ? 'Aula criada' : 'Série criada',
                     message: result.totalCriadas === 1
                         ? `A aula foi marcada para ${formatDate(scheduleReferenceDate)}.`
-                        : `${result.totalCriadas} aulas foram adicionadas ao horario.`,
+                        : `${result.totalCriadas} aulas foram adicionadas ao horário.`,
                     tone: 'success'
                 });
                 setFeedback(
@@ -1250,7 +1527,7 @@ const ScheduleManagement = () => {
                 setFormData(initialForm);
             }
         } catch (err) {
-            setError(err.message || 'Nao foi possivel agendar a aula.');
+            setError(err.message || 'Não foi possível agendar a aula.');
         } finally {
             setSaving(false);
         }
@@ -1396,11 +1673,11 @@ const ScheduleManagement = () => {
             if (result.totalCriadas > 0) {
                 await refreshSnapshot();
                 notify({
-                    title: 'Importacao concluida',
+                    title: 'Importação concluída',
                     message: `${result.totalCriadas} aula(s) criadas a partir do ficheiro.`,
                     tone: 'success'
                 });
-                setFeedback(`Importacao concluida com ${result.totalCriadas} aula(s) criada(s).`);
+            setFeedback(`Importação concluída com ${result.totalCriadas} aula(s) criada(s).`);
                 await loadData();
                 setImportForm((prev) => ({ ...prev, file: null }));
                 setImportInputKey((prev) => prev + 1);
@@ -1413,7 +1690,7 @@ const ScheduleManagement = () => {
                 });
             }
         } catch (err) {
-            setError(err.message || 'Nao foi possivel importar o ficheiro.');
+            setError(err.message || 'Não foi possível importar o ficheiro.');
         } finally {
             setImporting(false);
         }
@@ -1423,10 +1700,10 @@ const ScheduleManagement = () => {
         <div className="schedule-page">
             <div className="schedule-header">
                 <div>
-                    <p className="schedule-eyebrow">Direcao</p>
-                    <h1>Gestao de Horarios</h1>
+                    <p className="schedule-eyebrow">Direção</p>
+                    <h1>Gestão de horários</h1>
                     <p className="schedule-subtitle">
-                        Cria aulas regulares e Coachings, importa horarios em CSV e acompanha o calendario semanal.
+                        Crie aulas regulares e Coachings, importe horários em CSV e acompanhe o calendário semanal.
                     </p>
                 </div>
                 <button type="button" className="schedule-button schedule-button--primary" onClick={() => openLessonModal(new Date())}>
@@ -1442,7 +1719,7 @@ const ScheduleManagement = () => {
                     <p className="schedule-eyebrow">Menu</p>
                     <h2>Criar aulas e Coachings</h2>
                     <p className="schedule-action-copy">
-                        Define sessoes de Coaching com data exata ou cria series regulares semanais para a Direcao.
+                        Defina sessões de Coaching com data exata ou crie séries regulares semanais para a Direção.
                     </p>
                     <button type="button" className="schedule-button schedule-button--primary" onClick={handleOpenRegularCreator}>
                         Abrir criador
@@ -1451,12 +1728,23 @@ const ScheduleManagement = () => {
 
                 <article className={`schedule-action-card ${activeAction === 'import' ? 'schedule-action-card--active' : ''}`}>
                     <p className="schedule-eyebrow">Menu</p>
-                    <h2>Importar horario</h2>
+                    <h2>Importar horário</h2>
                     <p className="schedule-action-copy">
                         Carrega um ficheiro CSV com datas especificas ou com regras semanais, mensais ou anuais.
                     </p>
                     <button type="button" className="schedule-button schedule-button--ghost" onClick={() => setActiveAction('import')}>
                         Configurar importacao
+                    </button>
+                </article>
+
+                <article className={`schedule-action-card ${activeAction === 'config' ? 'schedule-action-card--active' : ''}`}>
+                    <p className="schedule-eyebrow">Menu</p>
+                    <h2>Configurar estúdios e estilos</h2>
+                    <p className="schedule-action-copy">
+                        Gere os estúdios disponíveis e os estilos de dança usados no planeamento das aulas.
+                    </p>
+                    <button type="button" className="schedule-button schedule-button--ghost" onClick={() => setActiveAction('config')}>
+                        Abrir configuração
                     </button>
                 </article>
             </div>
@@ -1465,10 +1753,10 @@ const ScheduleManagement = () => {
                 <section className="schedule-import-panel">
                     <div className="schedule-import-header">
                         <div>
-                            <p className="schedule-eyebrow">Importacao</p>
-                            <h2>Carregar ficheiro de horario</h2>
+                            <p className="schedule-eyebrow">Importação</p>
+                            <h2>Carregar ficheiro de horário</h2>
                             <p className="schedule-subtitle">
-                                Usa CSV com `;` ou `,`. Podes indicar professor, estudio e estilo por nome/numero ou por id.
+                                Use CSV com `;` ou `,`. Pode indicar professor, estúdio e estilo por nome, número ou ID.
                             </p>
                         </div>
                         <button type="button" className="schedule-button schedule-button--ghost" onClick={() => setActiveAction('regular')}>
@@ -1536,7 +1824,7 @@ const ScheduleManagement = () => {
                                 <span>Estudio por defeito</span>
                                 <select value={importForm.defaultStudio} onChange={(event) => setImportForm((prev) => ({ ...prev, defaultStudio: event.target.value }))}>
                                     <option value="">Usar o ficheiro</option>
-                                    {estudios.map((studio) => (
+                                    {activeEstudios.map((studio) => (
                                         <option key={studio.IdEstudio} value={studio.IdEstudio}>
                                             Estudio {studio.Numero}
                                         </option>
@@ -1550,7 +1838,7 @@ const ScheduleManagement = () => {
                                 <span>Estilo por defeito</span>
                                 <select value={importForm.defaultStyle} onChange={(event) => setImportForm((prev) => ({ ...prev, defaultStyle: event.target.value }))}>
                                     <option value="">Usar o ficheiro</option>
-                                    {estilos.map((style) => (
+                                    {activeEstilos.map((style) => (
                                         <option key={style.IdEstiloDanca} value={style.IdEstiloDanca}>
                                             {style.Nome}
                                         </option>
@@ -1608,8 +1896,202 @@ const ScheduleManagement = () => {
                             Limpar
                         </button>
                         <button type="button" className="schedule-button schedule-button--primary" onClick={handleImport} disabled={importing}>
-                            {importing ? 'A importar...' : 'Importar horario'}
+                            {importing ? 'A importar...' : 'Importar horário'}
                         </button>
+                    </div>
+                </section>
+            )}
+
+            {activeAction === 'config' && (
+                <section className="schedule-import-panel schedule-config-panel">
+                    <div className="schedule-import-header">
+                        <div>
+                            <p className="schedule-eyebrow">Configuração</p>
+                            <h2>Gerir estúdios e estilos</h2>
+                            <p className="schedule-subtitle">
+                                A Direção pode criar, editar, inativar e reativar estúdios e estilos sem perder histórico.
+                            </p>
+                        </div>
+                        <button type="button" className="schedule-button schedule-button--ghost" onClick={() => setActiveAction('regular')}>
+                            Fechar
+                        </button>
+                    </div>
+
+                    <div className="schedule-config-grid">
+                        <article className="schedule-config-card">
+                            <div className="schedule-config-card-header">
+                                <div>
+                                    <p className="schedule-eyebrow">Estilos</p>
+                                    <h3>{editingStyleId ? 'Editar estilo' : 'Novo estilo'}</h3>
+                                    <p className="schedule-helper">
+                                        Mantem a lista de estilos usada nas aulas e nos estúdios.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="schedule-config-form-card">
+                                <div className="schedule-form">
+                                <label>
+                                    <span>Nome do estilo</span>
+                                    <input
+                                        value={styleForm.Nome}
+                                        onChange={(event) => setStyleForm({ Nome: event.target.value })}
+                                        placeholder="Ex: Jazz Contemporaneo"
+                                    />
+                                </label>
+                                </div>
+
+                                <div className="schedule-modal-actions schedule-modal-actions--compact">
+                                    {editingStyleId && (
+                                        <button type="button" className="schedule-button schedule-button--ghost" onClick={resetStyleForm}>
+                                            Cancelar edição
+                                        </button>
+                                    )}
+                                    <button type="button" className="schedule-button schedule-button--primary" onClick={handleSaveStyle} disabled={catalogSaving}>
+                                        {catalogSaving ? 'A guardar...' : editingStyleId ? 'Guardar estilo' : 'Criar estilo'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="schedule-config-list">
+                                {configStyles.length === 0 ? (
+                                    <p className="schedule-config-empty">Ainda nao existem estilos configurados.</p>
+                                ) : configStyles.map((style) => (
+                                    <article key={style.IdEstiloDanca} className={`schedule-config-item ${style.EstaAtivo === false ? 'schedule-config-item--inactive' : ''}`}>
+                                        <div className="schedule-config-item-copy">
+                                            <div className="schedule-config-item-top">
+                                                <strong>{style.Nome}</strong>
+                                                <span className={`schedule-config-status ${style.EstaAtivo === false ? 'schedule-config-status--inactive' : 'schedule-config-status--active'}`}>
+                                                    {style.EstaAtivo === false ? 'Inativo' : 'Ativo'}
+                                                </span>
+                                            </div>
+                                            <span>ID: {style.IdEstiloDanca.slice(0, 8)}</span>
+                                        </div>
+                                        <div className="schedule-config-actions">
+                                            <button type="button" className="schedule-button schedule-button--ghost schedule-button--small" onClick={() => handleEditStyle(style)}>
+                                                Editar
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={`schedule-button schedule-button--small ${style.EstaAtivo === false ? 'schedule-button--primary' : 'schedule-button--danger'}`}
+                                                onClick={() => handleDeleteStyle(style)}
+                                                disabled={catalogSaving}
+                                            >
+                                                {style.EstaAtivo === false ? 'Reativar' : 'Inativar'}
+                                            </button>
+                                        </div>
+                                    </article>
+                                ))}
+                            </div>
+                        </article>
+
+                        <article className="schedule-config-card">
+                            <div className="schedule-config-card-header">
+                                <div>
+                                    <p className="schedule-eyebrow">Estudios</p>
+                                    <h3>{editingStudioId ? 'Editar estúdio' : 'Novo estúdio'}</h3>
+                                    <p className="schedule-helper">
+                                        Define a capacidade e os estilos suportados por cada estúdio.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="schedule-config-form-card">
+                                <div className="schedule-form">
+                                    <div className="schedule-form-grid">
+                                        <label>
+                                            <span>Numero</span>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={studioForm.Numero}
+                                                onChange={(event) => setStudioForm((prev) => ({ ...prev, Numero: event.target.value }))}
+                                                placeholder="Ex: 3"
+                                            />
+                                        </label>
+
+                                        <label>
+                                            <span>Capacidade</span>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={studioForm.Capacidade}
+                                                onChange={(event) => setStudioForm((prev) => ({ ...prev, Capacidade: event.target.value }))}
+                                                placeholder="Ex: 16"
+                                            />
+                                        </label>
+                                    </div>
+
+                                    <div>
+                                        <span className="schedule-form-label">Estilos associados</span>
+                                        <div className="schedule-config-check-grid">
+                                            {activeEstilos.map((style) => (
+                                                <label key={style.IdEstiloDanca} className="schedule-config-check">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={studioForm.IdsEstiloDanca.includes(style.IdEstiloDanca)}
+                                                        onChange={() => toggleStudioStyleSelection(style.IdEstiloDanca)}
+                                                    />
+                                                    <span>{style.Nome}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="schedule-modal-actions schedule-modal-actions--compact">
+                                    {editingStudioId && (
+                                        <button type="button" className="schedule-button schedule-button--ghost" onClick={resetStudioForm}>
+                                            Cancelar edição
+                                        </button>
+                                    )}
+                                    <button type="button" className="schedule-button schedule-button--primary" onClick={handleSaveStudio} disabled={catalogSaving}>
+                                        {catalogSaving ? 'A guardar...' : editingStudioId ? 'Guardar estúdio' : 'Criar estúdio'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="schedule-config-list">
+                                {configStudios.length === 0 ? (
+                                    <p className="schedule-config-empty">Ainda não existem estúdios configurados.</p>
+                                ) : configStudios.map((studio) => (
+                                    <article key={studio.IdEstudio} className={`schedule-config-item ${studio.EstaAtivo === false ? 'schedule-config-item--inactive' : ''}`}>
+                                        <div className="schedule-config-item-copy">
+                                            <div className="schedule-config-item-top">
+                                                <strong>{`Estudio ${studio.Numero}`}</strong>
+                                                <span className={`schedule-config-status ${studio.EstaAtivo === false ? 'schedule-config-status--inactive' : 'schedule-config-status--active'}`}>
+                                                    {studio.EstaAtivo === false ? 'Inativo' : 'Ativo'}
+                                                </span>
+                                            </div>
+                                            <span>{`Capacidade: ${studio.Capacidade}`}</span>
+                                            <div className="schedule-config-chip-list">
+                                                {(studio.EstudioEstilo || []).map((entry) => (
+                                                    <span
+                                                        key={`${studio.IdEstudio}-${entry.IdEstiloDanca}`}
+                                                        className={`schedule-config-chip ${entry.EstiloDanca?.EstaAtivo === false ? 'schedule-config-chip--inactive' : ''}`}
+                                                    >
+                                                        {entry.EstiloDanca?.Nome || 'Sem estilo'}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="schedule-config-actions">
+                                            <button type="button" className="schedule-button schedule-button--ghost schedule-button--small" onClick={() => handleEditStudio(studio)}>
+                                                Editar
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={`schedule-button schedule-button--small ${studio.EstaAtivo === false ? 'schedule-button--primary' : 'schedule-button--danger'}`}
+                                                onClick={() => handleDeleteStudio(studio)}
+                                                disabled={catalogSaving}
+                                            >
+                                                {studio.EstaAtivo === false ? 'Reativar' : 'Inativar'}
+                                            </button>
+                                        </div>
+                                    </article>
+                                ))}
+                            </div>
+                        </article>
                     </div>
                 </section>
             )}
@@ -1672,8 +2154,8 @@ const ScheduleManagement = () => {
 
                 {loading ? (
                     <div className="schedule-empty">
-                        <p className="schedule-empty-title">A carregar horarios...</p>
-                        <p className="schedule-empty-copy">A preparar aulas, estudios, estilos e professores.</p>
+                        <p className="schedule-empty-title">A carregar horários...</p>
+                        <p className="schedule-empty-copy">A preparar aulas, estúdios, estilos e professores.</p>
                     </div>
                 ) : (
                     <div className="schedule-calendar schedule-calendar--board">
@@ -1758,7 +2240,7 @@ const ScheduleManagement = () => {
                                 <h2>{isCoaching ? 'Novo Coaching' : 'Nova aula regular'}</h2>
                                 <p className="schedule-helper">
                                     {isCoaching
-                                        ? (formData.date ? `Sessao prevista para ${formatDate(formData.date)}.` : 'Escolhe a data do Coaching.')
+                                        ? (formData.date ? `Sessão prevista para ${formatDate(formData.date)}.` : 'Escolhe a data do Coaching.')
                                         : scheduleReferenceDate
                                             ? `Primeira ocorrencia em ${formatDate(scheduleReferenceDate)}.`
                                             : 'Escolhe o dia da semana para gerar a serie regular.'}
@@ -1819,7 +2301,7 @@ const ScheduleManagement = () => {
                                     <p className="schedule-helper">
                                         {formData.repeatUntil
                                             ? `Previstas ${recurrencePreviewDates.length} aula(s), sempre a ${getWeekdayLabel(formData.dayOfWeek).toLowerCase()}.`
-                                            : `A serie vai arrancar na primeira ${getWeekdayLabel(formData.dayOfWeek).toLowerCase()} disponivel a partir de ${formatDate(formData.anchorDate || scheduleReferenceDate)}.`}
+                                            : `A série vai arrancar na primeira ${getWeekdayLabel(formData.dayOfWeek).toLowerCase()} disponível a partir de ${formatDate(formData.anchorDate || scheduleReferenceDate)}.`}
                                     </p>
                                 </>
                             )}
@@ -1839,7 +2321,7 @@ const ScheduleManagement = () => {
                                         }))}
                                     >
                                         <option value="">Selecione o estilo</option>
-                                        {estilos.map((style) => (
+                                        {activeEstilos.map((style) => (
                                             <option key={style.IdEstiloDanca} value={style.IdEstiloDanca}>
                                                 {style.Nome}
                                             </option>
@@ -1943,7 +2425,7 @@ const ScheduleManagement = () => {
                                                     ? 'Sem professor associado ao estilo'
                                                     : 'Selecione o professor'
                                                 : formData.date
-                                                    ? 'Selecione o professor disponivel'
+                                                    ? 'Selecione o professor disponível'
                                                     : 'Escolha primeiro a data do Coaching'}
                                     </option>
                                     {teacherState.compatibleOptions.map((teacher) => (
@@ -1959,7 +2441,7 @@ const ScheduleManagement = () => {
 
                             {!isCoaching && teacherState.compatibleOptions.length === 0 && teacherState.allAvailableOptions.length > 0 && (
                                 <p className="schedule-helper">
-                                    Nao existe nenhum professor associado ao estilo escolhido. Podes usar a opcao "Outro professor".
+                                    Não existe nenhum professor associado ao estilo escolhido. Pode usar a opção "Outro professor".
                                 </p>
                             )}
 
@@ -1982,7 +2464,7 @@ const ScheduleManagement = () => {
                                     >
                                         <option value="">
                                             {teacherState.allAvailableOptions.length === 0
-                                                ? 'Nao existem professores ativos'
+                                                ? 'Não existem professores ativos'
                                                 : 'Selecione um professor alternativo'}
                                         </option>
                                         {teacherState.allAvailableOptions.map((teacher) => {
@@ -2066,10 +2548,10 @@ const ScheduleManagement = () => {
                                             : !formData.capacity
                                                 ? 'Indique primeiro a capacidade'
                                                 : !formData.startTime || !effectiveEndTime
-                                                    ? 'Defina primeiro o horario'
-                                                    : studioState.compatibleOptions.length === 0
-                                                        ? 'Sem estudio compativel livre'
-                                                        : 'Selecione o estudio compativel'}
+                                                    ? 'Defina primeiro o horário'
+                                                        : studioState.compatibleOptions.length === 0
+                                                        ? 'Sem estúdio compatível livre'
+                                                        : 'Selecione o estúdio compatível'}
                                     </option>
                                     {studioState.compatibleOptions.map((studio) => (
                                         <option key={studio.IdEstudio} value={studio.IdEstudio}>
@@ -2077,26 +2559,26 @@ const ScheduleManagement = () => {
                                         </option>
                                     ))}
                                     {canUnlockAlternativeStudio && (
-                                        <option value="__other__">Outro estudio</option>
+                                        <option value="__other__">Outro estúdio</option>
                                     )}
                                 </select>
                             </label>
 
                             {studioState.compatibleOptions.length === 0 && studioState.allAvailableOptions.length > 0 && (
                                 <p className="schedule-helper">
-                                    Nao existe nenhum estudio associado ao estilo livre para este horario. Podes usar a opcao "Outro estudio".
+                                    Não existe nenhum estúdio associado ao estilo livre para este horário. Pode usar a opção "Outro estúdio".
                                 </p>
                             )}
 
                             {showAlternativeStudioSelector && studioState.compatibleOptions.length > 0 && (
                                 <p className="schedule-helper">
-                                    Esta lista mostra todos os estudios livres para o horario escolhido, incluindo alternativas fora do estilo.
+                                    Esta lista mostra todos os estúdios livres para o horário escolhido, incluindo alternativas fora do estilo.
                                 </p>
                             )}
 
                             {showAlternativeStudioSelector && (
                                 <label>
-                                    <span>Outro estudio</span>
+                                    <span>Outro estúdio</span>
                                     <select
                                         value={selectedStudioId}
                                         onChange={(event) => setFormData((prev) => ({
@@ -2107,8 +2589,8 @@ const ScheduleManagement = () => {
                                     >
                                         <option value="">
                                             {studioState.allAvailableOptions.length === 0
-                                                ? 'Nao existem estudios livres'
-                                                : 'Selecione um estudio alternativo'}
+                                                ? 'Não existem estúdios livres'
+                                                : 'Selecione um estúdio alternativo'}
                                         </option>
                                         {studioState.allAvailableOptions.map((studio) => {
                                             const isCompatible = studioState.compatibleOptions.some((item) => item.IdEstudio === studio.IdEstudio);
@@ -2124,13 +2606,13 @@ const ScheduleManagement = () => {
 
                             {formData.style && canSelectTeacher && teacherState.compatibleOptions.length === 0 && isCoaching && (
                                 <p className="schedule-helper">
-                                    Nao existem professores disponiveis para este estilo na data e horario selecionados.
+                                    Não existem professores disponíveis para este estilo na data e horário selecionados.
                                 </p>
                             )}
 
                             {formData.style && canSelectStudio && studioState.allAvailableOptions.length === 0 && (
                                 <p className="schedule-helper">
-                                    Nao existem estudios livres com capacidade suficiente para este horario.
+                                    Não existem estúdios livres com capacidade suficiente para este horário.
                                 </p>
                             )}
                         </div>
@@ -2191,10 +2673,10 @@ const ScheduleManagement = () => {
                             </div>
                             <div className="schedule-lesson-detail-card">
                                 <span>Professor confirmou</span>
-                                <strong>{selectedLesson.confirmed ? 'Sim' : 'Nao'}</strong>
+                                <strong>{selectedLesson.confirmed ? 'Sim' : 'Não'}</strong>
                             </div>
                             <div className="schedule-lesson-detail-card">
-                                <span>Validacao da direcao</span>
+                                <span>Validação da direção</span>
                                 <strong>{getDirectorLessonStatus(selectedLesson)}</strong>
                             </div>
                         </div>

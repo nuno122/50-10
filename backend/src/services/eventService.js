@@ -71,11 +71,11 @@ const validarEvento = (dados) => {
 
 const criarEvento = async (dados, utilizador) => {
     if (!utilizador?.IdUtilizador) {
-        throw criarErro('Utilizador autenticado invalido.', 401);
+        throw criarErro('Utilizador autenticado inválido.', 401);
     }
 
     if (utilizador.Permissoes !== PERMISSOES.DIRECAO) {
-        throw criarErro('Apenas a Direcao pode criar eventos.', 403);
+        throw criarErro('Apenas a Direção pode criar eventos.', 403);
     }
 
     const payload = validarEvento(dados);
@@ -88,11 +88,11 @@ const criarEvento = async (dados, utilizador) => {
 
 const editarEvento = async (idEvento, dados, utilizador) => {
     if (!idEvento || !utilizador?.IdUtilizador) {
-        throw criarErro('IdEvento e utilizador autenticado sao obrigatorios.', 400);
+        throw criarErro('IdEvento e utilizador autenticado são obrigatórios.', 400);
     }
 
     if (utilizador.Permissoes !== PERMISSOES.DIRECAO) {
-        throw criarErro('Apenas a Direcao pode editar eventos.', 403);
+        throw criarErro('Apenas a Direção pode editar eventos.', 403);
     }
 
     const evento = await eventRepo.findById(idEvento);
@@ -107,7 +107,7 @@ const editarEvento = async (idEvento, dados, utilizador) => {
 
 const listarEventos = async (utilizador) => {
     if (!utilizador?.Permissoes) {
-        throw criarErro('Utilizador autenticado invalido.', 401);
+        throw criarErro('Utilizador autenticado inválido.', 401);
     }
 
     if (utilizador.Permissoes === PERMISSOES.DIRECAO) {
@@ -119,11 +119,11 @@ const listarEventos = async (utilizador) => {
 
 const removerEvento = async (idEvento, utilizador) => {
     if (!idEvento || !utilizador?.IdUtilizador) {
-        throw criarErro('IdEvento e utilizador autenticado sao obrigatorios.', 400);
+        throw criarErro('IdEvento e utilizador autenticado são obrigatórios.', 400);
     }
 
     if (utilizador.Permissoes !== PERMISSOES.DIRECAO) {
-        throw criarErro('Apenas a Direcao pode remover eventos.', 403);
+        throw criarErro('Apenas a Direção pode remover eventos.', 403);
     }
 
     const evento = await eventRepo.findById(idEvento);
@@ -140,7 +140,7 @@ const removerEvento = async (idEvento, utilizador) => {
 
 const adicionarComentario = async (idEvento, comentario, utilizador) => {
     if (!idEvento || !utilizador?.IdUtilizador) {
-        throw criarErro('IdEvento e utilizador autenticado sao obrigatorios.', 400);
+        throw criarErro('IdEvento e utilizador autenticado são obrigatórios.', 400);
     }
 
     if (utilizador.Permissoes !== PERMISSOES.PROFESSOR) {
@@ -159,15 +159,15 @@ const adicionarComentario = async (idEvento, comentario, utilizador) => {
 
     const agora = new Date();
     if (!evento.EstadoEvento) {
-        throw criarErro('Nao e possivel comentar um evento inativo.', 400);
+        throw criarErro('Não é possível comentar um evento inativo.', 400);
     }
 
     if (evento.DataPublicacaoInicio && new Date(evento.DataPublicacaoInicio) > agora) {
-        throw criarErro('Nao e possivel comentar um evento antes do inicio da publicacao.', 400);
+        throw criarErro('Não é possível comentar um evento antes do início da publicação.', 400);
     }
 
     if (evento.DataPublicacaoFim && new Date(evento.DataPublicacaoFim) < agora) {
-        throw criarErro('Nao e possivel comentar um evento cuja publicacao ja terminou.', 400);
+        throw criarErro('Não é possível comentar um evento cuja publicação já terminou.', 400);
     }
 
     const comentarioCriado = await eventRepo.createComment({
@@ -184,7 +184,7 @@ const adicionarComentario = async (idEvento, comentario, utilizador) => {
 
 const editarComentario = async (idEventoComentario, comentario, utilizador) => {
     if (!idEventoComentario || !utilizador?.IdUtilizador) {
-        throw criarErro('IdEventoComentario e utilizador autenticado sao obrigatorios.', 400);
+        throw criarErro('IdEventoComentario e utilizador autenticado são obrigatórios.', 400);
     }
 
     if (utilizador.Permissoes !== PERMISSOES.PROFESSOR) {

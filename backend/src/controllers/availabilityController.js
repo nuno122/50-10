@@ -11,7 +11,7 @@ const getDisponibilidades = async (req, res) => {
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Nao foi possivel carregar as disponibilidades.'
+            erro: erro.message || 'Não foi possível carregar as disponibilidades.'
         });
     }
 };
@@ -23,7 +23,7 @@ const getMinhasDisponibilidades = async (req, res) => {
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Nao foi possivel carregar as disponibilidades.'
+            erro: erro.message || 'Não foi possível carregar as disponibilidades.'
         });
     }
 };
@@ -35,7 +35,7 @@ const guardarMinhasDisponibilidades = async (req, res) => {
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Nao foi possivel guardar as disponibilidades.'
+            erro: erro.message || 'Não foi possível guardar as disponibilidades.'
         });
     }
 };

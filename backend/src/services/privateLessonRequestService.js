@@ -162,11 +162,11 @@ const validarProfessorDoPedido = async (idProfessor, estilo) => {
 const validarDisponibilidadeProfessor = async (pedido, idProfessor) => {
     const inicio = construirDataHora(pedido.DataPretendida, pedido.HoraPretendida);
     if (!inicio) {
-        throw criarErro('A data ou hora pretendida e invalida.', 400);
+        throw criarErro('A data ou hora pretendida é inválida.', 400);
     }
 
     if (inicio <= new Date()) {
-        throw criarErro('Nao e possivel confirmar um pedido para um horario passado.', 400);
+        throw criarErro('Não é possível confirmar um pedido para um horário passado.', 400);
     }
 
     const fim = construirFim(inicio, pedido.DuracaoMinutos);
@@ -182,7 +182,7 @@ const validarDisponibilidadeProfessor = async (pedido, idProfessor) => {
     ]);
 
     if (!intervaloCabeNaDisponibilidade(inicio, fim, disponibilidades)) {
-        throw criarErro('O professor nao tem disponibilidade registada para este horario.', 400);
+        throw criarErro('O professor não tem disponibilidade registada para este horário.', 400);
     }
 
     const aulaSobreposta = aulasDoProfessor.find((aula) => (
@@ -190,7 +190,7 @@ const validarDisponibilidadeProfessor = async (pedido, idProfessor) => {
     ));
 
     if (aulaSobreposta) {
-        throw criarErro('O professor ja tem uma aula marcada neste horario.', 400);
+        throw criarErro('O professor já tem uma aula marcada neste horário.', 400);
     }
 
     const pedidoSobreposto = pedidosConfirmados.find((pedidoConfirmado) => {
@@ -200,7 +200,7 @@ const validarDisponibilidadeProfessor = async (pedido, idProfessor) => {
     });
 
     if (pedidoSobreposto) {
-        throw criarErro('O professor ja confirmou outro pedido de Coaching neste horario.', 400);
+        throw criarErro('O professor já confirmou outro pedido de Coaching neste horário.', 400);
     }
 
     return { inicio, fim };
@@ -240,11 +240,11 @@ const criarPedido = async (dados, idEncarregado) => {
 
     const dataHoraPretendida = construirDataHora(DataPretendida, HoraPretendida);
     if (!dataHoraPretendida) {
-        throw criarErro('A data ou hora pretendida e invalida.', 400);
+        throw criarErro('A data ou hora pretendida é inválida.', 400);
     }
 
     if (dataHoraPretendida <= new Date()) {
-        throw criarErro('O pedido tem de ser para um horario futuro.', 400);
+        throw criarErro('O pedido tem de ser para um horário futuro.', 400);
     }
 
     await validarDisponibilidadeProfessor({
@@ -316,7 +316,7 @@ const confirmarPedidoProfessor = async (idPedidoAulaPrivada, dados, idProfessor)
     });
 
     return {
-        mensagem: 'Disponibilidade confirmada pelo professor. O pedido segue para validacao da Direcao.',
+        mensagem: 'Disponibilidade confirmada pelo professor. O pedido segue para validação da Direção.',
         pedido: pedidoAtualizado
     };
 };
@@ -362,7 +362,7 @@ const aprovarPedido = async (idPedidoAulaPrivada, dados, idDiretor) => {
     }
 
     if (pedido.EstadoPedido !== ESTADOS_PEDIDO.PENDENTE_DIRECAO) {
-        throw criarErro('Apenas pedidos confirmados pelo professor podem ser aprovados pela Direcao.', 400);
+        throw criarErro('Apenas pedidos confirmados pelo professor podem ser aprovados pela Direção.', 400);
     }
 
     const IdProfessor = pedido.IdProfessorConfirmado;
@@ -378,16 +378,16 @@ const aprovarPedido = async (idPedidoAulaPrivada, dados, idDiretor) => {
     }
 
     if (!Number.isFinite(preco) || preco < 0) {
-        throw criarErro('Preco invalido.', 400);
+        throw criarErro('Preço inválido.', 400);
     }
 
     const inicio = construirDataHora(dataPretendida, horaPretendida);
     if (!inicio) {
-        throw criarErro('Data ou hora da aula aprovada invalida.', 400);
+        throw criarErro('Data ou hora da aula aprovada inválida.', 400);
     }
 
     if (inicio <= new Date()) {
-        throw criarErro('A aula aprovada tem de ficar num horario futuro.', 400);
+        throw criarErro('A aula aprovada tem de ficar num horário futuro.', 400);
     }
 
     const fim = construirFim(inicio, duracao);

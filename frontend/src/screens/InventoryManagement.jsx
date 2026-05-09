@@ -44,7 +44,7 @@ const InventoryManagement = () => {
             const data = await getInventario();
             setInventory(data);
         } catch (err) {
-            setError(err.message || 'Nao foi possivel carregar o inventario.');
+            setError(err.message || 'Não foi possível carregar o inventário.');
         } finally {
             setLoading(false);
         }
@@ -127,7 +127,7 @@ const InventoryManagement = () => {
                 await refreshSnapshot();
                 notify({
                     title: 'Artigo publicado',
-                    message: `${formData.Nome || 'O artigo'} ficou visivel no marketplace.`,
+                    message: `${formData.Nome || 'O artigo'} ficou visível no marketplace.`,
                     tone: 'success'
                 });
             } else if (selectedItem) {
@@ -152,7 +152,7 @@ const InventoryManagement = () => {
             setSelectedImageFile(null);
             await loadInventory();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel guardar o artigo.');
+            setError(err.message || 'Não foi possível guardar o artigo.');
         } finally {
             setSaving(false);
         }
@@ -162,8 +162,8 @@ const InventoryManagement = () => {
         <div className="inventory-page">
             <div className="inventory-header">
                 <div>
-                    <p className="inventory-eyebrow">Direcao</p>
-                    <h1>Gestao de Inventario</h1>
+                    <p className="inventory-eyebrow">Direção</p>
+                    <h1>Gestão de inventário</h1>
                     <p className="inventory-subtitle">
                         Acompanha os anuncios publicados no marketplace e o stock associado.
                     </p>
@@ -186,7 +186,7 @@ const InventoryManagement = () => {
                 </article>
                 <article className="inventory-card inventory-stat-card">
                     <div>
-                        <p>Disponiveis</p>
+                        <p>Disponíveis</p>
                         <strong>{availableCount}</strong>
                     </div>
                     <span>OK</span>
@@ -212,7 +212,7 @@ const InventoryManagement = () => {
                 <div className="inventory-filters">
                     {[
                         ['all', 'Todos'],
-                        ['available', 'Disponiveis'],
+                        ['available', 'Disponíveis'],
                         ['rented', 'Sem Stock'],
                         ['inactive', 'Inativos']
                     ].map(([value, label]) => (
@@ -230,7 +230,7 @@ const InventoryManagement = () => {
 
             {loading ? (
                 <section className="inventory-card inventory-empty">
-                    <p>A carregar inventario...</p>
+                    <p>A carregar inventário...</p>
                 </section>
             ) : (
                 <div className="inventory-grid">
@@ -272,7 +272,7 @@ const InventoryManagement = () => {
                                     </div>
                                     <div className="inventory-meta-row">
                                         <span>Email do anunciante</span>
-                                        <strong>{item.Criador?.Email || 'Anuncio legacy'}</strong>
+                                        <strong>{item.Criador?.Email || 'Anúncio antigo'}</strong>
                                     </div>
                                 </div>
 
@@ -352,19 +352,19 @@ const InventoryManagement = () => {
 
                             {previewImageUrl && (
                                 <div className="inventory-form-note">
-                                    <p>Pre-visualizacao da imagem.</p>
+                                    <p>Pré-visualização da imagem.</p>
                                     <div className="inventory-detail-media">
-                                        <img className="inventory-detail-image" src={previewImageUrl} alt={formData.Nome || 'Pre-visualizacao do artigo'} />
+                                        <img className="inventory-detail-image" src={previewImageUrl} alt={formData.Nome || 'Pré-visualização do artigo'} />
                                     </div>
                                 </div>
                             )}
 
                             {selectedItem && (
                                 <div className="inventory-form-note">
-                                    <p>Publicacao atual.</p>
+                                    <p>Publicação atual.</p>
                                     <div className="inventory-meta-row">
                                         <span>Email do anunciante</span>
-                                        <strong>{selectedItem.Criador?.Email || 'Anuncio legacy'}</strong>
+                                        <strong>{selectedItem.Criador?.Email || 'Anúncio antigo'}</strong>
                                     </div>
                                 </div>
                             )}

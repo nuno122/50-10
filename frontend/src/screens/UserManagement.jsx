@@ -8,7 +8,7 @@ const MANAGED_ROLES = [PERMISSOES.ENCARREGADO, PERMISSOES.PROFESSOR, PERMISSOES.
 const ROLE_OPTIONS = [
     { value: PERMISSOES.ENCARREGADO, label: 'Encarregado' },
     { value: PERMISSOES.PROFESSOR, label: 'Professor' },
-    { value: PERMISSOES.DIRECAO, label: 'Direcao' }
+    { value: PERMISSOES.DIRECAO, label: 'Direção' }
 ];
 
 const emptyForm = {
@@ -32,7 +32,7 @@ const validateUserForm = (formData, editingUser) => {
     if (!formData.NomeUtilizador.trim()) return 'Indica o nome de utilizador.';
     if (!formData.Email.trim()) return 'Indica o email.';
     if (!formData.Nif.trim()) return 'Indica o NIF.';
-    if (!formData.CodigoPostal.trim()) return 'Indica o codigo postal.';
+    if (!formData.CodigoPostal.trim()) return 'Indica o código postal.';
     if (!formData.Morada.trim()) return 'Indica a morada.';
     if (!editingUser && !formData.PalavraPasse.trim()) return 'Indica a palavra-passe.';
     if (Number(formData.Permissoes) === PERMISSOES.PROFESSOR && !formData.Iban.trim()) return 'Indica o IBAN do professor.';
@@ -76,7 +76,7 @@ const UserManagement = () => {
             setUsers((data || []).filter((user) => MANAGED_ROLES.includes(user.Permissoes)));
             setStyles(stylesData || []);
         } catch (err) {
-            setError(err.message || 'Nao foi possivel carregar os utilizadores.');
+            setError(err.message || 'Não foi possível carregar os utilizadores.');
         } finally {
             setLoading(false);
         }
@@ -213,7 +213,7 @@ const UserManagement = () => {
             setIsModalOpen(false);
             await loadUsers();
         } catch (err) {
-            setModalError(err.message || 'Nao foi possivel guardar o utilizador.');
+            setModalError(err.message || 'Não foi possível guardar o utilizador.');
         } finally {
             submitLockRef.current = false;
             setSaving(false);
@@ -234,7 +234,7 @@ const UserManagement = () => {
             setFeedback(`Utilizador ${user.EstaAtivo === false ? 'ativado' : 'inativado'} com sucesso.`);
             await loadUsers();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel atualizar o estado do utilizador.');
+            setError(err.message || 'Não foi possível atualizar o estado do utilizador.');
         }
     };
 
@@ -242,15 +242,15 @@ const UserManagement = () => {
         <div className="user-admin-page">
             <div className="user-admin-header">
                 <div>
-                    <p className="user-admin-eyebrow">Direcao</p>
-                    <h1>Gestao de Utilizadores</h1>
+                    <p className="user-admin-eyebrow">Direção</p>
+                    <h1>Gestão de utilizadores</h1>
                     <p className="user-admin-subtitle">
-                        Crie, edite e ative ou inative Encarregados, Professores e membros da Direcao.
+                        Crie, edite, ative ou inative Encarregados, Professores e membros da Direção.
                     </p>
                 </div>
 
                 <button type="button" className="schedule-button schedule-button--primary" onClick={openCreateModal}>
-                    Novo Utilizador
+                    Novo utilizador
                 </button>
             </div>
 

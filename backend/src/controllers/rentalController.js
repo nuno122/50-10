@@ -34,7 +34,7 @@ const solicitarExtensaoController = async (req, res) => {
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao solicitar extensao.'
+            erro: erro.message || 'Erro ao solicitar extensão.'
         });
     }
 };
@@ -66,7 +66,7 @@ const registarDevolucaoController = async (req, res) => {
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao registar devolucao.'
+            erro: erro.message || 'Erro ao registar devolução.'
         });
     }
 };

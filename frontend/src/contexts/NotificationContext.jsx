@@ -140,10 +140,10 @@ const buildMarketplaceNotifications = (previousItems = [], nextItems = []) => {
     const firstItem = newItems[0];
 
     return [{
-        title: newItems.length === 1 ? 'Novo artigo disponivel para aluguer' : 'Novos artigos disponiveis para aluguer',
+        title: newItems.length === 1 ? 'Novo artigo disponível para aluguer' : 'Novos artigos disponíveis para aluguer',
         message: newItems.length === 1
             ? `${firstItem.title}${firstItem.email ? ` publicado por ${firstItem.email}` : ''}.`
-            : `${newItems.length} artigos ficaram disponiveis no marketplace.`,
+            : `${newItems.length} artigos ficaram disponíveis no marketplace.`,
         tone: 'info'
     }];
 };
@@ -271,7 +271,7 @@ const buildDirectorNotifications = (previousSnapshot, nextSnapshot) => {
             title: newLessons.length === 1 ? 'Nova aula criada' : 'Novas aulas criadas',
             message: newLessons.length === 1
                 ? `${firstLesson.label} em ${firstLesson.when}.`
-                : `${newLessons.length} novas aulas foram adicionadas ao horario.`,
+                : `${newLessons.length} novas aulas foram adicionadas ao horário.`,
             tone: 'info'
         });
     }
@@ -285,10 +285,10 @@ const buildDirectorNotifications = (previousSnapshot, nextSnapshot) => {
         if ((lesson.bookingCount || 0) > (previousLesson.bookingCount || 0)) {
             const newBookings = lesson.bookingCount - previousLesson.bookingCount;
             notifications.push({
-                title: newBookings === 1 ? 'Nova marcacao em aula' : 'Novas marcacoes em aula',
+                title: newBookings === 1 ? 'Nova marcação em aula' : 'Novas marcações em aula',
                 message: newBookings === 1
-                    ? `${lesson.label} recebeu uma nova inscricao.`
-                    : `${lesson.label} recebeu ${newBookings} novas inscricoes.`,
+                    ? `${lesson.label} recebeu uma nova inscrição.`
+                    : `${lesson.label} recebeu ${newBookings} novas inscrições.`,
                 tone: 'info'
             });
         }
@@ -296,8 +296,8 @@ const buildDirectorNotifications = (previousSnapshot, nextSnapshot) => {
 
     if ((nextSnapshot.pendingValidationCount || 0) > (previousSnapshot.pendingValidationCount || 0)) {
         notifications.push({
-            title: 'Novas validacoes pendentes',
-            message: 'A Direcao tem novas aulas por validar.',
+            title: 'Novas validações pendentes',
+            message: 'A Direção tem novas aulas por validar.',
             tone: 'warning'
         });
     }
@@ -318,8 +318,8 @@ const buildDirectorNotifications = (previousSnapshot, nextSnapshot) => {
         notifications.push({
             title: newCoachingRequests.length === 1 ? 'Novo pedido de Coaching' : 'Novos pedidos de Coaching',
             message: newCoachingRequests.length === 1
-                ? `${firstRequest.label} em ${firstRequest.when} aguarda decisao da Direcao.`
-                : `${newCoachingRequests.length} pedidos de Coaching aguardam decisao da Direcao.`,
+                ? `${firstRequest.label} em ${firstRequest.when} aguarda decisão da Direção.`
+                : `${newCoachingRequests.length} pedidos de Coaching aguardam decisão da Direção.`,
             tone: 'warning'
         });
     }
@@ -340,10 +340,10 @@ const buildTeacherNotifications = (previousSnapshot, nextSnapshot) => {
     if (newLessons.length > 0) {
         const firstLesson = newLessons[0];
         notifications.push({
-            title: newLessons.length === 1 ? 'Nova aula atribuida' : 'Novas aulas atribuidas',
+            title: newLessons.length === 1 ? 'Nova aula atribuída' : 'Novas aulas atribuídas',
             message: newLessons.length === 1
                 ? `${firstLesson.label} em ${firstLesson.when}.`
-                : `${newLessons.length} novas aulas foram associadas ao teu horario.`,
+                : `${newLessons.length} novas aulas foram associadas ao teu horário.`,
             tone: 'info'
         });
     }
@@ -355,10 +355,10 @@ const buildTeacherNotifications = (previousSnapshot, nextSnapshot) => {
         if ((lesson.bookingCount || 0) > (previousLesson.bookingCount || 0)) {
             const newBookings = lesson.bookingCount - previousLesson.bookingCount;
             notifications.push({
-                title: newBookings === 1 ? 'Nova marcacao na tua aula' : 'Novas marcacoes nas tuas aulas',
+                title: newBookings === 1 ? 'Nova marcação na tua aula' : 'Novas marcações nas tuas aulas',
                 message: newBookings === 1
-                    ? `${lesson.label} recebeu uma nova inscricao.`
-                    : `${lesson.label} recebeu ${newBookings} novas inscricoes.`,
+                    ? `${lesson.label} recebeu uma nova inscrição.`
+                    : `${lesson.label} recebeu ${newBookings} novas inscrições.`,
                 tone: 'info'
             });
         }
@@ -370,7 +370,7 @@ const buildTeacherNotifications = (previousSnapshot, nextSnapshot) => {
             title: newEvents.length === 1 ? 'Novo evento publicado' : 'Novos eventos publicados',
             message: newEvents.length === 1
                 ? `${firstEvent.title} para ${firstEvent.when}.`
-                : `${newEvents.length} novos eventos ficaram visiveis no portal.`,
+                : `${newEvents.length} novos eventos ficaram visíveis no portal.`,
             tone: 'info'
         });
     }
@@ -381,7 +381,7 @@ const buildTeacherNotifications = (previousSnapshot, nextSnapshot) => {
 
         if (previousLesson.validated === false && lesson.validated === true) {
             notifications.push({
-                title: 'Aula validada pela Direcao',
+                title: 'Aula validada pela Direção',
                 message: `${lesson.label} foi validada em ${lesson.when}.`,
                 tone: 'success'
             });
@@ -397,7 +397,7 @@ const buildTeacherNotifications = (previousSnapshot, nextSnapshot) => {
             title: newCoachingRequests.length === 1 ? 'Novo pedido de Coaching' : 'Novos pedidos de Coaching',
             message: newCoachingRequests.length === 1
                 ? `${firstRequest.student} pediu ${firstRequest.label} para ${firstRequest.when}.`
-                : `${newCoachingRequests.length} pedidos de Coaching aguardam a tua confirmacao.`,
+                : `${newCoachingRequests.length} pedidos de Coaching aguardam a tua confirmação.`,
             tone: 'warning'
         });
     }
@@ -417,10 +417,10 @@ const buildGuardianNotifications = (previousSnapshot, nextSnapshot) => {
     if (newAvailableLessons.length > 0) {
         const firstLesson = newAvailableLessons[0];
         notifications.push({
-            title: newAvailableLessons.length === 1 ? 'Nova aula disponivel' : 'Novas aulas disponiveis',
+            title: newAvailableLessons.length === 1 ? 'Nova aula disponível' : 'Novas aulas disponíveis',
             message: newAvailableLessons.length === 1
                 ? `${firstLesson.label} em ${firstLesson.when}.`
-                : `${newAvailableLessons.length} novas aulas ficaram disponiveis para inscricao.`,
+                : `${newAvailableLessons.length} novas aulas ficaram disponíveis para inscrição.`,
             tone: 'info'
         });
     }
@@ -431,7 +431,7 @@ const buildGuardianNotifications = (previousSnapshot, nextSnapshot) => {
             title: newEvents.length === 1 ? 'Novo evento publicado' : 'Novos eventos publicados',
             message: newEvents.length === 1
                 ? `${firstEvent.title} para ${firstEvent.when}.`
-                : `${newEvents.length} novos eventos ficaram disponiveis para consulta.`,
+                : `${newEvents.length} novos eventos ficaram disponíveis para consulta.`,
             tone: 'info'
         });
     }
@@ -457,7 +457,7 @@ const buildGuardianNotifications = (previousSnapshot, nextSnapshot) => {
         if (request.status === 'PendenteDirecao') {
             notifications.push({
                 title: 'Coaching confirmado pelo professor',
-                message: `${request.label} em ${request.when} segue agora para decisao da Direcao.`,
+                message: `${request.label} em ${request.when} segue agora para decisão da Direção.`,
                 tone: 'info'
             });
             return;
@@ -475,7 +475,7 @@ const buildGuardianNotifications = (previousSnapshot, nextSnapshot) => {
         if (request.status === 'RejeitadoProfessor') {
             notifications.push({
                 title: 'Coaching rejeitado pelo professor',
-                message: request.observacaoProfessor || `${request.label} nao foi confirmado pelo professor.`,
+                message: request.observacaoProfessor || `${request.label} não foi confirmado pelo professor.`,
                 tone: 'danger'
             });
             return;
@@ -483,8 +483,8 @@ const buildGuardianNotifications = (previousSnapshot, nextSnapshot) => {
 
         if (request.status === 'RejeitadoDirecao') {
             notifications.push({
-                title: 'Coaching rejeitado pela Direcao',
-                message: request.observacaoDirecao || `${request.label} nao foi aprovado pela Direcao.`,
+                title: 'Coaching rejeitado pela Direção',
+                message: request.observacaoDirecao || `${request.label} não foi aprovado pela Direção.`,
                 tone: 'danger'
             });
         }
@@ -538,6 +538,7 @@ export const NotificationProvider = ({ children }) => {
     const [notificationFeed, setNotificationFeed] = useState([]);
     const lastSnapshotRef = useRef(null);
     const isHydratingRef = useRef(true);
+    const lastRequestErrorRef = useRef({ key: '', timestamp: 0 });
 
     const dismiss = useCallback((id) => {
         setPopupNotifications((current) => current.filter((item) => item.id !== id));
@@ -592,6 +593,42 @@ export const NotificationProvider = ({ children }) => {
             }, duration);
         }
     }, [dismiss]);
+
+    useEffect(() => {
+        const handleRequestError = (event) => {
+            const detail = event?.detail || {};
+            const title = String(detail.title || 'Operação não concluída').trim();
+            const message = String(detail.message || 'O pedido não foi concluído.').trim();
+            const key = `${title}::${message}`;
+            const now = Date.now();
+
+            if (
+                lastRequestErrorRef.current.key === key &&
+                now - lastRequestErrorRef.current.timestamp < 1500
+            ) {
+                return;
+            }
+
+            lastRequestErrorRef.current = {
+                key,
+                timestamp: now
+            };
+
+            notify({
+                title,
+                message,
+                tone: 'danger',
+                duration: 8000,
+                persist: false
+            });
+        };
+
+        window.addEventListener('entartes:request-error', handleRequestError);
+
+        return () => {
+            window.removeEventListener('entartes:request-error', handleRequestError);
+        };
+    }, [notify]);
 
     const refreshSnapshot = useCallback(async () => {
         if (!isAuthenticated || !user?.Id) return;

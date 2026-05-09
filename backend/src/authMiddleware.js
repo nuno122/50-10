@@ -2,17 +2,17 @@ const jwt = require('jsonwebtoken');
 const PERMISSOES = require('./config/permissions');
 const userRepository = require('./repositories/userRepository');
 
-const JWT_SECRET = process.env.JWT_SECRET || "ChaveSuperSecretaDaEntArtes_2026";
+const JWT_SECRET = process.env.JWT_SECRET || 'ChaveSuperSecretaDaEntArtes_2026';
 
 const responderTokenInvalido = (res) => (
-    res.status(401).json({ erro: "Sessao expirada ou invalida. Por favor, faca login novamente." })
+    res.status(401).json({ erro: 'Sessão expirada ou inválida. Por favor, inicie sessão novamente.' })
 );
 
 const verificarToken = async (req, res, next) => {
     const cabecalhoAuth = req.headers.authorization;
 
     if (!cabecalhoAuth || !cabecalhoAuth.startsWith('Bearer ')) {
-        return res.status(401).json({ erro: "Acesso negado! Inicie sessao para continuar." });
+        return res.status(401).json({ erro: 'Acesso negado! Inicie sessão para continuar.' });
     }
 
     const token = cabecalhoAuth.split(' ')[1];
@@ -54,17 +54,14 @@ const verificarToken = async (req, res, next) => {
     }
 };
 
-// Aceita uma ou mais permissoes
-// Ex: verificarPermissao(PERMISSOES.DIRECAO)
-// Ex: verificarPermissao(PERMISSOES.PROFESSOR, PERMISSOES.DIRECAO)
 const verificarPermissao = (...permissoesPermitidas) => {
     return (req, res, next) => {
         if (!req.utilizador) {
-            return res.status(401).json({ erro: "Nao autenticado." });
+            return res.status(401).json({ erro: 'Não autenticado.' });
         }
 
         if (!permissoesPermitidas.includes(req.utilizador.Permissoes)) {
-            return res.status(403).json({ erro: "Acesso negado. Permissoes insuficientes." });
+            return res.status(403).json({ erro: 'Acesso negado. Permissões insuficientes.' });
         }
 
         next();

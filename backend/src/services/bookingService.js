@@ -54,12 +54,12 @@ const ConsultarVagas = async () => {
 
 const GetPreco = async (idAula) => {
     const aula = await bookingRepo.findAulaWithMarcacoes(idAula);
-    if (!aula) throw criarErro('Aula nao encontrada.', 404);
+    if (!aula) throw criarErro('Aula não encontrada.', 404);
     return aula.Preco;
 };
 
 const listarAlunosDoEncarregado = async (idEncarregado) => {
-    if (!idEncarregado) throw criarErro('IdEncarregado e obrigatorio.', 400);
+    if (!idEncarregado) throw criarErro('IdEncarregado é obrigatório.', 400);
 
     const relations = await bookingRepo.findStudentsByGuardian(idEncarregado);
 
@@ -75,7 +75,7 @@ const validarAlunoDoEncarregado = async (idEncarregado, idAluno) => {
     const aluno = alunos.find((item) => item.IdAluno === idAluno);
 
     if (!aluno) {
-        throw criarErro('O aluno selecionado nao esta associado a este encarregado.', 403);
+        throw criarErro('O aluno selecionado não está associado a este encarregado.', 403);
     }
 
     return aluno;
@@ -83,27 +83,27 @@ const validarAlunoDoEncarregado = async (idEncarregado, idAluno) => {
 
 const FazerMarcacao = async (idAula, idAluno) => {
     if (!idAluno || !idAula) {
-        throw criarErro('IdAluno e IdAula sao obrigatorios.', 400);
+        throw criarErro('IdAluno e IdAula são obrigatórios.', 400);
     }
 
     const aluno = await bookingRepo.findAlunoById(idAluno);
-    if (!aluno) throw criarErro('Aluno nao encontrado.', 404);
+    if (!aluno) throw criarErro('Aluno não encontrado.', 404);
 
     const aula = await bookingRepo.findAulaWithMarcacoes(idAula);
-    if (!aula) throw criarErro('Aula nao encontrada.', 404);
+    if (!aula) throw criarErro('Aula não encontrada.', 404);
 
     if (!aula.EstaAtivo) throw criarErro('Esta aula foi cancelada.', 400);
 
     const disponibilidadesProfessor = await classRepo.findProfessorAvailabilityByDate(aula.IdProfessor, aula.Data);
 
     if (!aulaCabeNaDisponibilidadeProfessor(aula, disponibilidadesProfessor)) {
-        throw criarErro('O professor nao tem disponibilidade registada para este horario.', 400);
+        throw criarErro('O professor não tem disponibilidade registada para este horário.', 400);
     }
 
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     if (new Date(aula.Data) < hoje) {
-        throw criarErro('Nao podes marcar aulas passadas.', 400);
+        throw criarErro('Não pode marcar aulas passadas.', 400);
     }
 
     const inscritosAtivos = aula.Marcacao.filter((marcacao) => marcacao.EstaAtivo).length;
@@ -112,7 +112,7 @@ const FazerMarcacao = async (idAula, idAluno) => {
     }
 
     const jaInscrito = await bookingRepo.findExisting(idAluno, idAula);
-    if (jaInscrito) throw criarErro('Ja estas inscrito nesta aula.', 400);
+    if (jaInscrito) throw criarErro('Já estás inscrito nesta aula.', 400);
 
     const novaMarcacao = await bookingRepo.create(idAluno, idAula);
 
@@ -147,7 +147,7 @@ const ProcessarCancelamento = async (idMarcacao, aprovadoAutomaticamente, motivo
     const marcacao = await bookingRepo.RegistarPedidoCancelamento(idMarcacao, motivo || 'Pedido de cancelamento com menos de 24h.');
     return {
         sucesso: false,
-        mensagem: 'Prazo de 24h expirou. O pedido foi enviado para aprovacao da Direcao.',
+        mensagem: 'O prazo de 24 horas expirou. O pedido foi enviado para aprovação da Direção.',
         marcacao
     };
 };
@@ -165,16 +165,16 @@ const construirDataAulaCompleta = (marcacao) => {
 
 const CancelarMarcacao = async (idMarcacao, idAluno, motivo) => {
     if (!idMarcacao || !idAluno) {
-        throw criarErro('IdMarcacao e IdAluno sao obrigatorios.', 400);
+        throw criarErro('IdMarcacao e IdAluno são obrigatórios.', 400);
     }
 
     const marcacao = await bookingRepo.findByIdComAula(idMarcacao);
 
-    if (!marcacao) throw criarErro('Marcacao nao encontrada.', 404);
-    if (marcacao.IdAluno !== idAluno) throw criarErro('Nao tens permissao para cancelar esta marcacao.', 403);
-    if (!marcacao.EstaAtivo) throw criarErro('Esta marcacao ja esta cancelada.', 400);
+    if (!marcacao) throw criarErro('Marcação não encontrada.', 404);
+    if (marcacao.IdAluno !== idAluno) throw criarErro('Não tem permissão para cancelar esta marcação.', 403);
+    if (!marcacao.EstaAtivo) throw criarErro('Esta marcação já está cancelada.', 400);
     if (marcacao.EstadoCancelamento === ESTADOS_CANCELAMENTO.PENDENTE) {
-        throw criarErro('Ja existe um pedido de cancelamento pendente para esta marcacao.', 400);
+        throw criarErro('Já existe um pedido de cancelamento pendente para esta marcação.', 400);
     }
 
     const dataAulaCompleta = construirDataAulaCompleta(marcacao);
@@ -183,7 +183,7 @@ const CancelarMarcacao = async (idMarcacao, idAluno, motivo) => {
 
 const CancelarMarcacaoComoEncarregado = async (idMarcacao, idEncarregado, motivo) => {
     const marcacao = await bookingRepo.findByIdComAula(idMarcacao);
-    if (!marcacao) throw criarErro('Marcacao nao encontrada.', 404);
+    if (!marcacao) throw criarErro('Marcação não encontrada.', 404);
 
     await validarAlunoDoEncarregado(idEncarregado, marcacao.IdAluno);
     return await CancelarMarcacao(idMarcacao, marcacao.IdAluno, motivo);
@@ -191,40 +191,40 @@ const CancelarMarcacaoComoEncarregado = async (idMarcacao, idEncarregado, motivo
 
 const aprovarPedidoCancelamento = async (idMarcacao, idDiretor, observacao) => {
     if (!idMarcacao || !idDiretor) {
-        throw criarErro('IdMarcacao e IdDiretor sao obrigatorios.', 400);
+        throw criarErro('IdMarcacao e IdDiretor são obrigatórios.', 400);
     }
 
     const marcacao = await bookingRepo.findByIdComAula(idMarcacao);
 
-    if (!marcacao) throw criarErro('Marcacao nao encontrada.', 404);
+    if (!marcacao) throw criarErro('Marcação não encontrada.', 404);
     if (marcacao.EstadoCancelamento !== ESTADOS_CANCELAMENTO.PENDENTE) {
-        throw criarErro('Esta marcacao nao tem um pedido de cancelamento pendente.', 400);
+        throw criarErro('Esta marcação não tem um pedido de cancelamento pendente.', 400);
     }
 
     const marcacaoAtualizada = await bookingRepo.aprovarPedidoCancelamento(idMarcacao, idDiretor, observacao);
 
     return {
-        mensagem: 'Pedido de cancelamento aprovado pela Direcao.',
+        mensagem: 'Pedido de cancelamento aprovado pela Direção.',
         marcacao: marcacaoAtualizada
     };
 };
 
 const rejeitarPedidoCancelamento = async (idMarcacao, idDiretor, observacao) => {
     if (!idMarcacao || !idDiretor) {
-        throw criarErro('IdMarcacao e IdDiretor sao obrigatorios.', 400);
+        throw criarErro('IdMarcacao e IdDiretor são obrigatórios.', 400);
     }
 
     const marcacao = await bookingRepo.findByIdComAula(idMarcacao);
 
-    if (!marcacao) throw criarErro('Marcacao nao encontrada.', 404);
+    if (!marcacao) throw criarErro('Marcação não encontrada.', 404);
     if (marcacao.EstadoCancelamento !== ESTADOS_CANCELAMENTO.PENDENTE) {
-        throw criarErro('Esta marcacao nao tem um pedido de cancelamento pendente.', 400);
+        throw criarErro('Esta marcação não tem um pedido de cancelamento pendente.', 400);
     }
 
     const marcacaoAtualizada = await bookingRepo.rejeitarPedidoCancelamento(idMarcacao, idDiretor, observacao);
 
     return {
-        mensagem: 'Pedido de cancelamento rejeitado pela Direcao.',
+        mensagem: 'Pedido de cancelamento rejeitado pela Direção.',
         marcacao: marcacaoAtualizada
     };
 };
@@ -234,7 +234,7 @@ const listarMarcacoes = async () => {
 };
 
 const listarMarcacoesDoAluno = async (idAluno) => {
-    if (!idAluno) throw criarErro('IdAluno e obrigatorio.', 400);
+    if (!idAluno) throw criarErro('IdAluno é obrigatório.', 400);
     return await bookingRepo.findByAluno(idAluno);
 };
 
@@ -259,11 +259,13 @@ module.exports = {
     CancelarMarcacaoComoEncarregado,
     aprovarPedidoCancelamento,
     rejeitarPedidoCancelamento,
-    criarMarcacao: FazerMarcacao,
-    cancelarMarcacao: CancelarMarcacao,
     listarMarcacoes,
     listarMarcacoesDoAluno,
     listarMarcacoesDoEncarregado,
     listarAlunosDoEncarregado,
-    listarPedidosCancelamentoPendentes
+    listarPedidosCancelamentoPendentes,
+    criarMarcacao: FazerMarcacao,
+    criarMarcacaoEncarregado: FazerMarcacaoComoEncarregado,
+    cancelarMarcacao: CancelarMarcacao,
+    cancelarMarcacaoEncarregado: CancelarMarcacaoComoEncarregado
 };

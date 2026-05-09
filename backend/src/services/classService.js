@@ -148,7 +148,7 @@ const criarAula = async (dados) => {
     const tipoAula = dados.TipoAula || 'Regular';
 
     if (!TIPOS_AULA_VALIDOS.includes(tipoAula)) {
-        throw criarErro('TipoAula invalido. Usa Regular ou Coaching.', 400);
+        throw criarErro('TipoAula inválido. Use Regular ou Coaching.', 400);
     }
 
     const [professor, estudio, estilo] = await Promise.all([
@@ -166,7 +166,7 @@ const criarAula = async (dados) => {
     }
 
     if (!estudio) {
-        throw criarErro('O estudio selecionado nao existe.', 400);
+        throw criarErro('O estúdio selecionado não existe.', 400);
     }
 
     if (!estilo) {
@@ -174,14 +174,14 @@ const criarAula = async (dados) => {
     }
 
     if (!estudioTemCapacidade(estudio, dados.CapacidadeMaxima)) {
-        throw criarErro('A capacidade da aula excede a capacidade do estudio selecionado.', 400);
+        throw criarErro('A capacidade da aula excede a capacidade do estúdio selecionado.', 400);
     }
 
     const novaHoraInicio = toMinutes(dados.HoraInicio);
     const novaHoraFim = toMinutes(dados.HoraFim);
 
     if (!Number.isFinite(novaHoraInicio) || !Number.isFinite(novaHoraFim)) {
-        throw criarErro('Horario da aula invalido.', 400);
+        throw criarErro('Horário da aula inválido.', 400);
     }
 
     if (novaHoraFim <= novaHoraInicio) {
@@ -190,7 +190,7 @@ const criarAula = async (dados) => {
 
     if (!estudioSuportaEstilo(estudio, estilo)) {
         if (!podeUsarEstudioAlternativo(dados)) {
-            throw criarErro('O estudio selecionado nao suporta o estilo escolhido.', 400);
+            throw criarErro('O estúdio selecionado não suporta o estilo escolhido.', 400);
         }
 
         const existeEstudioCompativelDisponivel = await existemEstudiosCompativeisDisponiveis({
@@ -203,7 +203,7 @@ const criarAula = async (dados) => {
 
         if (existeEstudioCompativelDisponivel) {
             throw criarErro(
-                'Existem estudios compativeis disponiveis para este horario. Escolhe primeiro um estudio associado ao estilo.',
+                'Existem estúdios compatíveis disponíveis para este horário. Escolha primeiro um estúdio associado ao estilo.',
                 400
             );
         }
@@ -220,7 +220,7 @@ const criarAula = async (dados) => {
     ]);
 
     if (shouldValidateProfessorAvailability && !intervaloCabeNaDisponibilidade(dados.HoraInicio, dados.HoraFim, disponibilidadesProfessor)) {
-        throw criarErro('O professor nao tem disponibilidade registada para este horario.', 400);
+        throw criarErro('O professor não tem disponibilidade registada para este horário.', 400);
     }
 
     const aulaSobrepostaNoEstudio = aulasNoEstudio.find((aulaExistente) => {
@@ -230,7 +230,7 @@ const criarAula = async (dados) => {
     });
 
     if (aulaSobrepostaNoEstudio) {
-        throw criarErro('Conflito de horario! Estudio ocupado.', 400);
+        throw criarErro('Conflito de horário: estúdio ocupado.', 400);
     }
 
     const aulaSobrepostaDoProfessor = aulasDoProfessorNoDia.find((aulaExistente) => {
@@ -240,7 +240,7 @@ const criarAula = async (dados) => {
     });
 
     if (aulaSobrepostaDoProfessor) {
-        throw criarErro('Conflito de horario! Professor ocupado.', 400);
+        throw criarErro('Conflito de horário: professor ocupado.', 400);
     }
 
     const novaAula = await classRepo.create({
@@ -275,7 +275,7 @@ const criarAulasEmLote = async (dados = {}) => {
             erros.push({
                 indice: index + 1,
                 referencia: aula?.Referencia || `${aula?.Data || 'sem-data'} ${aula?.HoraInicio || ''}`.trim(),
-                mensagem: erro.message || 'Nao foi possivel criar a aula.'
+                mensagem: erro.message || 'Não foi possível criar a aula.'
             });
         }
     }
@@ -288,7 +288,7 @@ const criarAulasEmLote = async (dados = {}) => {
     if (totalFalhas > 0 && totalCriadas > 0) {
         mensagem = `${totalCriadas} aula(s) criada(s) e ${totalFalhas} com erro.`;
     } else if (totalFalhas > 0) {
-        mensagem = 'Nao foi possivel criar as aulas enviadas.';
+        mensagem = 'Não foi possível criar as aulas enviadas.';
     }
 
     return {
@@ -304,20 +304,20 @@ const criarAulasEmLote = async (dados = {}) => {
 const ConfirmarPresenca = async (idAula) => {
     const aula = await classRepo.findByIdComAlunos(idAula);
     if (!aula) {
-        throw criarErro('Aula nao encontrada.', 404);
+        throw criarErro('Aula não encontrada.', 404);
     }
 
     if (aula.EstaAtivo === false) {
-        throw criarErro('Nao e possivel confirmar uma aula cancelada.', 400);
+        throw criarErro('Não é possível confirmar uma aula cancelada.', 400);
     }
 
     if (!aulaTerminou(aula)) {
-        throw criarErro('So e possivel confirmar a conclusao depois da aula terminar.', 400);
+        throw criarErro('Só é possível confirmar a conclusão depois de a aula terminar.', 400);
     }
 
     const marcacoesAtivas = aula.Marcacao || [];
     if (marcacoesAtivas.length === 0) {
-        throw criarErro('Nao e possivel confirmar uma aula sem alunos inscritos.', 400);
+        throw criarErro('Não é possível confirmar uma aula sem alunos inscritos.', 400);
     }
 
     return await classRepo.ValidarConclusaoAula(idAula, true);
@@ -326,7 +326,7 @@ const ConfirmarPresenca = async (idAula) => {
 const cancelarAula = async (idAula, utilizador) => {
     const aula = await classRepo.findById(idAula);
     if (!aula) {
-        throw criarErro('Aula nao encontrada.', 404);
+        throw criarErro('Aula não encontrada.', 404);
     }
 
     if (aula.EstaAtivo === false) {
@@ -334,7 +334,7 @@ const cancelarAula = async (idAula, utilizador) => {
     }
 
     if (aulaTerminou(aula)) {
-        throw criarErro('Nao e possivel cancelar uma aula que ja terminou.', 400);
+        throw criarErro('Não é possível cancelar uma aula que já terminou.', 400);
     }
 
     if (utilizador?.Permissoes === PERMISSOES.PROFESSOR && aula.IdProfessor !== utilizador.IdUtilizador) {
@@ -352,26 +352,26 @@ const cancelarAula = async (idAula, utilizador) => {
 const validarAula = async (idAula, opcoes = {}) => {
     const aula = await classRepo.findByIdComAlunos(idAula);
     if (!aula) {
-        throw criarErro('Aula nao encontrada.', 404);
+        throw criarErro('Aula não encontrada.', 404);
     }
 
     if (aula.EstaAtivo === false) {
-        throw criarErro('Nao e possivel validar uma aula cancelada.', 400);
+        throw criarErro('Não é possível validar uma aula cancelada.', 400);
     }
 
     const concluirPorExcecao = opcoes?.ConcluirPorExcecao === true;
 
     if (!aula.ConfirmacaoProfessor && !concluirPorExcecao) {
-        throw criarErro('A aula tem de ser confirmada pelo professor antes da validacao da Direcao.', 400);
+        throw criarErro('A aula tem de ser confirmada pelo professor antes da validação da Direção.', 400);
     }
 
     if (!aula.ConfirmacaoProfessor && concluirPorExcecao && !aulaTerminou(aula)) {
-        throw criarErro('A Direcao so pode concluir por excecao depois da aula terminar.', 400);
+        throw criarErro('A Direção só pode concluir por exceção depois de a aula terminar.', 400);
     }
 
     const marcacoesAtivas = aula.Marcacao;
     if (marcacoesAtivas.length === 0) {
-        throw criarErro('Nao e possivel validar uma aula sem alunos inscritos.', 400);
+        throw criarErro('Não é possível validar uma aula sem alunos inscritos.', 400);
     }
 
     await classRepo.atualizarValidacaoDirecao(idAula);
@@ -381,7 +381,7 @@ const validarAula = async (idAula, opcoes = {}) => {
     const resumoPagamentos = descreverQuantidadePagamentos(resultadoPagamentos.pagamentos.length);
 
     const mensagem = concluirPorExcecao && !aula.ConfirmacaoProfessor
-        ? `Aula concluida por excecao pela Direcao e ${resumoPagamentos}.`
+        ? `Aula concluída por exceção pela Direção e ${resumoPagamentos}.`
         : `Aula validada e ${resumoPagamentos}.`;
 
     return {

@@ -113,9 +113,9 @@ const EventManagement = () => {
     const pageCopy = useMemo(() => {
         if (canManageEvents) {
             return {
-                eyebrow: 'Direcao',
-                title: 'Gestao de Eventos',
-                subtitle: 'Crie, edite e remova eventos, mantendo a comunicacao da escola sempre atualizada.'
+                eyebrow: 'Direção',
+                title: 'Gestão de eventos',
+                subtitle: 'Crie, edite e remova eventos, mantendo a comunicação da escola sempre atualizada.'
             };
         }
 
@@ -123,14 +123,14 @@ const EventManagement = () => {
             return {
                 eyebrow: 'Professor',
                 title: 'Eventos da Escola',
-                subtitle: 'Consulte os eventos publicados e registe observacoes nos eventos que acompanha.'
+                subtitle: 'Consulte os eventos publicados e registe observações nos eventos que acompanha.'
             };
         }
 
         return {
             eyebrow: 'Encarregado',
             title: 'Eventos da Escola',
-            subtitle: 'Consulte os eventos publicados pela Direcao.'
+            subtitle: 'Consulte os eventos publicados pela Direção.'
         };
     }, [canComment, canManageEvents]);
 
@@ -142,7 +142,7 @@ const EventManagement = () => {
             const data = await getEventos();
             setEvents(Array.isArray(data) ? data : []);
         } catch (err) {
-            setError(err.message || 'Nao foi possivel carregar os eventos.');
+            setError(err.message || 'Não foi possível carregar os eventos.');
         } finally {
             setLoading(false);
         }
@@ -190,7 +190,7 @@ const EventManagement = () => {
             handleCancelEventEdit();
             await loadEvents();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel guardar o evento.');
+            setError(err.message || 'Não foi possível guardar o evento.');
         } finally {
             setSubmitting(false);
         }
@@ -213,7 +213,7 @@ const EventManagement = () => {
             setFeedback('Evento removido com sucesso.');
             await loadEvents();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel remover o evento.');
+            setError(err.message || 'Não foi possível remover o evento.');
         } finally {
             setDeletingEventId('');
         }
@@ -223,7 +223,7 @@ const EventManagement = () => {
         event.preventDefault();
         const comentario = String(commentDrafts[idEvento] || '').trim();
         if (!comentario) {
-            setError('Escreva um comentario antes de guardar.');
+            setError('Escreva um comentário antes de guardar.');
             return;
         }
 
@@ -233,14 +233,14 @@ const EventManagement = () => {
 
         try {
             await adicionarComentarioEvento(idEvento, comentario);
-            setFeedback('Comentario adicionado com sucesso.');
+            setFeedback('Comentário adicionado com sucesso.');
             setCommentDrafts((current) => ({
                 ...current,
                 [idEvento]: ''
             }));
             await loadEvents();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel adicionar o comentario.');
+            setError(err.message || 'Não foi possível adicionar o comentário.');
         } finally {
             setCommentingEventId('');
         }
@@ -262,7 +262,7 @@ const EventManagement = () => {
         event.preventDefault();
         const comentario = String(editingCommentDraft || '').trim();
         if (!comentario) {
-            setError('Escreva um comentario antes de guardar.');
+            setError('Escreva um comentário antes de guardar.');
             return;
         }
 
@@ -272,11 +272,11 @@ const EventManagement = () => {
 
         try {
             await editarComentarioEvento(idEventoComentario, comentario);
-            setFeedback('Comentario atualizado com sucesso.');
+            setFeedback('Comentário atualizado com sucesso.');
             handleCancelCommentEdit();
             await loadEvents();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel atualizar o comentario.');
+            setError(err.message || 'Não foi possível atualizar o comentário.');
         } finally {
             setSavingCommentId('');
         }
@@ -304,12 +304,12 @@ const EventManagement = () => {
                 <section className="events-card">
                     <div className="events-card-header">
                         <h2>{selectedEventId ? 'Editar Evento' : 'Novo Evento'}</h2>
-                        <p>{selectedEventId ? 'Atualize os dados do evento selecionado.' : 'Defina a janela de publicacao e os dados que todos vao ver no portal.'}</p>
+                        <p>{selectedEventId ? 'Atualize os dados do evento selecionado.' : 'Defina a janela de publicação e os dados que todos vão ver no portal.'}</p>
                     </div>
 
                     <form className="events-form" onSubmit={handleEventSubmit}>
                         <label className="events-field events-field--full">
-                            <span>Titulo</span>
+                            <span>Título</span>
                             <input
                                 type="text"
                                 name="Titulo"
@@ -320,7 +320,7 @@ const EventManagement = () => {
                         </label>
 
                         <label className="events-field events-field--full">
-                            <span>Descricao</span>
+                            <span>Descrição</span>
                             <textarea
                                 name="Descricao"
                                 value={formData.Descricao}
@@ -331,7 +331,7 @@ const EventManagement = () => {
                         </label>
 
                         <label className="events-field">
-                            <span>Publicacao Inicio</span>
+                            <span>Publicação início</span>
                             <input
                                 type="datetime-local"
                                 name="DataPublicacaoInicio"
@@ -342,7 +342,7 @@ const EventManagement = () => {
                         </label>
 
                         <label className="events-field">
-                            <span>Publicacao Fim</span>
+                            <span>Publicação fim</span>
                             <input
                                 type="datetime-local"
                                 name="DataPublicacaoFim"
@@ -401,7 +401,7 @@ const EventManagement = () => {
                                     className="events-secondary-button"
                                     onClick={handleCancelEventEdit}
                                 >
-                                    Cancelar edicao
+                                    Cancelar edição
                                 </button>
                             )}
                             <button type="submit" className="events-primary-button" disabled={submitting}>
@@ -424,7 +424,7 @@ const EventManagement = () => {
                     </div>
                 ) : events.length === 0 ? (
                     <div className="events-empty">
-                        <p>Nao existem eventos para mostrar de momento.</p>
+                        <p>Não existem eventos para apresentar de momento.</p>
                     </div>
                 ) : (
                     <div className="events-list">
@@ -486,8 +486,8 @@ const EventManagement = () => {
                                             <strong>{formatDate(eventItem.DataEvento)}</strong>
                                         </div>
                                         <div>
-                                            <span>Publicacao</span>
-                                            <strong>{formatDateTime(eventItem.DataPublicacaoInicio)} ate {formatDateTime(eventItem.DataPublicacaoFim)}</strong>
+                                            <span>Publicação</span>
+                                            <strong>{formatDateTime(eventItem.DataPublicacaoInicio)} até {formatDateTime(eventItem.DataPublicacaoFim)}</strong>
                                         </div>
                                         <div>
                                             <span>Local</span>
@@ -501,7 +501,7 @@ const EventManagement = () => {
 
                                     <div className="event-comments">
                                         <div className="event-comments-header">
-                                            <h4>Comentarios dos Professores</h4>
+                                            <h4>Comentários dos Professores</h4>
                                             <span>{comments.length}</span>
                                         </div>
 
@@ -573,7 +573,7 @@ const EventManagement = () => {
                                                         ...current,
                                                         [eventItem.IdEvento]: changeEvent.target.value
                                                     }))}
-                                                    placeholder="Escreva um comentario sobre este evento"
+                                                    placeholder="Escreva um comentário sobre este evento"
                                                     rows="3"
                                                 />
 
@@ -582,7 +582,7 @@ const EventManagement = () => {
                                                     className="events-secondary-button"
                                                     disabled={commentingEventId === eventItem.IdEvento}
                                                 >
-                                                    {commentingEventId === eventItem.IdEvento ? 'A guardar...' : 'Adicionar comentario'}
+                                                    {commentingEventId === eventItem.IdEvento ? 'A guardar...' : 'Adicionar comentário'}
                                                 </button>
                                             </form>
                                         )}

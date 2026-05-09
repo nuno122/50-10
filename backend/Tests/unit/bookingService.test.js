@@ -36,7 +36,7 @@ describe('Booking Service', () => {
         it('deve rejeitar com erro 400 quando o aluno ou a aula nao forem fornecidos', async () => {
             await expect(bookingService.criarMarcacao(null, 1))
                 .rejects
-                .toThrow('IdAluno e IdAula sao obrigatorios.');
+                .toThrow('IdAluno e IdAula são obrigatórios.');
             
             expect(bookingRepo.create).not.toHaveBeenCalled();
         });
@@ -46,7 +46,7 @@ describe('Booking Service', () => {
 
             await expect(bookingService.criarMarcacao(1, 1))
                 .rejects
-                .toThrow('Aluno nao encontrado.');
+                .toThrow('Aluno não encontrado.');
             
             expect(bookingRepo.create).not.toHaveBeenCalled();
         });
@@ -67,7 +67,7 @@ describe('Booking Service', () => {
 
             await expect(bookingService.criarMarcacao(1, 1))
                 .rejects
-                .toThrow('O professor nao tem disponibilidade registada para este horario.');
+                .toThrow('O professor não tem disponibilidade registada para este horário.');
             
             expect(bookingRepo.create).not.toHaveBeenCalled();
         });
@@ -118,7 +118,7 @@ describe('Booking Service', () => {
 
             await expect(bookingService.cancelarMarcacao(1, 1, 'Motivo'))
                 .rejects
-                .toThrow('Marcacao nao encontrada.');
+                .toThrow('Marcação não encontrada.');
             
             expect(bookingRepo.cancelar).not.toHaveBeenCalled();
         });
@@ -161,7 +161,7 @@ describe('Booking Service', () => {
             const resultado = await bookingService.cancelarMarcacao(1, 1, 'Imprevisto');
 
             expect(resultado.sucesso).toBe(false);
-            expect(resultado.mensagem).toMatch(/Prazo de 24h expirou/);
+            expect(resultado.mensagem).toMatch(/prazo de 24 horas expirou/i);
             expect(bookingRepo.RegistarPedidoCancelamento).toHaveBeenCalledWith(1, 'Imprevisto');
         });
     });

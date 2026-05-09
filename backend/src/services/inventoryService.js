@@ -32,7 +32,7 @@ const criarArtigo = async (dados, utilizador) => {
     const { Nome, CustoPorDia } = dados || {};
 
     if (!Nome) {
-        throw criarErro('Nome do artigo e obrigatorio.', 400);
+        throw criarErro('Nome do artigo é obrigatório.', 400);
     }
 
     if (CustoPorDia === undefined || CustoPorDia === null || CustoPorDia === '' || Number(CustoPorDia) <= 0) {
@@ -40,7 +40,7 @@ const criarArtigo = async (dados, utilizador) => {
     }
 
     if (!utilizador?.IdUtilizador) {
-        throw criarErro('Sessao invalida para publicar o anuncio.', 401);
+        throw criarErro('Sessão inválida para publicar o anúncio.', 401);
     }
 
     return await inventoryRepo.create({
@@ -51,21 +51,21 @@ const criarArtigo = async (dados, utilizador) => {
 
 const editarArtigo = async (id, dados, utilizador) => {
     if (!id) {
-        throw criarErro('ID do artigo e obrigatorio para edicao.', 400);
+        throw criarErro('ID do artigo é obrigatório para edição.', 400);
     }
 
     if (!dados || typeof dados !== 'object') {
-        throw criarErro('Dados do artigo sao obrigatorios para edicao.', 400);
+        throw criarErro('Dados do artigo são obrigatórios para edição.', 400);
     }
 
     const artigoAtual = await inventoryRepo.findById(id);
 
     if (!artigoAtual) {
-        throw criarErro('Artigo nao encontrado.', 404);
+        throw criarErro('Artigo não encontrado.', 404);
     }
 
     if (!podeGerirArtigo(utilizador, artigoAtual)) {
-        throw criarErro('Nao tens permissao para editar este anuncio.', 403);
+        throw criarErro('Não tens permissão para editar este anúncio.', 403);
     }
 
     return await inventoryRepo.update(id, dados);
@@ -73,17 +73,17 @@ const editarArtigo = async (id, dados, utilizador) => {
 
 const removerArtigo = async (id, utilizador) => {
     if (!id) {
-        throw criarErro('ID do artigo e obrigatorio para remocao.', 400);
+        throw criarErro('ID do artigo é obrigatório para remoção.', 400);
     }
 
     const artigoAtual = await inventoryRepo.findById(id);
 
     if (!artigoAtual) {
-        throw criarErro('Artigo nao encontrado.', 404);
+        throw criarErro('Artigo não encontrado.', 404);
     }
 
     if (!podeGerirArtigo(utilizador, artigoAtual)) {
-        throw criarErro('Nao tens permissao para remover este anuncio.', 403);
+        throw criarErro('Não tens permissão para remover este anúncio.', 403);
     }
 
     return await inventoryRepo.delete(id);

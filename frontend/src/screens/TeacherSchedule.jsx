@@ -431,7 +431,7 @@ const buildImportDates = (cadence, row, rangeStart, rangeEnd) => {
         const exactDate = parseDateInput(readRowValue(row, AVAILABILITY_FIELD_ALIASES.data));
 
         if (!exactDate) {
-            throw new Error(`Linha ${row.__line}: a coluna Data esta em falta ou e invalida.`);
+            throw new Error(`Linha ${row.__line}: a coluna Data está em falta ou é inválida.`);
         }
 
         return [toDateInputValue(exactDate)];
@@ -553,7 +553,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
             setSavedAvailability(availabilityView);
             setPrivateRequests(pedidosPrivados || []);
         } catch (err) {
-            setError(err.message || 'Nao foi possivel carregar os dados do professor.');
+            setError(err.message || 'Não foi possível carregar os dados do professor.');
         } finally {
             setLoading(false);
         }
@@ -650,7 +650,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
             setFeedback('Aula cancelada com sucesso.');
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel cancelar a aula.');
+            setError(err.message || 'Não foi possível cancelar a aula.');
         } finally {
             setSavingLesson(false);
         }
@@ -664,14 +664,14 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
             await confirmarAulaProfessor(lesson.id);
             await refreshSnapshot();
             notify({
-                title: 'Conclusao confirmada',
-                message: `${lesson.title} foi marcada como concluida.`,
+                title: 'Conclusão confirmada',
+                message: `${lesson.title} foi marcada como concluída.`,
                 tone: 'success'
             });
-            setFeedback('Conclusao da aula confirmada. A Direcao ja pode validar no Financeiro.');
+            setFeedback('Conclusão da aula confirmada. A Direção já pode validar no Financeiro.');
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel confirmar a aula.');
+            setError(err.message || 'Não foi possível confirmar a aula.');
         } finally {
             setSavingLesson(false);
         }
@@ -686,13 +686,13 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
             await refreshSnapshot();
             notify({
                 title: 'Pedido de Coaching confirmado',
-                message: `${request.EstiloDanca?.Nome || 'O pedido'} segue agora para validacao da Direcao.`,
+                message: `${request.EstiloDanca?.Nome || 'O pedido'} segue agora para validação da Direção.`,
                 tone: 'success'
             });
-            setFeedback('Disponibilidade confirmada. O pedido de Coaching segue para a Direcao validar o estudio.');
+            setFeedback('Disponibilidade confirmada. O pedido de Coaching segue para a Direção validar o estúdio.');
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel confirmar o pedido de Coaching.');
+            setError(err.message || 'Não foi possível confirmar o pedido de Coaching.');
         } finally {
             setSavingLesson(false);
         }
@@ -703,7 +703,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
         setError('');
 
         try {
-            await rejeitarPedidoAulaPrivadaProfessor(request.IdPedidoAulaPrivada, 'Professor indisponivel no horario pedido.');
+            await rejeitarPedidoAulaPrivadaProfessor(request.IdPedidoAulaPrivada, 'Professor indisponível no horário pedido.');
             await refreshSnapshot();
             notify({
                 title: 'Pedido de Coaching rejeitado',
@@ -713,7 +713,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
             setFeedback('Pedido de Coaching rejeitado.');
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel rejeitar o pedido de Coaching.');
+            setError(err.message || 'Não foi possível rejeitar o pedido de Coaching.');
         } finally {
             setSavingLesson(false);
         }
@@ -756,7 +756,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
         const pastDate = selectedCalendarDates.find((dateKey) => dateKey < todayKey);
 
         if (pastDate) {
-            throw new Error('Nao podes marcar disponibilidade em dias anteriores a hoje.');
+            throw new Error('Não pode marcar disponibilidade em dias anteriores a hoje.');
         }
     };
 
@@ -774,7 +774,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
         ));
 
         if (overlap) {
-            throw new Error(`${day.label}: existe sobreposicao com outro horario ja marcado.`);
+            throw new Error(`${day.label}: existe sobreposição com outro horário já marcado.`);
         }
 
         nextSlots.push(slot);
@@ -795,7 +795,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
             return draft;
         }
 
-        validateTimeSlot(calendarTimeRange.startTime, calendarTimeRange.endTime, 'Horario selecionado');
+        validateTimeSlot(calendarTimeRange.startTime, calendarTimeRange.endTime, 'Horário selecionado');
         validateSelectedDatesAreFutureOrToday();
 
         const selectedSet = new Set(selectedCalendarDates);
@@ -833,7 +833,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
             setFeedback(result.mensagem);
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel guardar a disponibilidade.');
+            setError(err.message || 'Não foi possível guardar a disponibilidade.');
         } finally {
             setSavingAvailability(false);
         }
@@ -843,7 +843,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
         const bounds = getMonthBounds(monthlyMonth);
 
         if (!bounds) {
-            setError('Escolha um mes valido.');
+            setError('Escolha um mês válido.');
             return;
         }
 
@@ -853,7 +853,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
             const totalActiveDays = draftToPersist.filter((day) => day.isAvailable).length;
 
             if (totalActiveDays === 0) {
-                setError('Selecione pelo menos um dia com horario antes de guardar a disponibilidade.');
+                setError('Selecione pelo menos um dia com horário antes de guardar a disponibilidade.');
                 return;
             }
 
@@ -881,7 +881,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                 title: 'Disponibilidade mensal atualizada'
             });
         } catch (err) {
-            setError(err.message || 'Nao foi possivel guardar a disponibilidade mensal.');
+            setError(err.message || 'Não foi possível guardar a disponibilidade mensal.');
         }
     };
 
@@ -902,20 +902,20 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
 
     const applyTimeToSelectedDates = () => {
         if (selectedCalendarDates.length === 0) {
-            setError('Escolha pelo menos um dia no calendario.');
+            setError('Escolha pelo menos um dia no calendário.');
             return;
         }
 
         try {
             setMonthlyDraft((previous) => mergeSelectedDatesIntoDraft(previous));
         } catch (err) {
-            setError(err.message || 'Nao foi possivel aplicar o horario.');
+            setError(err.message || 'Não foi possível aplicar o horário.');
         }
     };
 
     const removeSelectedDatesAvailability = async () => {
         if (selectedCalendarDates.length === 0) {
-            setError('Escolha pelo menos um dia no calendario.');
+            setError('Escolha pelo menos um dia no calendário.');
             return;
         }
 
@@ -950,7 +950,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
             setSelectedCalendarDates([]);
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel remover a disponibilidade.');
+            setError(err.message || 'Não foi possível remover a disponibilidade.');
         } finally {
             setSavingAvailability(false);
         }
@@ -990,7 +990,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                     const endTime = normalizeTimeValue(readRowValue(row, AVAILABILITY_FIELD_ALIASES.horaFim));
 
                     if (!parsedDate) {
-                        throw new Error(`Linha ${row.__line}: Data invalida.`);
+                        throw new Error(`Linha ${row.__line}: data inválida.`);
                     }
 
                     validateTimeSlot(startTime, endTime, `Linha ${row.__line}`);
@@ -1006,7 +1006,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                 const uniqueEntries = dedupeAvailabilityEntries(entries);
 
                 if (uniqueEntries.length === 0) {
-                    throw new Error('Nao foi encontrada nenhuma disponibilidade valida no ficheiro.');
+                    throw new Error('Não foi encontrada nenhuma disponibilidade válida no ficheiro.');
                 }
 
                 range = {
@@ -1043,7 +1043,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
             }
 
             if (entries.length === 0) {
-                throw new Error('O ficheiro nao gerou disponibilidades dentro do intervalo escolhido.');
+                throw new Error('O ficheiro não gerou disponibilidades dentro do intervalo escolhido.');
             }
 
             const normalizedEntries = dedupeAvailabilityEntries(entries);
@@ -1067,7 +1067,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
             setImportInputKey((previous) => previous + 1);
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel importar o horario.');
+            setError(err.message || 'Não foi possível importar o horário.');
         } finally {
             setSavingAvailability(false);
         }
@@ -1115,7 +1115,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                         <input
                             value={searchQuery}
                             onChange={(event) => setSearchQuery(event.target.value)}
-                            placeholder="Pesquisar por estilo ou estudio..."
+                            placeholder="Pesquisar por estilo ou estúdio..."
                         />
                         <div className="teacher-filter-badges">
                             <span className="teacher-chip teacher-chip--active">Proximas</span>
@@ -1165,7 +1165,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                                                     onClick={() => handleConfirmLesson(lesson)}
                                                     disabled={savingLesson}
                                                 >
-                                                    {savingLesson ? 'A confirmar...' : 'Confirmar Conclusao'}
+                                                    {savingLesson ? 'A confirmar...' : 'Confirmar Conclusão'}
                                                 </button>
                                             )}
                                             {canCancelLesson && (
@@ -1252,10 +1252,10 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                             <p className="schedule-eyebrow">Modo</p>
                             <h2>Calendario</h2>
                             <p className="schedule-action-copy">
-                                Clica num ou varios dias do mes e aplica o mesmo horario a todos de uma vez.
+                                Clique em um ou vários dias do mês e aplique o mesmo horário a todos de uma vez.
                             </p>
                             <button type="button" className="schedule-button schedule-button--primary" onClick={() => setAvailabilityMode('calendar')}>
-                                Abrir calendario
+                                Abrir calendário
                             </button>
                         </article>
 
@@ -1263,14 +1263,14 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                             <p className="schedule-eyebrow">Modo</p>
                             <h2>Como funciona</h2>
                             <p className="schedule-action-copy">
-                                Seleciona os dias no calendario, define as horas e depois guarda o mes para persistir as alteracoes.
+                                Selecione os dias no calendário, defina as horas e depois guarde o mês para persistir as alterações.
                             </p>
                             <div className="teacher-availability-tip">Mais rapido para excecoes, ferias e dias avulso.</div>
                         </article>
 
                         <article className={`schedule-action-card ${availabilityMode === 'import' ? 'schedule-action-card--active' : ''}`}>
                             <p className="schedule-eyebrow">Modo</p>
-                            <h2>Importar horario</h2>
+                            <h2>Importar horário</h2>
                             <p className="schedule-action-copy">
                                 Carrega um CSV para preencher disponibilidades especificas, semanais ou mensais em lote.
                             </p>
@@ -1287,7 +1287,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                                     <p className="schedule-eyebrow">Disponibilidade</p>
                                     <h2>Calendario mensal</h2>
                                     <p className="schedule-subtitle">
-                                        Escolhe um mes, clica nos dias pretendidos e aplica um horario comum aos dias selecionados.
+                                        Escolha um mês, clique nos dias pretendidos e aplique um horário comum aos dias selecionados.
                                     </p>
                                 </div>
                             </div>
@@ -1304,7 +1304,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                                     </label>
 
                                     <label>
-                                        <span>Resumo do mes</span>
+                                        <span>Resumo do mês</span>
                                         <input type="text" value={`${monthlySavedCount} bloco(s) guardado(s)`} disabled />
                                     </label>
                                 </div>
@@ -1317,7 +1317,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                                 </div>
                                 <div className="teacher-availability-tools">
                                     <button type="button" className="schedule-button schedule-button--ghost" onClick={handleSelectWeekdays}>
-                                        Selecionar dias uteis
+                                        Selecionar dias úteis
                                     </button>
                                     <button type="button" className="schedule-button schedule-button--ghost" onClick={handleClearSelection}>
                                         Limpar selecao
@@ -1354,7 +1354,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                                                     ? day.slots?.length > 1
                                                         ? `${day.slots.length} blocos`
                                                         : `${day.startTime}-${day.endTime}`
-                                                    : 'Sem horario'}
+                                                    : 'Sem horário'}
                                             </span>
                                         </button>
                                     );
@@ -1363,8 +1363,8 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
 
                             <div className="teacher-calendar-editor">
                                 <div className="teacher-calendar-editor-copy">
-                                    <h3>Horario para os dias selecionados</h3>
-                                    <p>Escolhe as horas uma vez e aplica a todos os dias que marcaste no calendario.</p>
+                                    <h3>Horário para os dias selecionados</h3>
+                                    <p>Escolha as horas uma vez e aplique-as a todos os dias que marcou no calendário.</p>
                                 </div>
 
                                 <div className="teacher-availability-time">
@@ -1411,7 +1411,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                             <div className="schedule-import-header">
                                 <div>
                                     <p className="schedule-eyebrow">Importacao</p>
-                                    <h2>Importar horario do professor</h2>
+                                    <h2>Importar horário do professor</h2>
                                     <p className="schedule-subtitle">
                                         Aceita CSV com `;` ou `,` e substitui a disponibilidade apenas no periodo importado.
                                     </p>
@@ -1483,7 +1483,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                                     Limpar
                                 </button>
                                 <button type="button" className="schedule-button schedule-button--primary" onClick={handleImport} disabled={savingAvailability}>
-                                    {savingAvailability ? 'A importar...' : 'Importar horario'}
+                                    {savingAvailability ? 'A importar...' : 'Importar horário'}
                                 </button>
                             </div>
                         </section>
@@ -1495,8 +1495,8 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                                 <h2>Resumo do Mes</h2>
                                 <p>
                                     {availabilityMode === 'calendar'
-                                        ? 'Pre-visualizacao dos dias e blocos horarios que estao a ser editados neste mes.'
-                                        : 'Vista agregada das disponibilidades guardadas para este mes.'}
+                                        ? 'Pré-visualização dos dias e blocos horários que estão a ser editados neste mês.'
+                                        : 'Vista agregada das disponibilidades guardadas para este mês.'}
                                 </p>
                             </div>
                         </div>
@@ -1508,8 +1508,8 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                                         <strong>{day.label}</strong>
                                         <span>
                                             {day.slots.length === 1
-                                                ? '1 bloco horario'
-                                                : `${day.slots.length} blocos horarios`}
+                                                ? '1 bloco horário'
+                                                : `${day.slots.length} blocos horários`}
                                         </span>
                                         <span>
                                             {day.slots.map((slot) => `${slot.startTime} ate ${slot.endTime}`).join(' | ')}
@@ -1519,7 +1519,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                             </ul>
                         ) : (
                             <div className="teacher-empty">
-                                <p className="teacher-empty-title">Ainda nao existem disponibilidades marcadas neste mes.</p>
+                                <p className="teacher-empty-title">Ainda não existem disponibilidades marcadas neste mês.</p>
                             </div>
                         )}
                     </div>

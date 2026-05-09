@@ -17,7 +17,7 @@ describe('Inventory Service', () => {
             // Act & Assert
             await expect(inventoryService.criarArtigo({ CustoPorDia: 10 }, anunciante))
                 .rejects
-                .toMatchObject({ statusCode: 400, message: 'Nome do artigo e obrigatorio.' });
+                .toMatchObject({ statusCode: 400, message: 'Nome do artigo é obrigatório.' });
 
             expect(inventoryRepository.create).not.toHaveBeenCalled();
         });
@@ -53,7 +53,7 @@ describe('Inventory Service', () => {
             // Act & Assert
             await expect(inventoryService.editarArtigo(null, {}, anunciante))
                 .rejects
-                .toMatchObject({ statusCode: 400, message: 'ID do artigo e obrigatorio para edicao.' });
+                .toMatchObject({ statusCode: 400, message: 'ID do artigo é obrigatório para edição.' });
 
             expect(inventoryRepository.update).not.toHaveBeenCalled();
         });
@@ -68,7 +68,7 @@ describe('Inventory Service', () => {
             // Act & Assert
             await expect(inventoryService.editarArtigo('art-1', { Nome: 'Novo nome' }, anunciante))
                 .rejects
-                .toMatchObject({ statusCode: 403, message: 'Nao tens permissao para editar este anuncio.' });
+                .toMatchObject({ statusCode: 403, message: 'Não tens permissão para editar este anúncio.' });
 
             expect(inventoryRepository.update).not.toHaveBeenCalled();
         });
@@ -95,7 +95,7 @@ describe('Inventory Service', () => {
             // Act & Assert
             await expect(inventoryService.removerArtigo(undefined, direcao))
                 .rejects
-                .toMatchObject({ statusCode: 400, message: 'ID do artigo e obrigatorio para remocao.' });
+                .toMatchObject({ statusCode: 400, message: 'ID do artigo é obrigatório para remoção.' });
 
             expect(inventoryRepository.delete).not.toHaveBeenCalled();
         });

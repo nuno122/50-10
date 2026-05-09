@@ -186,14 +186,14 @@ const PrivateLessonValidationPanel = ({
     return (
         <section className="rental-card rental-list-card">
             <div className="rental-form-header">
-                <h2>Requisicao de Coaching</h2>
-                <p>Pedidos de Coaching enviados pelos encarregados e aguardando decisao da Direcao.</p>
+                <h2>Requisição de Coaching</h2>
+                <p>Pedidos de Coaching enviados pelos encarregados e a aguardar decisão da Direção.</p>
             </div>
 
             {pendingRequests.length === 0 ? (
                 <div className="rental-empty">
-                    <p className="rental-empty-title">Sem requisicoes pendentes</p>
-                    <p className="rental-empty-copy">Quando surgirem novos pedidos de Coaching, vao aparecer aqui.</p>
+                    <p className="rental-empty-title">Sem requisições pendentes</p>
+                    <p className="rental-empty-copy">Quando surgirem novos pedidos de Coaching, vão aparecer aqui.</p>
                 </div>
             ) : (
                 <div className="rental-list">
@@ -217,9 +217,9 @@ const PrivateLessonValidationPanel = ({
                         const selectedStudioId = hasAvailableSelection ? form.IdEstudio : '';
                         const canApproveRequest = Boolean(request.IdProfessorConfirmado && selectedStudioId);
                         const approvalBlockedReason = !request.IdProfessorConfirmado
-                            ? 'O professor ainda precisa de confirmar o pedido antes da aprovacao final.'
+                            ? 'O professor ainda precisa de confirmar o pedido antes da aprovação final.'
                             : !selectedStudioId
-                                ? 'Escolha primeiro um estudio para aprovar este pedido.'
+                                ? 'Escolha primeiro um estúdio para aprovar este pedido.'
                                 : '';
                         const showAlternativeSelector = studioSelectionMode === 'alternative' && canUnlockAlternative && studioState.allAvailableOptions.length > 0;
                         const normalizedForm = {
@@ -260,7 +260,7 @@ const PrivateLessonValidationPanel = ({
                                     {request.Observacoes && (
                                         <div className="rental-extension">
                                             <div>
-                                                <p className="rental-extension-title">Observacoes do encarregado</p>
+                                                <p className="rental-extension-title">Observações do encarregado</p>
                                                 <p>{request.Observacoes}</p>
                                             </div>
                                         </div>
@@ -268,15 +268,15 @@ const PrivateLessonValidationPanel = ({
 
                                     {studioState.compatibleOptions.length === 0 && studioState.allAvailableOptions.length > 0 && (
                                         <div className="rental-form-note">
-                                            Nao existe nenhum estudio associado a este estilo disponivel para este horario.
-                                            A Direcao pode escolher um estudio alternativo livre com capacidade suficiente.
+                                            Não existe nenhum estúdio associado a este estilo disponível para este horário.
+                                            A Direção pode escolher um estúdio alternativo livre com capacidade suficiente.
                                         </div>
                                     )}
 
                                     {showAlternativeSelector && studioState.compatibleOptions.length > 0 && (
                                         <div className="rental-form-note">
-                                            A lista abaixo mostra todos os estudios livres. Um estudio alternativo so deve ser usado
-                                            quando nenhum estudio compativel servir para este horario.
+                                            A lista abaixo mostra todos os estúdios livres. Um estúdio alternativo só deve ser usado
+                                            quando nenhum estúdio compatível servir para este horário.
                                         </div>
                                     )}
 
@@ -354,8 +354,8 @@ const PrivateLessonValidationPanel = ({
                                             >
                                                 <option value="">
                                                     {studioState.compatibleOptions.length === 0
-                                                        ? 'Sem estudios compativeis disponiveis'
-                                                        : 'Selecione o estudio compativel'}
+                                                        ? 'Sem estúdios compatíveis disponíveis'
+                                                        : 'Selecione o estúdio compatível'}
                                                 </option>
                                                 {studioState.compatibleOptions.map((studio) => (
                                                     <option key={studio.IdEstudio} value={studio.IdEstudio}>
@@ -363,14 +363,14 @@ const PrivateLessonValidationPanel = ({
                                                     </option>
                                                 ))}
                                                 {canUnlockAlternative && (
-                                                    <option value="__other__">Outro estudio</option>
+                                                    <option value="__other__">Outro estúdio</option>
                                                 )}
                                             </select>
                                         </label>
 
                                         {showAlternativeSelector && (
                                             <label>
-                                                <span>Outro estudio</span>
+                                                <span>Outro estúdio</span>
                                                 <select
                                                     value={selectedStudioId}
                                                     onChange={(event) => {
@@ -380,15 +380,15 @@ const PrivateLessonValidationPanel = ({
                                                 >
                                                     <option value="">
                                                         {studioState.allAvailableOptions.length === 0
-                                                            ? 'Sem estudios livres neste horario'
-                                                            : 'Selecione entre todos os estudios livres'}
+                                                            ? 'Sem estúdios livres neste horário'
+                                                            : 'Selecione entre todos os estúdios livres'}
                                                     </option>
                                                     {studioState.allAvailableOptions.map((studio) => {
                                                         const isCompatible = studioState.compatibleOptions.some((item) => item.IdEstudio === studio.IdEstudio);
                                                         return (
                                                             <option key={studio.IdEstudio} value={studio.IdEstudio}>
                                                                 Estudio {studio.Numero} - Capacidade {studio.Capacidade}
-                                                                {isCompatible ? ' - Compativel' : ' - Alternativo'}
+                                                                {isCompatible ? ' - Compatível' : ' - Alternativo'}
                                                             </option>
                                                         );
                                                     })}
@@ -397,7 +397,7 @@ const PrivateLessonValidationPanel = ({
                                         )}
 
                                         <label>
-                                            <span>Preco (EUR)</span>
+                                            <span>Preço (EUR)</span>
                                             <input
                                                 type="number"
                                                 min="0"
@@ -408,7 +408,7 @@ const PrivateLessonValidationPanel = ({
                                         </label>
 
                                         <label>
-                                            <span>Observacao da Direcao</span>
+                                            <span>Observação da Direção</span>
                                             <textarea
                                                 rows="3"
                                                 value={form.ObservacaoDirecao}

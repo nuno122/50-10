@@ -14,7 +14,7 @@ describe('User Service', () => {
             // Act & Assert
             await expect(userService.criarUtilizador({ Email: 'teste@teste.com', Permissoes: PERMISSOES.DIRECAO }))
                 .rejects
-                .toMatchObject({ statusCode: 400, message: 'NomeCompleto e obrigatorio.' });
+                .toMatchObject({ statusCode: 400, message: 'NomeCompleto é obrigatório.' });
 
             expect(userRepository.create).not.toHaveBeenCalled();
         });
@@ -35,7 +35,7 @@ describe('User Service', () => {
             // Act & Assert
             await expect(userService.criarUtilizador(dados))
                 .rejects
-                .toMatchObject({ statusCode: 400, message: 'So e permitido criar Encarregados, Professores e membros da Direcao.' });
+                .toMatchObject({ statusCode: 400, message: 'Só é permitido criar Encarregados, Professores e membros da Direção.' });
 
             expect(userRepository.create).not.toHaveBeenCalled();
         });
@@ -136,7 +136,7 @@ describe('User Service', () => {
             // Act & Assert
             await expect(userService.criarUtilizador(dados))
                 .rejects
-                .toMatchObject({ statusCode: 400, message: 'Ja existe um utilizador com esse nome de utilizador.' });
+                .toMatchObject({ statusCode: 400, message: 'Já existe um utilizador com esse nome de utilizador.' });
         });
     });
 });

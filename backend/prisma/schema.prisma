@@ -131,6 +131,7 @@ model EncarregadoAluno {
 model EstiloDanca {
   IdEstiloDanca   String            @id(map: "PK__EstiloDa__CCE73E132A676A15") @default(dbgenerated("newsequentialid()"), map: "DF__EstiloDan__IdEst__6D0D32F4") @db.UniqueIdentifier
   Nome            String            @db.NVarChar(100)
+  EstaAtivo       Boolean           @default(true, map: "DF_EstiloDanca_EstaAtivo")
   Aula            Aula[]
   EstiloProfessor EstiloProfessor[]
   EstudioEstilo   EstudioEstilo[]
@@ -150,6 +151,7 @@ model Estudio {
   IdEstudio     String          @id(map: "PK__Estudio__0C3B43559A1E42D8") @default(dbgenerated("newsequentialid()"), map: "DF__Estudio__IdEstud__73BA3083") @db.UniqueIdentifier
   Numero        Int
   Capacidade    Int
+  EstaAtivo     Boolean         @default(true, map: "DF_Estudio_EstaAtivo")
   Aula          Aula[]
   EstudioEstilo EstudioEstilo[]
 }

@@ -48,7 +48,7 @@ describe('Event Service', () => {
             }, {
                 IdUtilizador: 'prof-1',
                 Permissoes: PERMISSOES.PROFESSOR
-            })).rejects.toThrow('Apenas a Direcao pode criar eventos.');
+            })).rejects.toThrow('Apenas a Direção pode criar eventos.');
 
             expect(eventRepository.create).not.toHaveBeenCalled();
         });

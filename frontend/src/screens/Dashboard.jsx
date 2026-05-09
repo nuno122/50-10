@@ -12,14 +12,16 @@ import {
 } from '../services/api';
 
 const emptyDashboard = {
-    roleLabel: 'Dashboard',
-    title: 'Painel Principal',
+    roleLabel: 'Painel',
+    title: 'Painel principal',
     welcome: "Bem-vindo a Ent'Artes",
     note: '',
     weekLabel: '',
     stats: [],
+    showQuick: true,
     quickTitle: 'Pontos principais',
     quick: [],
+    showActivity: true,
     activityTitle: 'Acompanhamento',
     activity: [],
     scheduleTitle: 'Agenda semanal',
@@ -125,7 +127,7 @@ const getUpcomingLabel = (date) => {
     const time = `${pad(target.getHours())}:${pad(target.getMinutes())}`;
 
     if (targetDay.getTime() === today.getTime()) return `Hoje ${time}`;
-    if (targetDay.getTime() === tomorrow.getTime()) return `Amanha ${time}`;
+    if (targetDay.getTime() === tomorrow.getTime()) return `Amanhã ${time}`;
     return `${formatDate(target)} ${time}`;
 };
 
@@ -161,7 +163,7 @@ const getLessonTypeLabel = (value) => {
 };
 
 const getStudioLabel = (aula) => (
-    aula?.Estudio?.Numero ? `Estudio ${aula.Estudio.Numero}` : 'Estudio por definir'
+    aula?.Estudio?.Numero ? `Estúdio ${aula.Estudio.Numero}` : 'Estúdio por definir'
 );
 
 const getTeacherName = (aula) => (
@@ -171,12 +173,6 @@ const getTeacherName = (aula) => (
 const getStudentName = (student) => student?.Nome || student?.Utilizador?.NomeCompleto || 'Educando';
 
 const hasAvailableSeats = (aula) => getActiveBookingsCount(aula) < Number(aula?.CapacidadeMaxima || 0);
-
-const isDashboardBookingActive = (booking) => (
-    booking &&
-    booking.EstaAtivo !== false &&
-    getBookingDateTime(booking) > new Date()
-);
 
 const buildScheduleDays = (entries, weekStart) => {
     const days = Array.from({ length: 7 }, (_, index) => {
@@ -264,31 +260,33 @@ const buildDirectorDashboard = ({ aulas, estudios, pagamentos }) => {
     const weeklyBookings = weeklyClasses.reduce((sum, aula) => sum + getActiveBookingsCount(aula), 0);
 
     return {
-        roleLabel: 'Direcao',
-        title: 'Resumo Operacional',
+        roleLabel: 'Direção',
+        title: 'Resumo operacional',
         welcome: '',
         note: pendingValidation.length > 0
-            ? `Tem ${pendingValidation.length} aula(s) prontas para validacao da Direcao.`
+            ? `Tem ${pendingValidation.length} aula(s) prontas para validação da Direção.`
             : pendingTeacherConfirmation.length > 0
-                ? `${pendingTeacherConfirmation.length} aula(s) terminadas aguardam confirmacao do professor.`
+                ? `${pendingTeacherConfirmation.length} aula(s) terminadas aguardam confirmação do professor.`
                 : overduePayments.length > 0
                     ? `Existem ${overduePayments.length} pagamento(s) em atraso para acompanhar.`
                     : '',
         weekLabel: getWeekRangeLabel(start),
         stats: [
-            { title: 'Aulas Hoje', value: todayClasses.length, icon: 'HJ', tone: 'blue' },
-            { title: 'Aulas Esta Semana', value: weeklyClasses.length, icon: 'CA', tone: 'green' },
-            { title: 'Validacoes Pendentes', value: pendingValidation.length, icon: 'OK', tone: 'amber' },
-            { title: 'Pagamentos em Atraso', value: overduePayments.length, icon: 'PG', tone: 'purple' }
+            { title: 'Aulas hoje', value: todayClasses.length, icon: 'HJ', tone: 'blue' },
+            { title: 'Aulas esta semana', value: weeklyClasses.length, icon: 'CA', tone: 'green' },
+            { title: 'Validações pendentes', value: pendingValidation.length, icon: 'OK', tone: 'amber' },
+            { title: 'Pagamentos em atraso', value: overduePayments.length, icon: 'PG', tone: 'purple' }
         ],
+        showQuick: false,
         quickTitle: 'Pontos de controlo',
         quick: [
-            ['Proxima aula', nextClass ? getUpcomingLabel(nextClass.date) : 'Sem aula futura'],
-            ['Inscricoes previstas esta semana', weeklyBookings],
+            ['Próxima aula', nextClass ? getUpcomingLabel(nextClass.date) : 'Sem aulas futuras'],
+            ['Inscrições previstas esta semana', weeklyBookings],
             ['Aulas por confirmar pelo professor', pendingTeacherConfirmation.length],
-            ['Estudios ativos', estudios.length]
+            ['Estúdios ativos', estudios.length]
         ],
-        activityTitle: 'Acoes imediatas',
+        showActivity: false,
+        activityTitle: 'Ações imediatas',
         activity: [
             ...pendingValidation.slice(0, 2).map((aula) => createActivity(
                 `Validar ${aula.EstiloDanca?.Nome || 'aula'} em ${getStudioLabel(aula)}`,
@@ -296,7 +294,7 @@ const buildDirectorDashboard = ({ aulas, estudios, pagamentos }) => {
                 'validation'
             )),
             ...pendingTeacherConfirmation.slice(0, 1).map((aula) => createActivity(
-                `Aguardar confirmacao do professor em ${aula.EstiloDanca?.Nome || 'aula'}`,
+                `Aguardar confirmação do professor em ${aula.EstiloDanca?.Nome || 'aula'}`,
                 `${formatDate(aula.Data)} | ${formatTime(aula.HoraFim)}`,
                 'notification'
             )),
@@ -306,7 +304,7 @@ const buildDirectorDashboard = ({ aulas, estudios, pagamentos }) => {
                 'notification'
             ))
         ].slice(0, 4),
-        scheduleTitle: 'Horario semanal completo',
+        scheduleTitle: 'Horário semanal completo',
         scheduleSubtitle: 'Vista global das aulas marcadas para esta semana.',
         scheduleDays: buildScheduleDays(
             weeklyClasses.map((aula) => buildLessonScheduleEntry(
@@ -316,7 +314,7 @@ const buildDirectorDashboard = ({ aulas, estudios, pagamentos }) => {
             )),
             start
         ),
-        scheduleEmpty: 'Ainda nao existem aulas marcadas para esta semana.'
+        scheduleEmpty: 'Ainda não existem aulas marcadas para esta semana.'
     };
 };
 
@@ -333,7 +331,12 @@ const buildTeacherDashboard = ({ aulas, user }) => {
         .map((aula) => ({ aula, date: getAulaDateTime(aula) }))
         .filter((entry) => entry.date > now)
         .sort((left, right) => left.date - right.date)[0];
-    const pendingDirectorValidation = ownClasses.filter((aula) => aula.ConfirmacaoProfessor && !aula.ValidacaoDirecao);
+    const pendingDirectorValidation = ownClasses.filter((aula) => (
+        getActiveBookingsCount(aula) > 0 &&
+        aula.ConfirmacaoProfessor &&
+        !aula.ValidacaoDirecao &&
+        getAulaDateTime(aula) <= now
+    ));
     const pendingOwnConfirmation = ownClasses.filter((aula) => (
         getActiveBookingsCount(aula) > 0 &&
         !aula.ConfirmacaoProfessor &&
@@ -343,31 +346,33 @@ const buildTeacherDashboard = ({ aulas, user }) => {
 
     return {
         roleLabel: 'Professor',
-        title: 'Semana de Aulas',
+        title: 'Semana de aulas',
         welcome: '',
         note: pendingOwnConfirmation.length > 0
             ? `Tem ${pendingOwnConfirmation.length} aula(s) terminadas por confirmar.`
             : pendingDirectorValidation.length > 0
-                ? `${pendingDirectorValidation.length} aula(s) suas aguardam validacao da Direcao.`
+                ? `${pendingDirectorValidation.length} aula(s) aguardam validação da Direção.`
                 : '',
         weekLabel: getWeekRangeLabel(start),
         stats: [
-            { title: 'Aulas Hoje', value: todayClasses.length, icon: 'HJ', tone: 'blue' },
-            { title: 'Aulas Esta Semana', value: weeklyClasses.length, icon: 'CA', tone: 'green' },
-            { title: 'Inscritos Esta Semana', value: weeklyBookings, icon: 'IN', tone: 'purple' },
-            { title: 'Por Confirmar', value: pendingOwnConfirmation.length, icon: 'CF', tone: 'amber' }
+            { title: 'Aulas hoje', value: todayClasses.length, icon: 'HJ', tone: 'blue' },
+            { title: 'Aulas esta semana', value: weeklyClasses.length, icon: 'CA', tone: 'green' },
+            { title: 'Inscritos esta semana', value: weeklyBookings, icon: 'IN', tone: 'purple' },
+            { title: 'Por confirmar', value: pendingOwnConfirmation.length, icon: 'CF', tone: 'amber' }
         ],
+        showQuick: false,
         quickTitle: 'Resumo da semana',
         quick: [
-            ['Proxima aula', nextClass ? getUpcomingLabel(nextClass.date) : 'Sem aula futura'],
-            ['Inscricoes esta semana', weeklyBookings],
+            ['Próxima aula', nextClass ? getUpcomingLabel(nextClass.date) : 'Sem aulas futuras'],
+            ['Inscrições esta semana', weeklyBookings],
             ['Alunos diferentes esta semana', uniqueStudents.size],
-            ['Aulas por validar na Direcao', pendingDirectorValidation.length]
+            ['Aulas por validar na Direção', pendingDirectorValidation.length]
         ],
-        activityTitle: 'O que precisa de acompanhar',
+        showActivity: false,
+        activityTitle: 'O que requer acompanhamento',
         activity: [
             ...pendingOwnConfirmation.slice(0, 2).map((aula) => createActivity(
-                `Confirmar conclusao de ${aula.EstiloDanca?.Nome || 'aula'}`,
+                `Confirmar conclusão de ${aula.EstiloDanca?.Nome || 'aula'}`,
                 `${formatDate(aula.Data)} | ${formatTime(aula.HoraFim)}`,
                 'notification'
             )),
@@ -380,8 +385,8 @@ const buildTeacherDashboard = ({ aulas, user }) => {
                     'booking'
                 ))
         ].slice(0, 4),
-        scheduleTitle: 'Horario das aulas desta semana',
-        scheduleSubtitle: 'Tudo o que tem de dar nesta semana, organizado por dia.',
+        scheduleTitle: 'Horário das aulas desta semana',
+        scheduleSubtitle: 'Todas as aulas da semana, organizadas por dia.',
         scheduleDays: buildScheduleDays(
             weeklyClasses.map((aula) => buildLessonScheduleEntry(
                 aula,
@@ -390,7 +395,7 @@ const buildTeacherDashboard = ({ aulas, user }) => {
             )),
             start
         ),
-        scheduleEmpty: 'Nao tem aulas marcadas para esta semana.'
+        scheduleEmpty: 'Não tem aulas marcadas para esta semana.'
     };
 };
 
@@ -398,11 +403,12 @@ const buildGuardianDashboard = ({ aulas, pagamentos, studentBookings }) => {
     const now = new Date();
     const { start, end } = getWeekRange();
     const pendingPayments = (pagamentos || []).filter(isPendingPayment);
-    const futureBookings = studentBookings
-        .filter((booking) => isDashboardBookingActive(booking))
+    const activeBookings = studentBookings
+        .filter((booking) => booking && booking.EstaAtivo !== false)
         .sort((left, right) => getBookingDateTime(left) - getBookingDateTime(right));
-    const weeklyBookings = futureBookings.filter((booking) => isWithinRange(getBookingDateTime(booking), start, end));
-    const todayBookings = futureBookings.filter((booking) => isSameDay(booking.Aula?.Data, now));
+    const futureBookings = activeBookings.filter((booking) => getBookingDateTime(booking) > now);
+    const weeklyBookings = activeBookings.filter((booking) => isWithinRange(getBookingDateTime(booking), start, end));
+    const todayBookings = activeBookings.filter((booking) => isSameDay(booking.Aula?.Data, now));
     const nextBookedLesson = futureBookings[0];
     const availableLessons = (aulas || [])
         .filter(isFutureRegularLesson)
@@ -413,30 +419,32 @@ const buildGuardianDashboard = ({ aulas, pagamentos, studentBookings }) => {
 
     return {
         roleLabel: 'Encarregado',
-        title: 'Agenda dos Educandos',
+        title: 'Agenda dos educandos',
         welcome: '',
         note: pendingPayments.length > 0
-            ? `Tem ${pendingPayments.length} pagamento(s) pendente(s) para liquidar.`
+            ? `Tem ${pendingPayments.length} pagamento(s) pendente(s) por liquidar.`
             : weeklyBookings.length > 0
                 ? `Esta semana existem ${weeklyBookings.length} aula(s) marcadas para os seus educandos.`
                 : availableLessons.length > 0
-                    ? `Existem ${availableLessons.length} aula(s) regular(es) disponiveis para inscricao.`
+                    ? `Existem ${availableLessons.length} aula(s) regulares disponíveis para inscrição.`
                     : '',
         weekLabel: getWeekRangeLabel(start),
         stats: [
-            { title: 'Aulas Hoje', value: todayBookings.length, icon: 'HJ', tone: 'blue' },
-            { title: 'Aulas Esta Semana', value: weeklyBookings.length, icon: 'CA', tone: 'green' },
-            { title: 'Valor Pendente', value: pendingAmount, icon: 'VP', tone: 'purple' },
-            { title: 'Pagamentos Pendentes', value: pendingPayments.length, icon: 'PG', tone: 'amber' }
+            { title: 'Aulas hoje', value: todayBookings.length, icon: 'HJ', tone: 'blue' },
+            { title: 'Aulas esta semana', value: weeklyBookings.length, icon: 'CA', tone: 'green' },
+            { title: 'Valor pendente', value: pendingAmount, icon: 'VP', tone: 'purple' },
+            { title: 'Pagamentos pendentes', value: pendingPayments.length, icon: 'PG', tone: 'amber' }
         ],
+        showQuick: false,
         quickTitle: 'Conta e semana',
         quick: [
-            ['Proxima aula', nextBookedLesson ? getUpcomingLabel(getBookingDateTime(nextBookedLesson)) : 'Sem aula futura'],
+            ['Próxima aula', nextBookedLesson ? getUpcomingLabel(getBookingDateTime(nextBookedLesson)) : 'Sem aulas futuras'],
             ['Educandos com aula esta semana', studentsWithWeeklyLessons.size],
-            ['Valor pendente', formatCurrency(pendingPayments.reduce((sum, pagamento) => sum + Number(pagamento.Custo || 0), 0))],
+            ['Valor pendente', pendingAmount],
             ['Aulas regulares com vagas', availableLessons.length]
         ],
-        activityTitle: 'Aulas em que estao inscritos',
+        showActivity: false,
+        activityTitle: 'Aulas em que estão inscritos',
         activity: [
             ...pendingPayments.slice(0, 1).map((pagamento) => createActivity(
                 `Pagamento pendente de ${formatCurrency(pagamento.Custo)}`,
@@ -450,12 +458,12 @@ const buildGuardianDashboard = ({ aulas, pagamentos, studentBookings }) => {
             ))
         ].slice(0, 4),
         scheduleTitle: 'Agenda da semana',
-        scheduleSubtitle: 'Aulas ja marcadas para os seus educandos nesta semana.',
+        scheduleSubtitle: 'Aulas já marcadas para os seus educandos nesta semana.',
         scheduleDays: buildScheduleDays(
             weeklyBookings.map((booking) => buildBookingScheduleEntry(booking, booking.studentName)),
             start
         ),
-        scheduleEmpty: 'Nao existem aulas marcadas para os seus educandos nesta semana.'
+        scheduleEmpty: 'Não existem aulas marcadas para os seus educandos nesta semana.'
     };
 };
 
@@ -521,7 +529,7 @@ const Dashboard = () => {
 
                 setDashboard(emptyDashboard);
             } catch (err) {
-                setError(err.message || 'Nao foi possivel carregar o dashboard.');
+                setError(err.message || 'Não foi possível carregar o dashboard.');
             } finally {
                 setLoading(false);
             }
@@ -558,7 +566,7 @@ const Dashboard = () => {
                     {safeDashboard.weekLabel && (
                         <div className="dashboard-hero-meta">
                             <span>{safeDashboard.weekLabel}</span>
-                            <span>Visao inicial da semana</span>
+                            <span>Visão inicial da semana</span>
                         </div>
                     )}
                 </div>
@@ -568,7 +576,7 @@ const Dashboard = () => {
 
             {loading ? (
                 <section className="dashboard-card dashboard-loading">
-                    <p>A carregar dashboard...</p>
+                    <p>A carregar o dashboard...</p>
                 </section>
             ) : (
                 <>
@@ -583,6 +591,61 @@ const Dashboard = () => {
                             </article>
                         ))}
                     </div>
+
+                    {(safeDashboard.showQuick || safeDashboard.showActivity) && (
+                        <div className="dashboard-grid">
+                            {safeDashboard.showQuick && (
+                                <section className="dashboard-card">
+                                    <div className="dashboard-card-header">
+                                        <h2>{safeDashboard.quickTitle}</h2>
+                                        <p>Indicadores rápidos para orientar a semana.</p>
+                                    </div>
+
+                                    {safeDashboard.quick.length > 0 ? (
+                                        <div className="dashboard-list">
+                                            {safeDashboard.quick.map(([label, value]) => (
+                                                <div key={label} className="dashboard-list-row">
+                                                    <span>{label}</span>
+                                                    <strong>{value}</strong>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="dashboard-list dashboard-list-empty">
+                                            <p>Sem indicadores adicionais para apresentar.</p>
+                                        </div>
+                                    )}
+                                </section>
+                            )}
+
+                            {safeDashboard.showActivity && (
+                                <section className="dashboard-card">
+                                    <div className="dashboard-card-header">
+                                        <h2>{safeDashboard.activityTitle}</h2>
+                                        <p>Ações e acontecimentos que merecem atenção imediata.</p>
+                                    </div>
+
+                                    {safeDashboard.activity.length > 0 ? (
+                                        <div className="dashboard-activity">
+                                            {safeDashboard.activity.map((item, index) => (
+                                                <div key={`${item.action}-${item.when}-${index}`} className="dashboard-activity-row">
+                                                    <span className={`dashboard-dot dashboard-dot--${item.type || 'notification'}`} />
+                                                    <div className="dashboard-activity-copy">
+                                                        <p>{item.action}</p>
+                                                        <small>{item.when}</small>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="dashboard-list dashboard-list-empty">
+                                            <p>Sem ações pendentes neste momento.</p>
+                                        </div>
+                                    )}
+                                </section>
+                            )}
+                        </div>
+                    )}
 
                     <section className="dashboard-card dashboard-week-card">
                         <div className="dashboard-card-header">

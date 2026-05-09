@@ -1,4 +1,5 @@
 const authenticationService = require('../services/authenticationService');
+const { handleControllerError } = require('./controllerError');
 
 const login = async (req, res) => {
     try {
@@ -6,10 +7,7 @@ const login = async (req, res) => {
         const resultado = await authenticationService.login(Email, Password);
         res.json(resultado);
     } catch (erro) {
-        console.error('Erro no login:', erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Ocorreu um erro interno ao tentar fazer login.'
-        });
+        handleControllerError(res, erro, 'Ocorreu um erro interno ao tentar fazer login.', 'authenticationController.login');
     }
 };
 

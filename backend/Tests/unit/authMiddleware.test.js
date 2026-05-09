@@ -27,7 +27,7 @@ describe('Auth Middleware', () => {
             await verificarToken(req, res, next);
 
             expect(res.status).toHaveBeenCalledWith(401);
-            expect(res.json).toHaveBeenCalledWith({ erro: 'Acesso negado! Inicie sessao para continuar.' });
+            expect(res.json).toHaveBeenCalledWith({ erro: 'Acesso negado! Inicie sessão para continuar.' });
             expect(next).not.toHaveBeenCalled();
         });
 
@@ -76,7 +76,7 @@ describe('Auth Middleware', () => {
             await verificarToken(req, res, next);
 
             expect(res.status).toHaveBeenCalledWith(401);
-            expect(res.json).toHaveBeenCalledWith({ erro: 'Sessao expirada ou invalida. Por favor, faca login novamente.' });
+            expect(res.json).toHaveBeenCalledWith({ erro: 'Sessão expirada ou inválida. Por favor, inicie sessão novamente.' });
             expect(next).not.toHaveBeenCalled();
         });
 
@@ -102,7 +102,7 @@ describe('Auth Middleware', () => {
             await verificarToken(req, res, next);
 
             expect(res.status).toHaveBeenCalledWith(401);
-            expect(res.json).toHaveBeenCalledWith({ erro: 'Sessao expirada ou invalida. Por favor, faca login novamente.' });
+            expect(res.json).toHaveBeenCalledWith({ erro: 'Sessão expirada ou inválida. Por favor, inicie sessão novamente.' });
         });
 
         it('deve rejeitar token mal-formado', async () => {
@@ -111,7 +111,7 @@ describe('Auth Middleware', () => {
             await verificarToken(req, res, next);
 
             expect(res.status).toHaveBeenCalledWith(401);
-            expect(res.json).toHaveBeenCalledWith({ erro: 'Sessao expirada ou invalida. Por favor, faca login novamente.' });
+            expect(res.json).toHaveBeenCalledWith({ erro: 'Sessão expirada ou inválida. Por favor, inicie sessão novamente.' });
         });
     });
 

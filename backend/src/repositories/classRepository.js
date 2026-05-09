@@ -184,10 +184,18 @@ const classRepository = {
     },
 
     findEstudioById: async (idEstudio) => {
-        return await prisma.estudio.findUnique({
-            where: { IdEstudio: idEstudio },
+        return await prisma.estudio.findFirst({
+            where: {
+                IdEstudio: idEstudio,
+                EstaAtivo: true
+            },
             include: {
                 EstudioEstilo: {
+                    where: {
+                        EstiloDanca: {
+                            EstaAtivo: true
+                        }
+                    },
                     include: {
                         EstiloDanca: true
                     }
@@ -198,8 +206,16 @@ const classRepository = {
 
     findAllStudios: async () => {
         return await prisma.estudio.findMany({
+            where: {
+                EstaAtivo: true
+            },
             include: {
                 EstudioEstilo: {
+                    where: {
+                        EstiloDanca: {
+                            EstaAtivo: true
+                        }
+                    },
                     include: {
                         EstiloDanca: true
                     }
@@ -209,8 +225,11 @@ const classRepository = {
     },
 
     findEstiloById: async (idEstiloDanca) => {
-        return await prisma.estiloDanca.findUnique({
-            where: { IdEstiloDanca: idEstiloDanca }
+        return await prisma.estiloDanca.findFirst({
+            where: {
+                IdEstiloDanca: idEstiloDanca,
+                EstaAtivo: true
+            }
         });
     },
 

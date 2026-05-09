@@ -103,7 +103,7 @@ const GuardianLessons = () => {
                 setSelectedStudentId((current) => current || data[0].IdAluno);
             }
         } catch (err) {
-            setError(err.message || 'Nao foi possivel carregar os educandos.');
+            setError(err.message || 'Não foi possível carregar os educandos.');
         } finally {
             setLoading(false);
         }
@@ -142,7 +142,7 @@ const GuardianLessons = () => {
 
             setAvailableLessons(lessons);
         } catch (err) {
-            setError(err.message || 'Nao foi possivel carregar as aulas do educando.');
+            setError(err.message || 'Não foi possível carregar as aulas do educando.');
         }
     };
 
@@ -184,7 +184,7 @@ const GuardianLessons = () => {
             setSelectedBooking(null);
             await loadBookings(selectedStudentId);
         } catch (err) {
-            setError(err.message || 'Nao foi possivel processar o cancelamento.');
+            setError(err.message || 'Não foi possível processar o cancelamento.');
         } finally {
             setSubmitting(false);
         }
@@ -202,15 +202,15 @@ const GuardianLessons = () => {
                 IdAluno: selectedStudentId,
                 IdAula: idAula
             });
-            setFeedback(result?.mensagem || 'Inscricao efetuada com sucesso.');
+            setFeedback(result?.mensagem || 'Inscrição efetuada com sucesso.');
             notify({
-                title: 'Marcacao criada',
+                title: 'Marcação criada',
                 message: result?.mensagem || 'O educando foi inscrito com sucesso na aula.',
                 tone: 'success'
             });
             await loadBookings(selectedStudentId);
         } catch (err) {
-            setError(err.message || 'Nao foi possivel efetuar a inscricao.');
+            setError(err.message || 'Não foi possível efetuar a inscrição.');
         } finally {
             setSubmitting(false);
         }
@@ -221,9 +221,9 @@ const GuardianLessons = () => {
             <div className="guardian-lessons-header">
                 <div>
                     <p className="guardian-lessons-eyebrow">Encarregado</p>
-                    <h1>Aulas e Cancelamentos</h1>
+                    <h1>Aulas e cancelamentos</h1>
                     <p className="guardian-lessons-subtitle">
-                        Consulte as proximas aulas do educando e envie pedidos de cancelamento quando necessario.
+                        Consulte as próximas aulas do educando e envie pedidos de cancelamento quando necessário.
                     </p>
                 </div>
             </div>
@@ -240,7 +240,7 @@ const GuardianLessons = () => {
                         disabled={students.length === 0}
                     >
                         {students.length === 0 ? (
-                            <option value="">Sem alunos associados</option>
+                            <option value="">Sem educandos associados</option>
                         ) : (
                             students.map((student) => (
                                 <option key={student.IdAluno} value={student.IdAluno}>
@@ -268,8 +268,8 @@ const GuardianLessons = () => {
                     <section className="guardian-lessons-card guardian-lessons-list">
                         <div className="guardian-lessons-modal-header">
                             <div>
-                                <p className="guardian-lessons-eyebrow">Inscricao</p>
-                                <h2>Aulas Disponiveis</h2>
+                                <p className="guardian-lessons-eyebrow">Inscrição</p>
+                                <h2>Aulas disponíveis</h2>
                             </div>
                             <span className="guardian-lessons-status guardian-lessons-status--info">
                                 {availableLessons.length}
@@ -278,8 +278,8 @@ const GuardianLessons = () => {
 
                         {availableLessons.length === 0 ? (
                             <div className="guardian-lessons-empty">
-                                <p className="guardian-lessons-empty-title">Sem aulas disponiveis</p>
-                                <p>Quando existirem aulas regulares com vaga, vao aparecer aqui.</p>
+                                <p className="guardian-lessons-empty-title">Sem aulas disponíveis</p>
+                                <p>Quando existirem aulas regulares com vaga, vão aparecer aqui.</p>
                             </div>
                         ) : (
                             <div className="guardian-lessons-grid">
@@ -339,7 +339,7 @@ const GuardianLessons = () => {
                         {bookings.length === 0 ? (
                             <div className="guardian-lessons-empty">
                                 <p className="guardian-lessons-empty-title">Sem aulas futuras</p>
-                                <p>Quando existirem aulas agendadas para o educando, vao aparecer aqui.</p>
+                                <p>Quando existirem aulas agendadas para o educando, vão aparecer aqui.</p>
                             </div>
                         ) : (
                             <div className="guardian-lessons-grid">
@@ -430,7 +430,7 @@ const GuardianLessons = () => {
                                 <span>Regra</span>
                                 <p>
                                     {isWithin24Hours(selectedBooking)
-                                        ? 'Faltam menos de 24h: a Direcao tera de validar.'
+                                        ? 'Faltam menos de 24h: a Direção terá de validar.'
                                         : 'Com 24h ou mais, o cancelamento e aprovado automaticamente.'}
                                 </p>
                             </div>

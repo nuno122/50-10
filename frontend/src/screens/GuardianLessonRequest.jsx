@@ -183,7 +183,7 @@ const GuardianLessonRequest = () => {
                 }));
             }
         } catch (err) {
-            setError(err.message || 'Nao foi possivel carregar os dados do formulario.');
+            setError(err.message || 'Não foi possível carregar os dados do formulário.');
         } finally {
             setLoading(false);
         }
@@ -280,7 +280,7 @@ const GuardianLessonRequest = () => {
         event.preventDefault();
 
         if (!formData.studentId || !formData.date || !formData.time || !formData.styleId || !formData.teacherId) {
-            setError('Por favor, preencha todos os campos obrigatorios.');
+            setError('Por favor, preencha todos os campos obrigatórios.');
             setFeedback('');
             return;
         }
@@ -301,16 +301,16 @@ const GuardianLessonRequest = () => {
                 Observacoes: formData.notes
             });
 
-            setFeedback('Pedido de Coaching enviado com sucesso para confirmacao do professor.');
+            setFeedback('Pedido de Coaching enviado com sucesso para confirmação do professor.');
             notify({
                 title: 'Pedido de Coaching enviado',
-                message: 'O pedido foi enviado para confirmacao do professor.',
+                message: 'O pedido foi enviado para confirmação do professor.',
                 tone: 'success'
             });
             resetForm();
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel enviar o pedido.');
+            setError(err.message || 'Não foi possível enviar o pedido.');
         } finally {
             setSubmitting(false);
         }
@@ -323,7 +323,7 @@ const GuardianLessonRequest = () => {
                     <p className="guardian-request-eyebrow">Encarregado</p>
                     <h1>Pedido de Coaching</h1>
                     <p className="guardian-request-subtitle">
-                        Os encarregados podem pedir sessoes de Coaching para os seus educandos.
+                        Os encarregados podem pedir sessões de Coaching para os seus educandos.
                     </p>
                 </div>
             </div>
@@ -336,7 +336,7 @@ const GuardianLessonRequest = () => {
                     <div className="guardian-request-card-header">
                         <div>
                             <h2>Novo Pedido</h2>
-                            <p>Preencha pela ordem mais util: data, estilo, professor e so depois o horario pretendido.</p>
+                            <p>Preencha pela ordem mais útil: data, estilo, professor e só depois o horário pretendido.</p>
                         </div>
                     </div>
 
@@ -346,7 +346,7 @@ const GuardianLessonRequest = () => {
                         </div>
                     ) : students.length === 0 ? (
                         <div className="guardian-request-empty">
-                            <p>Nao existem educandos associados a esta conta.</p>
+                            <p>Não existem educandos associados a esta conta.</p>
                         </div>
                     ) : (
                         <form onSubmit={handleSubmit} className="guardian-request-form">
@@ -398,7 +398,7 @@ const GuardianLessonRequest = () => {
                                         ))}
                                     </select>
                                     <small className="guardian-request-field-hint">
-                                        O estilo filtra logo os professores disponiveis para este pedido.
+                                        O estilo filtra de imediato os professores disponíveis para este pedido.
                                     </small>
                                 </label>
 
@@ -479,7 +479,7 @@ const GuardianLessonRequest = () => {
                                 ) : !formData.styleId ? (
                                     <p>Escolha o estilo para podermos filtrar os professores certos.</p>
                                 ) : !formData.teacherId ? (
-                                    <p>Escolha o professor para ver os blocos disponiveis nesse dia.</p>
+                                    <p>Escolha o professor para ver os blocos disponíveis nesse dia.</p>
                                 ) : availabilityLoading ? (
                                     <p>A carregar disponibilidade...</p>
                                 ) : teacherAvailability.length === 0 ? (
@@ -513,7 +513,7 @@ const GuardianLessonRequest = () => {
                             </div>
 
                             <label>
-                                <span>Observacoes</span>
+                                <span>Observações</span>
                                 <textarea
                                     rows="4"
                                     value={formData.notes}
@@ -525,15 +525,15 @@ const GuardianLessonRequest = () => {
                             <div className="guardian-request-note">
                                 <p className="guardian-request-note-title">Como funciona</p>
                                 <ul>
-                                    <li>O pedido entra primeiro para confirmacao do professor escolhido.</li>
-                                    <li>Depois de confirmado pelo professor, a Direcao valida o estudio e aprova ou rejeita.</li>
-                                    <li>Quando aprovado, o pedido passa a uma sessao de Coaching com marcacao do educando.</li>
+                                    <li>O pedido segue primeiro para confirmação do professor escolhido.</li>
+                                    <li>Depois de confirmado pelo professor, a Direção valida o estúdio e aprova ou rejeita.</li>
+                                    <li>Quando aprovado, o pedido passa a uma sessão de Coaching com marcação do educando.</li>
                                 </ul>
                             </div>
 
                             <div className="guardian-request-actions">
                                 <button type="button" className="inventory-secondary-button" onClick={resetForm}>
-                                    Limpar Formulario
+                                    Limpar formulário
                                 </button>
                                 <button type="submit" className="inventory-primary-button" disabled={submitting}>
                                     {submitting ? 'A enviar...' : 'Enviar Pedido'}
@@ -557,7 +557,7 @@ const GuardianLessonRequest = () => {
                         </div>
                     ) : requests.length === 0 ? (
                         <div className="guardian-request-empty">
-                            <p>Ainda nao existem pedidos de Coaching.</p>
+                            <p>Ainda não existem pedidos de Coaching.</p>
                         </div>
                     ) : (
                         <div className="guardian-request-note">

@@ -22,7 +22,7 @@ const login = async (email, password) => {
     const utilizador = await userRepository.findByEmail(email);
 
     if (!utilizador) {
-        throw criarErro('Credenciais invalidas.', 401);
+        throw criarErro('Credenciais inválidas.', 401);
     }
 
     if (utilizador.EstaAtivo === false) {
@@ -34,7 +34,7 @@ const login = async (email, password) => {
     const passwordValida = storedPassword === passwordHash || storedPassword === password;
 
     if (!passwordValida) {
-        throw criarErro('Credenciais invalidas.', 401);
+        throw criarErro('Credenciais inválidas.', 401);
     }
 
     // Migra automaticamente utilizadores antigos com password em plaintext.

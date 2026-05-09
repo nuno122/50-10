@@ -97,6 +97,23 @@ button {
   cursor: pointer;
 }
 
+.request-banner--error,
+.dashboard-banner--error,
+.events-banner--error,
+.student-agenda-banner--error,
+.guardian-request-banner--error,
+.guardian-lessons-banner--error,
+.inventory-banner--error,
+.rental-banner--error,
+.finance-banner--error,
+.schedule-banner--error,
+.teacher-banner--error {
+  position: sticky;
+  top: 16px;
+  z-index: 18;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
+}
+
 .login-page {
   min-height: 100vh;
   padding: 32px;
@@ -769,16 +786,19 @@ button {
 
 .portal-utility-row {
   display: grid;
+  margin-top: -4px;
+  margin-bottom: 10px;
 }
 
 .portal-notification-button {
   width: 100%;
+  max-width: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 9px 12px;
-  border-radius: 14px;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.1);
   color: #f5f8fc;
   text-align: left;
@@ -791,22 +811,24 @@ button {
 
 .portal-notification-button-copy {
   display: grid;
-  gap: 2px;
+  gap: 0;
 }
 
 .portal-notification-button-copy strong {
-  font-size: 0.84rem;
+  font-size: 0.82rem;
+  line-height: 1.1;
 }
 
 .portal-notification-button-copy small {
-  font-size: 0.76rem;
+  font-size: 0.74rem;
+  line-height: 1.05;
   color: #d8e2ee;
 }
 
 .portal-notification-icon-wrap {
   position: relative;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 10px;
   display: grid;
   place-items: center;
@@ -815,8 +837,8 @@ button {
 }
 
 .portal-notification-icon {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 .portal-notification-count {
@@ -3897,7 +3919,7 @@ button {
 
 .schedule-actions-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -3939,6 +3961,174 @@ button {
   padding: 24px;
   display: grid;
   gap: 18px;
+}
+
+.schedule-config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.schedule-config-card {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border-radius: 22px;
+  background: #f8fbff;
+  border: 1px solid #dbe7f5;
+  align-content: start;
+}
+
+.schedule-config-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.schedule-config-card-header > div {
+  display: grid;
+  gap: 8px;
+}
+
+.schedule-config-card-header h3 {
+  margin: 0;
+  color: #16324f;
+}
+
+.schedule-config-form-card {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid #dbe7f5;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.schedule-config-list {
+  display: grid;
+  gap: 12px;
+}
+
+.schedule-config-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 112px;
+  align-items: start;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.schedule-config-item--inactive {
+  background: #f8fafc;
+  border-style: dashed;
+  opacity: 0.86;
+}
+
+.schedule-config-item-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.schedule-config-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.schedule-config-item-copy span {
+  color: #60758f;
+  font-size: 0.82rem;
+}
+
+.schedule-config-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.schedule-config-status--active {
+  background: #ecfdf3;
+  color: #166534;
+}
+
+.schedule-config-status--inactive {
+  background: #eef2f7;
+  color: #475569;
+}
+
+.schedule-config-actions {
+  display: grid;
+  gap: 8px;
+  width: 112px;
+  justify-self: end;
+}
+
+.schedule-config-actions .schedule-button {
+  width: 100%;
+  justify-content: center;
+}
+
+.schedule-config-chip-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.schedule-config-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #edf3fb;
+  color: #27496d;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.schedule-config-chip--inactive {
+  background: #eef2f7;
+  color: #475569;
+}
+
+.schedule-config-empty {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  color: #60758f;
+}
+
+.schedule-config-check-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.schedule-config-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #dbe7f5;
+  color: #16324f;
+  font-weight: 600;
+}
+
+.schedule-config-check input {
+  accent-color: #2563eb;
 }
 
 .schedule-import-header,
@@ -4063,6 +4253,9 @@ button {
 }
 
 .schedule-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 12px 16px;
   border-radius: 16px;
   font-weight: 700;
@@ -4082,6 +4275,16 @@ button {
 .schedule-button--ghost {
   background: #edf3fb;
   color: #27496d;
+}
+
+.schedule-button--danger {
+  background: #fff1f2;
+  color: #b42318;
+}
+
+.schedule-button--small {
+  padding: 9px 12px;
+  border-radius: 14px;
 }
 
 .schedule-button--icon {
@@ -4578,6 +4781,12 @@ button {
   gap: 12px;
   margin-top: 24px;
   flex-wrap: wrap;
+}
+
+.schedule-modal-actions--compact {
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0;
 }
 
 .schedule-lesson-detail-grid {
@@ -5479,6 +5688,8 @@ button {
   .rental-detail-grid,
   .finance-layout,
   .schedule-actions-grid,
+  .schedule-config-grid,
+  .schedule-config-check-grid,
   .schedule-form-grid,
   .user-admin-card-grid,
   .user-admin-grid,
@@ -5491,6 +5702,16 @@ button {
   .inventory-role-layout,
   .inventory-role-overview {
     grid-template-columns: 1fr;
+  }
+
+  .schedule-config-item {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-config-actions {
+    width: 100%;
+    justify-self: stretch;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .schedule-shell {
@@ -5604,6 +5825,8 @@ button {
   }
 
   .portal-notification-button {
+    width: 100%;
+    max-width: none;
     padding: 12px 14px;
   }
 
@@ -5628,6 +5851,8 @@ button {
   .rental-detail-grid,
   .finance-layout,
   .schedule-actions-grid,
+  .schedule-config-grid,
+  .schedule-config-check-grid,
   .schedule-form-grid,
   .user-admin-card-grid,
   .user-admin-grid,
@@ -5639,6 +5864,15 @@ button {
 
   .schedule-board {
     grid-auto-columns: minmax(200px, 200px);
+  }
+
+  .schedule-config-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-modal-actions--compact {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .schedule-slot-group-header,

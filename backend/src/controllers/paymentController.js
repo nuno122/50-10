@@ -7,7 +7,7 @@ const getPagamentos = async (req, res) => {
         res.json(pagamentos);
     } catch (erro) {
         console.error('Erro ao carregar pagamentos:', erro);
-        res.status(500).json({ erro: 'Nao foi possivel carregar o historico financeiro.' });
+        res.status(500).json({ erro: 'Não foi possível carregar o histórico financeiro.' });
     }
 };
 
@@ -25,7 +25,7 @@ const getPagamentosEncarregado = async (req, res) => {
         res.json(pagamentos);
     } catch (erro) {
         console.error('Erro ao carregar pagamentos do encarregado:', erro);
-        res.status(500).json({ erro: 'Nao foi possivel carregar os pagamentos do encarregado.' });
+        res.status(500).json({ erro: 'Não foi possível carregar os pagamentos do encarregado.' });
     }
 };
 
@@ -35,7 +35,7 @@ const getAtrasados = async (req, res) => {
         res.json(pagamentosAtrasados);
     } catch (erro) {
         console.error('Erro ao carregar dividas:', erro);
-        res.status(500).json({ erro: 'Nao foi possivel calcular os pagamentos em atraso.' });
+        res.status(500).json({ erro: 'Não foi possível calcular os pagamentos em atraso.' });
     }
 };
 
@@ -45,7 +45,7 @@ const pagar = async (req, res) => {
 
         const pagamento = await paymentRepository.buscarPagamentoPorId(id);
         if (!pagamento) {
-            return res.status(404).json({ erro: 'Fatura nao encontrada no sistema.' });
+            return res.status(404).json({ erro: 'Fatura não encontrada no sistema.' });
         }
 
         if (pagamento.EstadoPagamento === 'Pago') {
@@ -53,7 +53,7 @@ const pagar = async (req, res) => {
         }
 
         if (pagamento.EstadoPagamento === 'Cancelado') {
-            return res.status(400).json({ erro: 'Nao e possivel liquidar um pagamento cancelado.' });
+            return res.status(400).json({ erro: 'Não é possível liquidar um pagamento cancelado.' });
         }
 
         const pagamentoAtualizado = await paymentRepository.registarRecebimento(id);

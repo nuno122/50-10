@@ -29,33 +29,33 @@ const listarUtilizadores = async () => {
 
 const validarPermissaoGerivel = (permissao) => {
     if (!permissoesDePortalAtivas.includes(permissao)) {
-        throw criarErro('So e permitido gerir Encarregados, Professores e Direcao.', 400);
+        throw criarErro('Só é permitido gerir Encarregados, Professores e Direção.', 400);
     }
 };
 
 const validarCamposBase = (dados) => {
     if (!dados.NomeCompleto) {
-        throw criarErro('NomeCompleto e obrigatorio.', 400);
+        throw criarErro('NomeCompleto é obrigatório.', 400);
     }
 
     if (!dados.Email) {
-        throw criarErro('Email e obrigatorio.', 400);
+        throw criarErro('Email é obrigatório.', 400);
     }
 
     if (!dados.NomeUtilizador) {
-        throw criarErro('NomeUtilizador e obrigatorio.', 400);
+        throw criarErro('NomeUtilizador é obrigatório.', 400);
     }
 
     if (!dados.CodigoPostal) {
-        throw criarErro('CodigoPostal e obrigatorio.', 400);
+        throw criarErro('CodigoPostal é obrigatório.', 400);
     }
 
     if (!dados.Morada) {
-        throw criarErro('Morada e obrigatoria.', 400);
+        throw criarErro('Morada é obrigatória.', 400);
     }
 
     if (!dados.Nif) {
-        throw criarErro('NIF e obrigatorio.', 400);
+        throw criarErro('NIF é obrigatório.', 400);
     }
 };
 
@@ -92,22 +92,22 @@ const traduzirErroRepositorio = (erro) => {
         const campo = extrairCampoUnico(erro);
 
         if (campo === 'NomeUtilizador') {
-            throw criarErro('Ja existe um utilizador com esse nome de utilizador.', 400);
+            throw criarErro('Já existe um utilizador com esse nome de utilizador.', 400);
         }
 
         if (campo === 'Email') {
-            throw criarErro('Ja existe um utilizador com esse email.', 400);
+            throw criarErro('Já existe um utilizador com esse email.', 400);
         }
 
         if (campo === 'Nif') {
-            throw criarErro('Ja existe um utilizador com esse NIF.', 400);
+            throw criarErro('Já existe um utilizador com esse NIF.', 400);
         }
 
-        throw criarErro('Ja existe um utilizador com um dos dados inseridos.', 400);
+        throw criarErro('Já existe um utilizador com um dos dados inseridos.', 400);
     }
 
     if (erro?.code === 'P2025') {
-        throw criarErro('Codigo postal invalido.', 400);
+        throw criarErro('Código postal inválido.', 400);
     }
 
     throw erro;
@@ -117,11 +117,11 @@ const criarUtilizador = async (dados) => {
     validarCamposBase(dados);
 
     if (dados.Permissoes === undefined || dados.Permissoes === null || !permissoesDePortalAtivas.includes(dados.Permissoes)) {
-        throw criarErro('So e permitido criar Encarregados, Professores e membros da Direcao.', 400);
+        throw criarErro('Só é permitido criar Encarregados, Professores e membros da Direção.', 400);
     }
 
     if (dados.Permissoes === PERMISSOES.PROFESSOR && !dados.Iban) {
-        throw criarErro('IBAN e obrigatorio para professores.', 400);
+        throw criarErro('IBAN é obrigatório para professores.', 400);
     }
 
     if (dados.Permissoes === PERMISSOES.PROFESSOR && normalizarIdsEstilo(dados.IdsEstiloDanca).length === 0) {
@@ -130,7 +130,7 @@ const criarUtilizador = async (dados) => {
 
     const plainPassword = dados.PalavraPasse || dados.PalavraPasseHash || '';
     if (!plainPassword) {
-        throw criarErro('PalavraPasse e obrigatoria.', 400);
+        throw criarErro('PalavraPasse é obrigatória.', 400);
     }
 
     const hash = hashPassword(plainPassword);
@@ -148,20 +148,20 @@ const criarUtilizador = async (dados) => {
 
 const atualizarUtilizador = async (idUtilizador, dados) => {
     if (!idUtilizador) {
-        throw criarErro('IdUtilizador e obrigatorio.', 400);
+        throw criarErro('IdUtilizador é obrigatório.', 400);
     }
 
     validarCamposBase(dados);
 
     const utilizadorAtual = await userRepository.findById(idUtilizador);
     if (!utilizadorAtual) {
-        throw criarErro('Utilizador nao encontrado.', 404);
+        throw criarErro('Utilizador não encontrado.', 404);
     }
 
     validarPermissaoGerivel(utilizadorAtual.Permissoes);
 
     if (utilizadorAtual.Permissoes === PERMISSOES.PROFESSOR && !dados.Iban) {
-        throw criarErro('IBAN e obrigatorio para professores.', 400);
+        throw criarErro('IBAN é obrigatório para professores.', 400);
     }
 
     if (utilizadorAtual.Permissoes === PERMISSOES.PROFESSOR && normalizarIdsEstilo(dados.IdsEstiloDanca).length === 0) {
@@ -187,63 +187,103 @@ const atualizarUtilizador = async (idUtilizador, dados) => {
     return dadosSeguros;
 };
 
-const atualizarEstadoUtilizador = async (idUtilizador, estaAtivo) => {
+const atualizarEstadoUtilizador = async (idUtilizador, EstaAtivo) => {
     if (!idUtilizador) {
-        throw criarErro('IdUtilizador e obrigatorio.', 400);
+        throw criarErro('IdUtilizador é obrigatório.', 400);
     }
 
     const utilizadorAtual = await userRepository.findById(idUtilizador);
     if (!utilizadorAtual) {
-        throw criarErro('Utilizador nao encontrado.', 404);
+        throw criarErro('Utilizador não encontrado.', 404);
     }
 
     validarPermissaoGerivel(utilizadorAtual.Permissoes);
 
-    const utilizador = await userRepository.updateStatus(idUtilizador, Boolean(estaAtivo));
+    const utilizador = await userRepository.updateStatus(idUtilizador, EstaAtivo);
     const { PalavraPasseHash: _, ...dadosSeguros } = utilizador;
     return dadosSeguros;
 };
 
-const autenticarUtilizador = async (email, palavraPasse) => {
-    if (!email || !palavraPasse) {
-        throw criarErro('Email e palavra-passe sao obrigatorios.', 400);
+const autenticar = async ({ Email, PalavraPasse }) => {
+    if (!Email || !PalavraPasse) {
+        throw criarErro('Email e PalavraPasse são obrigatórios.', 400);
     }
 
-    const utilizador = await userRepository.findByEmail(email);
-
+    const utilizador = await userRepository.findByEmail(Email);
     if (!utilizador) {
-        throw criarErro('Credenciais invalidas.', 401);
+        throw criarErro('Credenciais inválidas.', 401);
     }
 
-    if (!utilizador.EstaAtivo) {
-        throw criarErro('Conta desativada. Contacte a direcao.', 403);
+    if (utilizador.EstaAtivo === false) {
+        throw criarErro('Conta desativada.', 403);
     }
 
-    if (!permissoesDePortalAtivas.includes(utilizador.Permissoes)) {
-        throw criarErro('O perfil de Aluno ja nao esta disponivel no portal. Utilize a conta do Encarregado.', 403);
-    }
-
-    const hashDaEntrada = hashPassword(palavraPasse);
-
-    if (hashDaEntrada !== utilizador.PalavraPasseHash) {
-        throw criarErro('Credenciais invalidas.', 401);
+    const hash = hashPassword(PalavraPasse);
+    if (utilizador.PalavraPasseHash !== hash) {
+        throw criarErro('Credenciais inválidas.', 401);
     }
 
     const token = jwt.sign(
         {
             IdUtilizador: utilizador.IdUtilizador,
+            Email: utilizador.Email,
+            NomeCompleto: utilizador.NomeCompleto,
             Permissoes: utilizador.Permissoes
         },
         JWT_SECRET,
         { expiresIn: '8h' }
     );
 
-    const { PalavraPasseHash: _, ...dadosSeguros } = utilizador;
+    return {
+        token,
+        utilizador: {
+            IdUtilizador: utilizador.IdUtilizador,
+            Email: utilizador.Email,
+            NomeCompleto: utilizador.NomeCompleto,
+            Permissoes: utilizador.Permissoes,
+            EstaAtivo: utilizador.EstaAtivo
+        }
+    };
+};
+
+const autenticarUtilizador = async (Email, PalavraPasseHash) => {
+    if (!Email || !PalavraPasseHash) {
+        throw criarErro('Email e PalavraPasseHash são obrigatórios.', 400);
+    }
+
+    const utilizador = await userRepository.findByEmail(Email);
+    if (!utilizador) {
+        throw criarErro('Credenciais inválidas.', 401);
+    }
+
+    if (utilizador.EstaAtivo === false) {
+        throw criarErro('Conta desativada.', 403);
+    }
+
+    if (utilizador.PalavraPasseHash !== PalavraPasseHash) {
+        throw criarErro('Credenciais inválidas.', 401);
+    }
+
+    const token = jwt.sign(
+        {
+            IdUtilizador: utilizador.IdUtilizador,
+            Email: utilizador.Email,
+            NomeCompleto: utilizador.NomeCompleto,
+            Permissoes: utilizador.Permissoes
+        },
+        JWT_SECRET,
+        { expiresIn: '8h' }
+    );
 
     return {
-        mensagem: 'Login efetuado com sucesso!',
         token,
-        utilizador: dadosSeguros
+        utilizador: {
+            IdUtilizador: utilizador.IdUtilizador,
+            Email: utilizador.Email,
+            NomeCompleto: utilizador.NomeCompleto,
+            Permissoes: utilizador.Permissoes,
+            EstaAtivo: utilizador.EstaAtivo
+        }
     };
 };
 
@@ -252,5 +292,7 @@ module.exports = {
     criarUtilizador,
     atualizarUtilizador,
     atualizarEstadoUtilizador,
-    autenticarUtilizador
+    autenticar,
+    autenticarUtilizador,
+    hashPassword
 };

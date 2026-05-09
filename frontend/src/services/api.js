@@ -1,6 +1,6 @@
 const API_BASE_URL = 'http://localhost:3000/api';
 
-const handleResponse = async (response) => {
+const handleResponse = async (response, { method = 'GET', suppressErrorNotification = false, errorTitle = 'Operação não concluída' } = {}) => {
     const data = await response.json().catch(() => null);
 
     if (!response.ok) {
@@ -22,6 +22,23 @@ const handleResponse = async (response) => {
             }));
         }
 
+        const shouldNotifyError = (
+            typeof window !== 'undefined' &&
+            !suppressErrorNotification &&
+            response.status !== 401 &&
+            String(method || 'GET').toUpperCase() !== 'GET'
+        );
+
+        if (shouldNotifyError) {
+            window.dispatchEvent(new CustomEvent('entartes:request-error', {
+                detail: {
+                    title: errorTitle,
+                    message: error.message,
+                    status: response.status
+                }
+            }));
+        }
+
         throw error;
     }
 
@@ -32,7 +49,13 @@ const request = async (path, options = {}) => {
     // Get token from localStorage for auth
     const token = localStorage.getItem('authToken');
     const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
-    const { headers: optionHeaders, ...fetchOptions } = options;
+    const {
+        headers: optionHeaders,
+        suppressErrorNotification = false,
+        errorTitle,
+        ...fetchOptions
+    } = options;
+    const method = String(fetchOptions.method || 'GET').toUpperCase();
     
     const response = await fetch(`${API_BASE_URL}${path}`, {
         ...fetchOptions,
@@ -43,7 +66,11 @@ const request = async (path, options = {}) => {
         }
     });
 
-    return await handleResponse(response);
+    return await handleResponse(response, {
+        method,
+        suppressErrorNotification,
+        errorTitle
+    });
 };
 
 export const getUtilizadores = async () => request('/utilizadores');
@@ -288,10 +315,66 @@ export const registarDevolucaoAluguer = async (idAluguer, EstadoEntrega, Multa =
         body: JSON.stringify({ EstadoEntrega, Multa })
     });
 
-export const getEstudios = async () => request('/master/estudios');
+export const getEstudios = async ({ incluirInativos = false } = {}) => {
+    const params = new URLSearchParams();
+    if (incluirInativos) params.set('incluirInativos', 'true');
+    const query = params.toString();
+    return request(`/master/estudios${query ? `?${query}` : ''}`);
+};
 
-export const getEstilos = async () => request('/master/estilos');
+export const getEstilos = async ({ incluirInativos = false } = {}) => {
+    const params = new URLSearchParams();
+    if (incluirInativos) params.set('incluirInativos', 'true');
+    const query = params.toString();
+    return request(`/master/estilos${query ? `?${query}` : ''}`);
+};
 
 export const getProfessores = async () => request('/master/professores');
 
 export const getGeografia = async () => request('/master/geografia');
+
+export const criarEstudio = async (dados) =>
+    request('/master/estudios', {
+        method: 'POST',
+        body: JSON.stringify(dados)
+    });
+
+export const atualizarEstudio = async (idEstudio, dados) =>
+    request(`/master/estudios/${idEstudio}`, {
+        method: 'PATCH',
+        body: JSON.stringify(dados)
+    });
+
+export const atualizarEstadoEstudio = async (idEstudio, EstaAtivo) =>
+    request(`/master/estudios/${idEstudio}/estado`, {
+        method: 'PATCH',
+        body: JSON.stringify({ EstaAtivo })
+    });
+
+export const removerEstudio = async (idEstudio) =>
+    request(`/master/estudios/${idEstudio}`, {
+        method: 'DELETE'
+    });
+
+export const criarEstilo = async (dados) =>
+    request('/master/estilos', {
+        method: 'POST',
+        body: JSON.stringify(dados)
+    });
+
+export const atualizarEstilo = async (idEstilo, dados) =>
+    request(`/master/estilos/${idEstilo}`, {
+        method: 'PATCH',
+        body: JSON.stringify(dados)
+    });
+
+export const atualizarEstadoEstilo = async (idEstilo, EstaAtivo) =>
+    request(`/master/estilos/${idEstilo}/estado`, {
+        method: 'PATCH',
+        body: JSON.stringify({ EstaAtivo })
+    });
+
+export const removerEstilo = async (idEstilo) =>
+    request(`/master/estilos/${idEstilo}`, {
+        method: 'DELETE'
+    });

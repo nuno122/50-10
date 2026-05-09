@@ -15,7 +15,7 @@ const roleLabel = (permission) => {
         case PERMISSOES.PROFESSOR:
             return 'Professor';
         case PERMISSOES.DIRECAO:
-            return 'Direcao';
+            return 'Direção';
         case PERMISSOES.ENCARREGADO:
             return 'Encarregado';
         default:
@@ -110,7 +110,7 @@ const RequestValidation = ({ embedded = false }) => {
             setUsers(usersData.filter((user) => user.EstaAtivo !== false));
             setInventory(inventoryData);
         } catch (err) {
-            setError(err.message || 'Nao foi possivel carregar os dados dos alugueres.');
+            setError(err.message || 'Não foi possível carregar os dados dos alugueres.');
         } finally {
             setLoading(false);
         }
@@ -184,10 +184,10 @@ const RequestValidation = ({ embedded = false }) => {
 
         try {
             await avaliarPedidoExtensao(request.IdPedido, true, Number(request.ValorAdicional || 0));
-            setFeedback('Extensao de prazo aprovada com sucesso.');
+            setFeedback('Extensão de prazo aprovada com sucesso.');
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel aprovar o pedido de extensao.');
+            setError(err.message || 'Não foi possível aprovar o pedido de extensão.');
         } finally {
             setSaving(false);
         }
@@ -202,10 +202,10 @@ const RequestValidation = ({ embedded = false }) => {
 
         try {
             await avaliarPedidoExtensao(request.IdPedido, false, 0);
-            setFeedback('Pedido de extensao rejeitado.');
+            setFeedback('Pedido de extensão rejeitado.');
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel rejeitar o pedido de extensao.');
+            setError(err.message || 'Não foi possível rejeitar o pedido de extensão.');
         } finally {
             setSaving(false);
         }
@@ -215,7 +215,7 @@ const RequestValidation = ({ embedded = false }) => {
         if (!returnRental) return;
 
         if (returnState === 'bad' && (!fineAmount || Number.isNaN(Number(fineAmount)) || Number(fineAmount) <= 0)) {
-            setError('Introduz um valor de multa valido para registar uma devolucao danificada.');
+            setError('Introduza um valor de multa válido para registar uma devolução danificada.');
             return;
         }
 
@@ -236,7 +236,7 @@ const RequestValidation = ({ embedded = false }) => {
             setSelectedRental(null);
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel registar a devolucao.');
+            setError(err.message || 'Não foi possível registar a devolução.');
         } finally {
             setSaving(false);
         }
@@ -265,7 +265,7 @@ const RequestValidation = ({ embedded = false }) => {
             setFeedback('Aluguer presencial registado com sucesso.');
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel registar o aluguer presencial.');
+            setError(err.message || 'Não foi possível registar o aluguer presencial.');
         } finally {
             setSaving(false);
         }
@@ -276,10 +276,10 @@ const RequestValidation = ({ embedded = false }) => {
             <section className={embedded ? 'rental-shell rental-shell--embedded' : 'rental-shell'}>
                 <header className="rental-header">
                     <div>
-                        <p className="rental-eyebrow">Direcao</p>
-                        <h1>Registo e Validacao de Alugueres</h1>
+                        <p className="rental-eyebrow">Direção</p>
+                        <h1>Registo e Validação de Alugueres</h1>
                         <p className="rental-subtitle">
-                            Gira novos alugueres, devolucoes e pedidos de extensao num espaco proprio.
+                            Gere novos alugueres, devoluções e pedidos de extensão num espaço próprio.
                         </p>
                     </div>
 
@@ -310,7 +310,7 @@ const RequestValidation = ({ embedded = false }) => {
 
                             <article className="rental-card rental-stat-card">
                                 <div>
-                                    <p>Concluidos</p>
+                                    <p>Concluídos</p>
                                     <strong>{completedCount}</strong>
                                 </div>
                                 <span>OK</span>
@@ -338,7 +338,7 @@ const RequestValidation = ({ embedded = false }) => {
                                 {[
                                     ['all', 'Todos'],
                                     ['active', 'Ativos'],
-                                    ['completed', 'Concluidos']
+                                    ['completed', 'Concluídos']
                                 ].map(([value, label]) => (
                                     <button
                                         key={value}
@@ -357,7 +357,7 @@ const RequestValidation = ({ embedded = false }) => {
                                     className="rental-button rental-button--ghost"
                                     onClick={() => handleSort('requestDate')}
                                 >
-                                    Data de Requisicao
+                                    Data de Requisição
                                 </button>
                                 <button
                                     type="button"
@@ -378,7 +378,7 @@ const RequestValidation = ({ embedded = false }) => {
                             ) : filteredRentals.length === 0 ? (
                                 <div className="rental-empty">
                                     <p className="rental-empty-title">Nenhum registo encontrado</p>
-                                    <p className="rental-empty-copy">Nao existem alugueres para os filtros atuais.</p>
+                                    <p className="rental-empty-copy">Não existem alugueres para os filtros atuais.</p>
                                 </div>
                             ) : (
                                 <div className="rental-list">
@@ -412,7 +412,7 @@ const RequestValidation = ({ embedded = false }) => {
                                                             <p>{rental.Utilizador?.NomeCompleto || 'Utilizador'}</p>
                                                         </div>
                                                         <div>
-                                                            <span className="rental-label">Data de requisicao</span>
+                                                            <span className="rental-label">Data de requisição</span>
                                                             <p>{formatDate(rental.DataLevantamento)}</p>
                                                         </div>
                                                         <div>
@@ -436,7 +436,7 @@ const RequestValidation = ({ embedded = false }) => {
                                                     {pendingExtension && (
                                                         <div className="rental-extension">
                                                             <div>
-                                                                <p className="rental-extension-title">Pedido de Extensao de Prazo</p>
+                                                                <p className="rental-extension-title">Pedido de Extensão de Prazo</p>
                                                                 <p>Nova data pedida: {formatDate(pendingExtension.NovaDataProposta)}</p>
                                                                 <p>Data do pedido: {formatDate(pendingExtension.DataPedido)}</p>
                                                             </div>
@@ -492,7 +492,7 @@ const RequestValidation = ({ embedded = false }) => {
                         <section className="rental-card rental-form-card">
                             <div className="rental-form-header">
                                 <h2>Novo Aluguer Presencial</h2>
-                                <p>Cria um novo aluguer a partir dos dados disponiveis.</p>
+                                <p>Crie um novo aluguer a partir dos dados disponíveis.</p>
                             </div>
 
                             <div className="rental-form">
@@ -549,7 +549,7 @@ const RequestValidation = ({ embedded = false }) => {
                     <section className="rental-modal rental-modal--small" onClick={(event) => event.stopPropagation()}>
                         <div className="rental-modal-header">
                             <div>
-                                <p className="rental-eyebrow">Registar devolucao</p>
+                                <p className="rental-eyebrow">Registar devolução</p>
                                 <h2>Confirmar estado da entrega</h2>
                             </div>
                             <button type="button" className="rental-button rental-button--ghost" onClick={() => setIsReturnModalOpen(false)}>
@@ -609,7 +609,7 @@ const RequestValidation = ({ embedded = false }) => {
                     <section className="rental-modal" onClick={(event) => event.stopPropagation()}>
                         <div className="rental-modal-header">
                             <div>
-                                <p className="rental-eyebrow">Detalhes da requisicao</p>
+                                <p className="rental-eyebrow">Detalhes da requisição</p>
                                 <h2>Aluguer</h2>
                             </div>
                             <button type="button" className="rental-button rental-button--ghost" onClick={() => setSelectedRental(null)}>
@@ -627,7 +627,7 @@ const RequestValidation = ({ embedded = false }) => {
                                 <p>{selectedRental.Utilizador?.NomeCompleto || 'Utilizador'}</p>
                             </div>
                             <div>
-                                <span className="rental-label">Data de requisicao</span>
+                                <span className="rental-label">Data de requisição</span>
                                 <p>{formatDate(selectedRental.DataLevantamento)}</p>
                             </div>
                             <div>

@@ -25,7 +25,7 @@ describe('Authentication Service', () => {
 
             await expect(authenticationService.login('naoexiste@teste.com', 'senha123'))
                 .rejects
-                .toThrow('Credenciais invalidas.');
+                .toThrow('Credenciais inválidas.');
         });
 
         it('deve emitir erro 401 quando a palavra-passe introduzida esta errada', async () => {
@@ -37,7 +37,7 @@ describe('Authentication Service', () => {
 
             await expect(authenticationService.login('aluno@teste.com', 'senhaErrada'))
                 .rejects
-                .toThrow('Credenciais invalidas.');
+                .toThrow('Credenciais inválidas.');
         });
 
         it('deve emitir erro 403 quando a conta esta desativada', async () => {

@@ -51,7 +51,7 @@ const Login = () => {
                             </div>
 
                             <div>
-                                <p className="login-eyebrow">Sistema de Gestao</p>
+                                <p className="login-eyebrow">Sistema de Gestão</p>
                                 <h1>Ent'Artes</h1>
                                 <p className="login-copy login-copy--dark">
                                     Autentica-te para aceder ao painel interno da plataforma.
@@ -60,7 +60,7 @@ const Login = () => {
                         </div>
 
                         <div className="login-card-header">
-                            <h2>Autenticacao</h2>
+                            <h2>Autenticação</h2>
                             <p>Usa as tuas credenciais para entrar no painel interno.</p>
                         </div>
 
@@ -78,7 +78,7 @@ const Login = () => {
                             />
 
                             <label className="login-label" htmlFor="password">
-                                Password
+                                Palavra-passe
                             </label>
                             <input
                                 id="password"
@@ -96,7 +96,7 @@ const Login = () => {
                                 disabled={loading}
                                 className="login-submit"
                             >
-                                {loading ? 'A autenticar...' : 'Login'}
+                                {loading ? 'A autenticar...' : 'Iniciar sessão'}
                             </button>
                         </form>
                     </div>

@@ -70,7 +70,7 @@ describe('Class Service', () => {
 
             await expect(classService.criarAula(payload))
                 .rejects
-                .toThrow('Conflito de horario! Estudio ocupado.');
+                .toThrow('Conflito de horário: estúdio ocupado.');
             
             expect(classRepo.create).not.toHaveBeenCalled();
         });
@@ -101,7 +101,7 @@ describe('Class Service', () => {
 
             await expect(classService.criarAula(payload))
                 .rejects
-                .toThrow('O estudio selecionado nao suporta o estilo escolhido.');
+                .toThrow('O estúdio selecionado não suporta o estilo escolhido.');
             
             expect(classRepo.create).not.toHaveBeenCalled();
         });
@@ -117,7 +117,7 @@ describe('Class Service', () => {
 
             await expect(classService.criarAula(payload))
                 .rejects
-                .toThrow('O professor nao tem disponibilidade registada para este horario.');
+                .toThrow('O professor não tem disponibilidade registada para este horário.');
             
             expect(classRepo.create).not.toHaveBeenCalled();
         });
@@ -190,7 +190,7 @@ describe('Class Service', () => {
 
             await expect(classService.criarAula(dadosPreenchidos))
                 .rejects
-                .toThrow('Conflito de horario! Professor ocupado.');
+                .toThrow('Conflito de horário: professor ocupado.');
         });
 
         it('deve emitir erro 400 quando a capacidade exceder a do estudio', async () => {
@@ -207,7 +207,7 @@ describe('Class Service', () => {
 
             await expect(classService.criarAula(dadosPreenchidos))
                 .rejects
-                .toThrow('A capacidade da aula excede a capacidade do estudio selecionado.');
+                .toThrow('A capacidade da aula excede a capacidade do estúdio selecionado.');
         });
 
         it('deve permitir um professor alternativo numa aula regular quando a Direcao o desbloquear', async () => {
@@ -327,7 +327,7 @@ describe('Class Service', () => {
 
             await expect(classService.criarAula(dadosValidos))
                 .rejects
-                .toThrow('Existem estudios compativeis disponiveis para este horario. Escolhe primeiro um estudio associado ao estilo.');
+                .toThrow('Existem estúdios compatíveis disponíveis para este horário. Escolha primeiro um estúdio associado ao estilo.');
         });
     });
 
@@ -369,7 +369,7 @@ describe('Class Service', () => {
             expect(resultado.totalFalhas).toBe(1);
             expect(resultado.aulas[0].IdAula).toBe(10);
             expect(resultado.erros[0].referencia).toBe('Linha 3');
-            expect(resultado.erros[0].mensagem).toBe('Conflito de horario! Estudio ocupado.');
+            expect(resultado.erros[0].mensagem).toBe('Conflito de horário: estúdio ocupado.');
             expect(classRepo.create).toHaveBeenCalledTimes(1);
         });
     });
@@ -412,7 +412,7 @@ describe('Class Service', () => {
 
             await expect(classService.validarAula(88))
                 .rejects
-                .toThrow('A aula tem de ser confirmada pelo professor antes da validacao da Direcao.');
+                .toThrow('A aula tem de ser confirmada pelo professor antes da validação da Direção.');
 
             expect(classRepo.atualizarValidacaoDirecao).not.toHaveBeenCalled();
             expect(paymentService.GerarPagamento).not.toHaveBeenCalled();
@@ -440,7 +440,7 @@ describe('Class Service', () => {
                 { IdMarcacao: 13, Pagamento: [] }
             ], 22);
             expect(resultado.concluidaPorExcecao).toBe(true);
-            expect(resultado.mensagem).toBe('Aula concluida por excecao pela Direcao e 1 pagamento gerado.');
+            expect(resultado.mensagem).toBe('Aula concluída por exceção pela Direção e 1 pagamento gerado.');
         });
 
         it('deve bloquear a conclusao por excecao se a aula ainda nao terminou', async () => {
@@ -456,7 +456,7 @@ describe('Class Service', () => {
 
             await expect(classService.validarAula(90, { ConcluirPorExcecao: true }))
                 .rejects
-                .toThrow('A Direcao so pode concluir por excecao depois da aula terminar.');
+                .toThrow('A Direção só pode concluir por exceção depois de a aula terminar.');
 
             expect(classRepo.atualizarValidacaoDirecao).not.toHaveBeenCalled();
             expect(paymentService.GerarPagamento).not.toHaveBeenCalled();

@@ -38,7 +38,7 @@ const toMinutes = (timeValue) => {
 
 const assertProfessor = async (idProfessor) => {
     if (!idProfessor) {
-        throw criarErro('Utilizador nao autenticado.', 401);
+        throw criarErro('Utilizador não autenticado.', 401);
     }
 
     const professor = await availabilityRepo.findProfessorById(idProfessor);
@@ -99,7 +99,7 @@ const validarEscopoSubstituicao = (dados = {}) => {
     }
 
     if (from > to) {
-        throw criarErro('O intervalo de disponibilidade e invalido.', 400);
+        throw criarErro('O intervalo de disponibilidade é inválido.', 400);
     }
 
     return {
@@ -118,11 +118,11 @@ const normalizarDisponibilidades = (disponibilidades = [], scope) => {
         const endTime = extractTime(item?.HoraFim);
 
         if (!dateKey) {
-            throw criarErro(`A disponibilidade ${index + 1} tem uma data invalida.`, 400);
+            throw criarErro(`A disponibilidade ${index + 1} tem uma data inválida.`, 400);
         }
 
         if (!startTime || !endTime) {
-            throw criarErro(`A disponibilidade ${index + 1} tem um horario invalido.`, 400);
+            throw criarErro(`A disponibilidade ${index + 1} tem um horário inválido.`, 400);
         }
 
         const withinRange = scope.type === 'range'

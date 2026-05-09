@@ -91,7 +91,7 @@ const getValidationLabel = (lesson) => {
     }
 
     if (lesson.operationalStatus === 'awaiting-director') {
-        return { text: 'Aguarda conclusao da direcao', tone: 'finance-badge--warning' };
+        return { text: 'Aguarda conclusão da direção', tone: 'finance-badge--warning' };
     }
 
     if (lesson.validation.teacher && lesson.validation.director) {
@@ -112,17 +112,17 @@ const getActionNote = (lesson, isGuardian) => {
 
     switch (lesson.operationalStatus) {
         case 'expired-empty':
-            return 'Sem acao necessaria';
+            return 'Sem ação necessária';
         case 'scheduled':
             return 'Aula futura';
         case 'awaiting-teacher':
-            return 'Aguarda conclusao do professor';
+            return 'Aguarda conclusão do professor';
         case 'awaiting-director':
-            return 'Dar aula como concluida';
+            return 'Dar aula como concluída';
         case 'validated':
-            return lesson.paid ? 'Sem acao pendente' : 'Registar pagamento presencial';
+            return lesson.paid ? 'Sem ação pendente' : 'Registar pagamento presencial';
         default:
-            return 'Sem acao pendente';
+            return 'Sem ação pendente';
     }
 };
 
@@ -251,10 +251,10 @@ const exportLessonsCsv = (lessons) => {
         lesson.style || '',
         lesson.duration,
         Number(lesson.amount || 0).toFixed(2),
-        lesson.validation.teacher ? 'Sim' : 'Nao',
-        lesson.validation.director ? 'Sim' : 'Nao',
+        lesson.validation.teacher ? 'Sim' : 'Não',
+        lesson.validation.director ? 'Sim' : 'Não',
         formatDate(lesson.deadlineDate),
-        lesson.paid ? 'Sim' : 'Nao'
+        lesson.paid ? 'Sim' : 'Não'
     ]);
 
     const csv = [header, ...rows]
@@ -296,7 +296,7 @@ const FinanceManagement = () => {
 
             setLessons(isGuardian ? buildGuardianLessons(aulas, pagamentos) : buildDirectorLessons(aulas, pagamentos));
         } catch (err) {
-            setError(err.message || 'Nao foi possivel carregar o financeiro.');
+            setError(err.message || 'Não foi possível carregar o financeiro.');
         } finally {
             setLoading(false);
         }
@@ -359,10 +359,10 @@ const FinanceManagement = () => {
 
         try {
             const result = await validarAulaDirecao(lesson.id, options);
-            setFeedback(result?.mensagem || 'Aula concluida pela Direcao e pagamentos gerados para as marcacoes ativas.');
+            setFeedback(result?.mensagem || 'Aula concluída pela Direção e pagamentos gerados para as marcações ativas.');
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel validar a aula.');
+            setError(err.message || 'Não foi possível validar a aula.');
         } finally {
             setSubmittingId(null);
         }
@@ -371,7 +371,7 @@ const FinanceManagement = () => {
     const handlePayLesson = async (lesson) => {
         const unpaidPayments = (lesson.payments || []).filter((payment) => normalizeStatus(payment.EstadoPagamento) !== 'pago');
         if (unpaidPayments.length === 0) {
-            setError('Nao existem pagamentos pendentes para esta aula.');
+            setError('Não existem pagamentos pendentes para esta aula.');
             return;
         }
 
@@ -383,7 +383,7 @@ const FinanceManagement = () => {
             setFeedback('Pagamento presencial registado com sucesso.');
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel registar o pagamento.');
+            setError(err.message || 'Não foi possível registar o pagamento.');
         } finally {
             setSubmittingId(null);
         }
@@ -413,11 +413,11 @@ const FinanceManagement = () => {
         <div className="finance-page">
             <div className="finance-header">
                 <div>
-                    <p className="finance-eyebrow">{isGuardian ? 'Encarregado' : 'Direcao'}</p>
-                    <h1>{isGuardian ? 'Pagamentos' : 'Validacao Financeira'}</h1>
+                    <p className="finance-eyebrow">{isGuardian ? 'Encarregado' : 'Direção'}</p>
+                    <h1>{isGuardian ? 'Pagamentos' : 'Validação Financeira'}</h1>
                     <p className="finance-subtitle">
                         {isGuardian
-                            ? 'Consulte os pagamentos das aulas dos educandos. O pagamento e registado presencialmente pela Direcao.'
+                            ? 'Consulte os pagamentos das aulas dos educandos. O pagamento é registado presencialmente pela Direção.'
                             : 'Reveja aulas reais, valide as que ja foram confirmadas pelo professor e registe pagamentos presenciais.'}
                     </p>
                 </div>
@@ -435,7 +435,7 @@ const FinanceManagement = () => {
             {error && <div className="finance-banner finance-banner--error">{error}</div>}
             {isGuardian && pendingPaymentsCount > 0 && (
                 <div className="finance-banner finance-banner--warning">
-                    Tem {pendingPaymentsCount} pagamento(s) pendente(s). O pagamento deve ser feito presencialmente na Direcao.
+                    Tem {pendingPaymentsCount} pagamento(s) pendente(s). O pagamento deve ser feito presencialmente na Direção.
                 </div>
             )}
 
@@ -445,12 +445,12 @@ const FinanceManagement = () => {
                         {loading ? (
                             <div className="finance-empty">
                                 <p className="finance-empty-title">A carregar aulas...</p>
-                                <p className="finance-empty-copy">A preparar a informacao financeira.</p>
+                                <p className="finance-empty-copy">A preparar a informação financeira.</p>
                             </div>
                         ) : sortedLessons.length === 0 ? (
                             <div className="finance-empty">
                                 <p className="finance-empty-title">Sem aulas para apresentar</p>
-                                <p className="finance-empty-copy">Nao existem registos financeiros de aulas neste momento.</p>
+                                <p className="finance-empty-copy">Não existem registos financeiros de aulas neste momento.</p>
                             </div>
                         ) : (
                             <div className="finance-table-wrap">
@@ -463,7 +463,7 @@ const FinanceManagement = () => {
                                             <th><button type="button" onClick={() => handleSort('style')}>Estilo</button></th>
                                             <th><button type="button" onClick={() => handleSort('duration')}>Duracao</button></th>
                                             <th><button type="button" onClick={() => handleSort('amount')}>Valor</button></th>
-                                            <th><button type="button" onClick={() => handleSort(isGuardian ? 'paid' : 'validation')}>{isGuardian ? 'Pagamento' : 'Validacao'}</button></th>
+                                            <th><button type="button" onClick={() => handleSort(isGuardian ? 'paid' : 'validation')}>{isGuardian ? 'Pagamento' : 'Validação'}</button></th>
                                             <th><button type="button" onClick={() => handleSort('deadlineDate')}>Prazo</button></th>
                                             <th>Acoes</th>
                                         </tr>
@@ -581,7 +581,7 @@ const FinanceManagement = () => {
                         </article>
                     ) : (
                         <article className="finance-summary-card finance-summary-card--success">
-                            <p>Pendente Validacao</p>
+                            <p>Pendente de Validação</p>
                             <strong>{formatCurrency(totalPending)}</strong>
                             <span>{lessons.filter((lesson) => !lesson.validation.teacher || !lesson.validation.director).length} aulas pendentes</span>
                         </article>

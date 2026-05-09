@@ -64,7 +64,7 @@ const LessonValidation = ({ embedded = false }) => {
             setPrivateLessonRequests(privateRequestsData || []);
             setPendingCancellationRequests(cancellationRequestsData || []);
         } catch (err) {
-            setError(err.message || 'Nao foi possivel carregar as validacoes pendentes.');
+            setError(err.message || 'Não foi possível carregar as validações pendentes.');
         } finally {
             setLoading(false);
         }
@@ -102,7 +102,7 @@ const LessonValidation = ({ embedded = false }) => {
 
     const handleApprovePrivateRequest = async (idPedidoAulaPrivada, form) => {
         if (!form?.IdEstudio) {
-            setError('Escolhe primeiro um estudio para aprovar o pedido de Coaching.');
+            setError('Escolha primeiro um estúdio para aprovar o pedido de Coaching.');
             setFeedback('');
             return;
         }
@@ -120,7 +120,7 @@ const LessonValidation = ({ embedded = false }) => {
             setFeedback('Pedido de Coaching aprovado com sucesso.');
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel aprovar o pedido de Coaching.');
+            setError(err.message || 'Não foi possível aprovar o pedido de Coaching.');
         } finally {
             setSaving(false);
         }
@@ -135,7 +135,7 @@ const LessonValidation = ({ embedded = false }) => {
             setFeedback('Pedido de Coaching rejeitado.');
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel rejeitar o pedido de Coaching.');
+            setError(err.message || 'Não foi possível rejeitar o pedido de Coaching.');
         } finally {
             setSaving(false);
         }
@@ -150,7 +150,7 @@ const LessonValidation = ({ embedded = false }) => {
             setFeedback('Cancelamento aprovado com sucesso.');
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel aprovar o cancelamento.');
+            setError(err.message || 'Não foi possível aprovar o cancelamento.');
         } finally {
             setSaving(false);
         }
@@ -165,7 +165,7 @@ const LessonValidation = ({ embedded = false }) => {
             setFeedback('Cancelamento rejeitado.');
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel rejeitar o cancelamento.');
+            setError(err.message || 'Não foi possível rejeitar o cancelamento.');
         } finally {
             setSaving(false);
         }
@@ -176,10 +176,10 @@ const LessonValidation = ({ embedded = false }) => {
             <section className={embedded ? 'rental-shell rental-shell--embedded' : 'rental-shell'}>
                 <header className="rental-header">
                     <div>
-                        <p className="rental-eyebrow">Direcao</p>
-                        <h1>Validacao de Aulas e Cancelamentos</h1>
+                        <p className="rental-eyebrow">Direção</p>
+                        <h1>Validação de Aulas e Cancelamentos</h1>
                         <p className="rental-subtitle">
-                            Centraliza as requisicoes de aula e os cancelamentos tardios.
+                            Centraliza os pedidos de aula e os cancelamentos tardios.
                         </p>
                     </div>
 
@@ -220,8 +220,8 @@ const LessonValidation = ({ embedded = false }) => {
                         {loading ? (
                             <section className="rental-card rental-list-card">
                                 <div className="rental-empty">
-                                    <p className="rental-empty-title">A carregar validacoes...</p>
-                                    <p className="rental-empty-copy">A preparar as requisicoes de aula e cancelamento.</p>
+                                    <p className="rental-empty-title">A carregar validações...</p>
+                                    <p className="rental-empty-copy">A preparar os pedidos de aula e de cancelamento.</p>
                                 </div>
                             </section>
                         ) : (

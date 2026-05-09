@@ -59,10 +59,10 @@ const getRentalItems = (rental) => (
 
 const getRoleSubtitle = (permission) => {
     if (permission === PERMISSOES.PROFESSOR) {
-        return 'Publica anuncios, consulta o marketplace e acompanha os alugueres associados a esta conta.';
+    return 'Publica anúncios, consulta o marketplace e acompanha os alugueres associados a esta conta.';
     }
 
-    return 'Consulta o marketplace, publica anuncios e acompanha os alugueres reais da tua conta.';
+    return 'Consulta o marketplace, publica anúncios e acompanha os alugueres reais da tua conta.';
 };
 
 const RoleInventory = () => {
@@ -101,7 +101,7 @@ const RoleInventory = () => {
             setInventory(inventoryData);
             setRentals(rentalsData);
         } catch (err) {
-            setError(err.message || 'Nao foi possivel carregar o inventario e os alugueres.');
+            setError(err.message || 'Não foi possível carregar o inventário e os alugueres.');
         } finally {
             setLoading(false);
         }
@@ -204,17 +204,17 @@ const RoleInventory = () => {
         try {
             await solicitarExtensaoAluguer(selectedRental.IdAluguer, extensionDate);
             notify({
-                title: 'Pedido de extensao enviado',
-                message: 'O pedido de extensao foi enviado para aprovacao.',
+                title: 'Pedido de extensão enviado',
+                message: 'O pedido de extensão foi enviado para aprovação.',
                 tone: 'success'
             });
-            setFeedback('Pedido de extensao enviado com sucesso para aprovacao.');
+            setFeedback('Pedido de extensão enviado com sucesso para aprovação.');
             setIsExtensionOpen(false);
             setSelectedRental(null);
             setExtensionDate('');
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel enviar o pedido de extensao.');
+            setError(err.message || 'Não foi possível enviar o pedido de extensão.');
         } finally {
             setSubmitting(false);
         }
@@ -251,20 +251,20 @@ const RoleInventory = () => {
                 await editarArtigo(editingAd.IdArtigo, payload);
                 await refreshSnapshot();
                 notify({
-                    title: 'Anuncio atualizado',
-                    message: `${adFormData.Nome || 'O anuncio'} foi atualizado no marketplace.`,
+                    title: 'Anúncio atualizado',
+                    message: `${adFormData.Nome || 'O anúncio'} foi atualizado no marketplace.`,
                     tone: 'success'
                 });
-                setFeedback('Anuncio atualizado com sucesso.');
+                setFeedback('Anúncio atualizado com sucesso.');
             } else {
                 await criarArtigo(payload);
                 await refreshSnapshot();
                 notify({
-                    title: 'Anuncio publicado',
-                    message: `${adFormData.Nome || 'O anuncio'} ficou disponivel no marketplace.`,
+                    title: 'Anúncio publicado',
+                    message: `${adFormData.Nome || 'O anúncio'} ficou disponível no marketplace.`,
                     tone: 'success'
                 });
-                setFeedback('Anuncio publicado com sucesso.');
+                setFeedback('Anúncio publicado com sucesso.');
             }
 
             setIsAdModalOpen(false);
@@ -273,7 +273,7 @@ const RoleInventory = () => {
             setSelectedImageFile(null);
             await loadData();
         } catch (err) {
-            setError(err.message || 'Nao foi possivel guardar o anuncio.');
+            setError(err.message || 'Não foi possível guardar o anúncio.');
         } finally {
             setSubmitting(false);
         }
@@ -289,12 +289,12 @@ const RoleInventory = () => {
                 </div>
 
                 <button type="button" className="inventory-primary-button" onClick={openCreateAd}>
-                    Publicar anuncio
+                    Publicar anúncio
                 </button>
             </div>
 
             <div className="inventory-banner inventory-banner--info">
-                Os anuncios do marketplace mostram o email de quem publicou. Os alugueres e pedidos de extensao continuam a ser geridos neste mesmo espaco.
+                Os anúncios do marketplace mostram o email de quem publicou. Os alugueres e pedidos de extensão continuam a ser geridos neste mesmo espaço.
             </div>
 
             {feedback && <div className="inventory-banner inventory-banner--success">{feedback}</div>}
@@ -324,7 +324,7 @@ const RoleInventory = () => {
                 </article>
                 <article className="inventory-card inventory-stat-card">
                     <div>
-                        <p>Meus Anuncios</p>
+                        <p>Meus anúncios</p>
                         <strong>{ownPublishedAds.length}</strong>
                     </div>
                     <span>AD</span>
@@ -421,7 +421,7 @@ const RoleInventory = () => {
                                     className="inventory-primary-button"
                                     onClick={() => openExtensionDialog(rental)}
                                 >
-                                    Pedir Extensao
+                                    Pedir Extensão
                                 </button>
                             </article>
                         ))}
@@ -475,7 +475,7 @@ const RoleInventory = () => {
                 <div className="inventory-filters">
                     {[
                         ['all', 'Todos'],
-                        ['available', 'Disponiveis'],
+                        ['available', 'Disponíveis'],
                         ['empty', 'Sem Stock'],
                         ['inactive', 'Inativos']
                     ].map(([value, label]) => (
@@ -493,11 +493,11 @@ const RoleInventory = () => {
 
             {loading ? (
                 <section className="inventory-card inventory-empty">
-                    <p>A carregar inventario...</p>
+                    <p>A carregar inventário...</p>
                 </section>
             ) : filteredInventory.length === 0 ? (
                 <section className="inventory-card inventory-empty">
-                    <p>Nao foram encontrados artigos para os filtros atuais.</p>
+                    <p>Não foram encontrados artigos para os filtros atuais.</p>
                 </section>
             ) : (
                 <div className="inventory-grid">
@@ -543,7 +543,7 @@ const RoleInventory = () => {
                                     </div>
                                     <div className="inventory-meta-row">
                                         <span>Email do anunciante</span>
-                                        <strong>{item.Criador?.Email || 'Anuncio legacy'}</strong>
+                                        <strong>{item.Criador?.Email || 'Anúncio antigo'}</strong>
                                     </div>
                                 </div>
 
@@ -569,7 +569,7 @@ const RoleInventory = () => {
                                     </button>
                                     {(item.IdUtilizadorCriador === user?.Id || item.Criador?.IdUtilizador === user?.Id) && (
                                         <button type="button" className="inventory-primary-button" onClick={() => openEditAd(item)}>
-                                            Editar anuncio
+                                            Editar anúncio
                                         </button>
                                     )}
                                 </div>
@@ -630,7 +630,7 @@ const RoleInventory = () => {
                                 </div>
                                 <div className="inventory-meta-row">
                                     <span>Email do anunciante</span>
-                                    <strong>{selectedItem.Criador?.Email || 'Anuncio legacy'}</strong>
+                                    <strong>{selectedItem.Criador?.Email || 'Anúncio antigo'}</strong>
                                 </div>
                             </div>
                         </div>
@@ -659,7 +659,7 @@ const RoleInventory = () => {
                     <section className="inventory-modal inventory-modal--narrow" onClick={(event) => event.stopPropagation()}>
                         <div className="inventory-modal-header">
                             <div>
-                                <p className="inventory-eyebrow">Pedido de extensao</p>
+                                <p className="inventory-eyebrow">Pedido de extensão</p>
                                 <h2>Atualizar data de entrega</h2>
                             </div>
                             <button type="button" className="inventory-close" onClick={() => setIsExtensionOpen(false)}>
@@ -717,8 +717,8 @@ const RoleInventory = () => {
                     <section className="inventory-modal inventory-modal--narrow" onClick={(event) => event.stopPropagation()}>
                         <div className="inventory-modal-header">
                             <div>
-                                <p className="inventory-eyebrow">{editingAd ? 'Editar anuncio' : 'Novo anuncio'}</p>
-                                <h2>{editingAd ? adFormData.Nome : 'Publicar anuncio'}</h2>
+                                <p className="inventory-eyebrow">{editingAd ? 'Editar anúncio' : 'Novo anúncio'}</p>
+                                <h2>{editingAd ? adFormData.Nome : 'Publicar anúncio'}</h2>
                             </div>
                             <button type="button" className="inventory-close" onClick={() => setIsAdModalOpen(false)}>
                                 Fechar
@@ -759,16 +759,16 @@ const RoleInventory = () => {
 
                             {previewImageUrl && (
                                 <div className="inventory-form-note">
-                                    <p>Pre-visualizacao da imagem.</p>
+                                    <p>Pré-visualização da imagem.</p>
                                     <div className="inventory-detail-media">
-                                        <img className="inventory-detail-image" src={previewImageUrl} alt={adFormData.Nome || 'Pre-visualizacao do anuncio'} />
+                                        <img className="inventory-detail-image" src={previewImageUrl} alt={adFormData.Nome || 'Pré-visualização do anúncio'} />
                                     </div>
                                 </div>
                             )}
 
                             {editingAd && (
                                 <label className="inventory-switch">
-                                    <span>Anuncio ativo</span>
+                                    <span>Anúncio ativo</span>
                                     <input
                                         type="checkbox"
                                         checked={adFormData.EstadoArtigo !== false}
@@ -783,7 +783,7 @@ const RoleInventory = () => {
                                 Cancelar
                             </button>
                             <button type="button" className="inventory-primary-button" onClick={handleSaveAd} disabled={submitting}>
-                                {submitting ? 'A guardar...' : editingAd ? 'Guardar anuncio' : 'Publicar anuncio'}
+                                {submitting ? 'A guardar...' : editingAd ? 'Guardar anúncio' : 'Publicar anúncio'}
                             </button>
                         </div>
                     </section>

@@ -102,7 +102,7 @@ const inventoryImageUpload = (req, res, next) => {
         }
 
         res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Nao foi possivel carregar a imagem.'
+            erro: erro.message || 'Não foi possível carregar a imagem.'
         });
     };
 

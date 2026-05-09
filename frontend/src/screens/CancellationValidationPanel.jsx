@@ -64,7 +64,7 @@ const CancellationValidationPanel = ({
 
                                 <div className="rental-form">
                                     <label>
-                                        <span>Observacao da Direcao</span>
+                                        <span>Observação da Direção</span>
                                         <textarea
                                             rows="3"
                                             value={notes[request.IdMarcacao] || ''}

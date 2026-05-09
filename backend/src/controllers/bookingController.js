@@ -8,7 +8,7 @@ const criarMarcacao = async (req, res) => {
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao processar a marcacao.'
+            erro: erro.message || 'Erro ao processar a marcação.'
         });
     }
 };
@@ -22,7 +22,7 @@ const criarMarcacaoEncarregado = async (req, res) => {
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro ao processar a marcacao.'
+            erro: erro.message || 'Erro ao processar a marcação.'
         });
     }
 };
@@ -38,7 +38,7 @@ const cancelarMarcacao = async (req, res) => {
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 400).json({
-            erro: erro.message || 'Erro ao cancelar a marcacao.'
+            erro: erro.message || 'Erro ao cancelar a marcação.'
         });
     }
 };
@@ -54,7 +54,7 @@ const cancelarMarcacaoEncarregado = async (req, res) => {
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 400).json({
-            erro: erro.message || 'Erro ao cancelar a marcacao.'
+            erro: erro.message || 'Erro ao cancelar a marcação.'
         });
     }
 };

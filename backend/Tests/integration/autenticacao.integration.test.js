@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { makeRequest, prisma } = require('./setup');
+const { makeRequest, ensureDatabaseReady, ensurePostalCode, prisma } = require('./setup');
 
 const hashPassword = (value) => crypto.createHash('sha256').update(value).digest('hex');
 
@@ -22,36 +22,46 @@ describe('Integracao - Autenticacao', () => {
         });
 
         expect(response.status).toBe(401);
-        expect(response.data.erro).toBe('Credenciais invalidas.');
+        expect(response.data.erro).toMatch(/Credenciais/i);
     });
 
     it('3 Deve rejeitar login com password errada (401)', async () => {
-        const utilizador = await prisma.utilizador.findFirst();
+        const codigoPostal = await ensurePostalCode();
+        const uniqueSuffix = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
-        if (!utilizador) {
-            throw new Error('Setup falhou: Nenhum utilizador encontrado na BD para testar login.');
-        }
-
-        const response = await makeRequest('/autenticacao/login', 'POST', {
-            Email: utilizador.Email,
-            Password: 'PasswordErradaQueNaoFuncionaXYZ'
+        const utilizador = await prisma.utilizador.create({
+            data: {
+                CodigoPostal: codigoPostal.CodigoPostal,
+                Morada: 'Morada teste password errada',
+                Permissoes: 3,
+                NomeCompleto: 'Integracao Password Errada',
+                NomeUtilizador: `int_auth_wrong_${uniqueSuffix}`,
+                Email: `int-auth-wrong-${uniqueSuffix}@entartes.test`,
+                PalavraPasseHash: hashPassword('PasswordCorreta123'),
+                EstaAtivo: true,
+                Nif: `91${uniqueSuffix}`.slice(0, 9)
+            }
         });
 
-        expect(response.status).toBe(401);
-        expect(response.data.erro).toBe('Credenciais invalidas.');
+        try {
+            const response = await makeRequest('/autenticacao/login', 'POST', {
+                Email: utilizador.Email,
+                Password: 'PasswordErradaQueNaoFuncionaXYZ'
+            });
+
+            expect(response.status).toBe(401);
+            expect(response.data.erro).toMatch(/Credenciais/i);
+        } finally {
+            await prisma.utilizador.delete({
+                where: { IdUtilizador: utilizador.IdUtilizador }
+            });
+        }
     });
 
     it('4 Deve devolver token JWT com login valido para password guardada em hash', async () => {
-        const codigoPostal = await prisma.codigoPostal.findFirst();
-
-        if (!codigoPostal) {
-            throw new Error('Setup falhou: Nenhum codigo postal encontrado na BD para criar utilizador.');
-        }
-
+        const codigoPostal = await ensurePostalCode();
         const uniqueSuffix = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
         const plainPassword = 'PasswordHashTeste123';
-        const email = `int-auth-${uniqueSuffix}@entartes.test`;
-        const username = `int_auth_${uniqueSuffix}`;
 
         const utilizador = await prisma.utilizador.create({
             data: {
@@ -59,16 +69,17 @@ describe('Integracao - Autenticacao', () => {
                 Morada: 'Morada de teste integracao',
                 Permissoes: 3,
                 NomeCompleto: 'Integracao Autenticacao',
-                NomeUtilizador: username,
-                Email: email,
+                NomeUtilizador: `int_auth_${uniqueSuffix}`,
+                Email: `int-auth-${uniqueSuffix}@entartes.test`,
                 PalavraPasseHash: hashPassword(plainPassword),
-                EstaAtivo: true
+                EstaAtivo: true,
+                Nif: `92${uniqueSuffix}`.slice(0, 9)
             }
         });
 
         try {
             const response = await makeRequest('/autenticacao/login', 'POST', {
-                Email: email,
+                Email: utilizador.Email,
                 Password: plainPassword
             });
 

@@ -4,7 +4,7 @@ export { PERMISSOES };
 
 export const ROLE_LABELS = {
     [PERMISSOES.PROFESSOR]: 'Professor',
-    [PERMISSOES.DIRECAO]: 'Direcao',
+    [PERMISSOES.DIRECAO]: 'Direção',
     [PERMISSOES.ENCARREGADO]: 'Encarregado'
 };
 

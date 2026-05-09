@@ -1,113 +1,190 @@
-const { makeRequest, getAdminToken, prisma } = require('./setup');
+const {
+    makeRequest,
+    getAdminToken,
+    ensureDatabaseReady,
+    ensureUser,
+    prisma
+} = require('./setup');
 
-describe('Integração - Alugueres', () => {
+describe('Integracao - Alugueres', () => {
+    let adminToken;
+    let utilizadorAluguer;
+    let createdArticleId = null;
+    let createdSizeId = null;
 
-    describe('Proteção de rotas', () => {
+    beforeAll(async () => {
+        try {
+            await ensureDatabaseReady();
+            adminToken = await getAdminToken();
+            utilizadorAluguer = await ensureUser({
+                email: 'cliente.aluguer@integration.test',
+                nomeCompleto: 'Cliente Aluguer Integration Test',
+                nomeUtilizador: 'clientealuguerintegration',
+                permissoes: 1,
+                nif: '555555555',
+                createAluno: true
+            });
+        } catch (error) {
+            adminToken = null;
+            utilizadorAluguer = null;
+        }
+    });
 
-        it('1️⃣ Deve rejeitar GET /alugueres sem token (401)', async () => {
-            // Arrange: sem token
+    afterAll(async () => {
+        if (createdSizeId) {
+            await prisma.artigoAluguer.deleteMany({
+                where: { IdTamanhoArtigo: createdSizeId }
+            });
 
-            // Act
+            await prisma.tamanhoArtigo.deleteMany({
+                where: { IdTamanhoArtigo: createdSizeId }
+            });
+        }
+
+        if (createdArticleId) {
+            await prisma.artigo.deleteMany({
+                where: { IdArtigo: createdArticleId }
+            });
+        }
+    });
+
+    describe('Protecao de rotas', () => {
+        it('1 Deve rejeitar GET /alugueres sem token (401)', async () => {
             const response = await makeRequest('/alugueres', 'GET');
 
-            // Assert
             expect(response.status).toBe(401);
             expect(response.data.erro).toBeDefined();
         });
 
-        it('2️⃣ Deve aceitar GET /alugueres com token válido (200)', async () => {
-            // Arrange
-            const token = await getAdminToken();
+        it('2 Deve aceitar GET /alugueres com token valido (200)', async () => {
+            await ensureDatabaseReady();
+            adminToken = adminToken || await getAdminToken();
+            const response = await makeRequest('/alugueres', 'GET', null, adminToken);
 
-            // Act
-            const response = await makeRequest('/alugueres', 'GET', null, token);
-
-            // Assert
             expect(response.status).toBe(200);
             expect(Array.isArray(response.data)).toBe(true);
         });
-
     });
 
     describe('Criar Aluguer (POST /alugueres)', () => {
+        it('3 Deve rejeitar sem token (401)', async () => {
+            const payload = {
+                IdUtilizador: '00000000-0000-0000-0000-000000000010',
+                DataLevantamento: '2030-01-10',
+                DataEntrega: '2030-01-12',
+                ListaArtigos: []
+            };
 
-        it('3️⃣ Deve rejeitar sem token (401)', async () => {
-            // Arrange
-            const payload = { IdUtilizador: 1, DataLevantamento: '2030-01-10', DataEntrega: '2030-01-12', ListaArtigos: [] };
-
-            // Act
             const response = await makeRequest('/alugueres', 'POST', payload);
 
-            // Assert
             expect(response.status).toBe(401);
         });
 
-        it('4️⃣ Deve rejeitar quando DataEntrega é anterior à DataLevantamento (400)', async () => {
-            // Arrange: datas trocadas
-            const token = await getAdminToken();
+        it('4 Deve rejeitar quando DataEntrega e anterior a DataLevantamento (400)', async () => {
+            await ensureDatabaseReady();
+            adminToken = adminToken || await getAdminToken();
+            utilizadorAluguer = utilizadorAluguer || await ensureUser({
+                email: 'cliente.aluguer@integration.test',
+                nomeCompleto: 'Cliente Aluguer Integration Test',
+                nomeUtilizador: 'clientealuguerintegration',
+                permissoes: 1,
+                nif: '555555555',
+                createAluno: true
+            });
             const payload = {
-                IdUtilizador: 1,
+                IdUtilizador: utilizadorAluguer.IdUtilizador,
                 DataLevantamento: '2030-01-15',
-                DataEntrega: '2030-01-10',  // antes da data de levantamento
-                ListaArtigos: [{ IdTamanhoArtigo: 999, Quantidade: 1 }]
+                DataEntrega: '2030-01-10',
+                ListaArtigos: [{
+                    IdTamanhoArtigo: '00000000-0000-0000-0000-000000000111',
+                    Quantidade: 1
+                }]
             };
 
-            // Act
-            const response = await makeRequest('/alugueres', 'POST', payload, token);
+            const response = await makeRequest('/alugueres', 'POST', payload, adminToken);
 
-            // Assert
             expect(response.status).toBe(400);
             expect(response.data.erro).toBe('A DataEntrega nao pode ser anterior a DataLevantamento.');
         });
 
-        it('5️⃣ Deve rejeitar quando não há artigos na lista (400)', async () => {
-            // Arrange: lista vazia
-            const token = await getAdminToken();
+        it('5 Deve rejeitar quando nao ha artigos na lista (400)', async () => {
+            await ensureDatabaseReady();
+            adminToken = adminToken || await getAdminToken();
+            utilizadorAluguer = utilizadorAluguer || await ensureUser({
+                email: 'cliente.aluguer@integration.test',
+                nomeCompleto: 'Cliente Aluguer Integration Test',
+                nomeUtilizador: 'clientealuguerintegration',
+                permissoes: 1,
+                nif: '555555555',
+                createAluno: true
+            });
             const payload = {
-                IdUtilizador: 1,
+                IdUtilizador: utilizadorAluguer.IdUtilizador,
                 DataLevantamento: '2030-01-10',
                 DataEntrega: '2030-01-15',
                 ListaArtigos: []
             };
 
-            // Act
-            const response = await makeRequest('/alugueres', 'POST', payload, token);
+            const response = await makeRequest('/alugueres', 'POST', payload, adminToken);
 
-            // Assert
             expect(response.status).toBe(400);
-            expect(response.data.erro).toBeDefined();
+            expect(response.data.erro).toMatch(/ListaArtigos/i);
         });
 
-        it('6️⃣ Deve rejeitar quando stock é insuficiente (400)', async () => {
-            // Arrange: buscar artigo existente na BD usando Prisma partilhado
-            let artigo = await prisma.tamanhoArtigo.findFirst();
+        it('6 Deve rejeitar quando stock e insuficiente (400)', async () => {
+            await ensureDatabaseReady();
+            adminToken = adminToken || await getAdminToken();
+            utilizadorAluguer = utilizadorAluguer || await ensureUser({
+                email: 'cliente.aluguer@integration.test',
+                nomeCompleto: 'Cliente Aluguer Integration Test',
+                nomeUtilizador: 'clientealuguerintegration',
+                permissoes: 1,
+                nif: '555555555',
+                createAluno: true
+            });
+            let artigo = await prisma.tamanhoArtigo.findFirst({
+                include: { Artigo: true }
+            });
 
             if (!artigo) {
-                // Criar artigo temporário para o teste
                 const baseArtigo = await prisma.artigo.create({
-                    data: { Nome: `Artigo Integ ${Date.now()}`, CustoPorDia: 5 }
+                    data: {
+                        Nome: `Artigo Integ ${Date.now()}`,
+                        CustoPorDia: 5,
+                        IdUtilizadorCriador: utilizadorAluguer.IdUtilizador
+                    }
                 });
-                artigo = await prisma.tamanhoArtigo.create({
-                    data: { IdArtigo: baseArtigo.IdArtigo, Tamanho: 'M', Quantidade: 10 }
+
+                const tamanho = await prisma.tamanhoArtigo.create({
+                    data: {
+                        IdArtigo: baseArtigo.IdArtigo,
+                        Tamanho: 'M',
+                        Quantidade: 10
+                    }
                 });
+
+                createdArticleId = baseArtigo.IdArtigo;
+                createdSizeId = tamanho.IdTamanhoArtigo;
+                artigo = {
+                    ...tamanho,
+                    Artigo: baseArtigo
+                };
             }
 
-            const token = await getAdminToken();
             const payload = {
-                IdUtilizador: 1,
+                IdUtilizador: utilizadorAluguer.IdUtilizador,
                 DataLevantamento: '2030-01-10',
                 DataEntrega: '2030-01-15',
-                ListaArtigos: [{ IdTamanhoArtigo: artigo.IdTamanhoArtigo, Quantidade: 999999 }]
+                ListaArtigos: [{
+                    IdTamanhoArtigo: artigo.IdTamanhoArtigo,
+                    Quantidade: 999999
+                }]
             };
 
-            // Act
-            const response = await makeRequest('/alugueres', 'POST', payload, token);
+            const response = await makeRequest('/alugueres', 'POST', payload, adminToken);
 
-            // Assert
             expect(response.status).toBe(400);
-            expect(response.data.erro).toMatch(/Stock insuficiente/);
+            expect(response.data.erro).toMatch(/Stock insuficiente/i);
         });
-
     });
-
 });

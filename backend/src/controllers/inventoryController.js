@@ -7,7 +7,7 @@ const getInventario = async (req, res) => {
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Nao foi possivel carregar os artigos.'
+            erro: erro.message || 'Não foi possível carregar os artigos.'
         });
     }
 };
@@ -23,7 +23,7 @@ const criarArtigo = async (req, res) => {
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Nao foi possivel gravar o artigo.'
+            erro: erro.message || 'Não foi possível gravar o artigo.'
         });
     }
 };
@@ -39,7 +39,7 @@ const editarArtigo = async (req, res) => {
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Nao foi possivel atualizar o artigo.'
+            erro: erro.message || 'Não foi possível atualizar o artigo.'
         });
     }
 };
@@ -51,7 +51,7 @@ const removerArtigo = async (req, res) => {
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Nao foi possivel remover o artigo.'
+            erro: erro.message || 'Não foi possível remover o artigo.'
         });
     }
 };

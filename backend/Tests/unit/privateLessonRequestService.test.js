@@ -78,7 +78,7 @@ describe('Private Lesson Request Service', () => {
                 HoraPretendida: '10:30',
                 DuracaoMinutos: 60,
                 CapacidadePretendida: 1
-            }, 'enc-1')).rejects.toThrow('O professor ja tem uma aula marcada neste horario.');
+            }, 'enc-1')).rejects.toThrow('O professor já tem uma aula marcada neste horário.');
         });
     });
 
@@ -131,7 +131,7 @@ describe('Private Lesson Request Service', () => {
 
             await expect(privateLessonRequestService.aprovarPedido('pedido-1', {}, 'dir-1'))
                 .rejects
-                .toThrow('Apenas pedidos confirmados pelo professor podem ser aprovados pela Direcao.');
+                .toThrow('Apenas pedidos confirmados pelo professor podem ser aprovados pela Direção.');
         });
     });
 

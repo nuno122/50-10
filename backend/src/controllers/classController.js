@@ -19,7 +19,7 @@ const criarAula = async (req, res) => {
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Nao foi possivel agendar a aula.'
+            erro: erro.message || 'Não foi possível agendar a aula.'
         });
     }
 };
@@ -32,7 +32,7 @@ const criarAulasEmLote = async (req, res) => {
     } catch (erro) {
         console.error(erro);
         res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Nao foi possivel importar as aulas.'
+            erro: erro.message || 'Não foi possível importar as aulas.'
         });
     }
 };

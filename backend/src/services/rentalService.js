@@ -74,12 +74,12 @@ const SolicitarExtensaoPrazo = async ({ IdAluguer, NovaDataProposta }) => {
 
     const dataProposta = new Date(NovaDataProposta);
     if (Number.isNaN(dataProposta.getTime())) {
-        throw criarErro('NovaDataProposta invalida.', 400);
+        throw criarErro('NovaDataProposta inválida.', 400);
     }
 
     const pedido = await rentalRepository.criarPedidoExtensao(IdAluguer, NovaDataProposta);
     return {
-        mensagem: 'Pedido de extensao criado com sucesso!',
+        mensagem: 'Pedido de extensão criado com sucesso!',
         pedido
     };
 };
@@ -87,7 +87,7 @@ const SolicitarExtensaoPrazo = async ({ IdAluguer, NovaDataProposta }) => {
 const AvaliarPedidoExtensao = async ({ IdPedido, Aprovado, ValorAdicional = 0 }) => {
     const pedido = await rentalRepository.getPedidoExtensaoById(IdPedido);
     if (!pedido) {
-        throw criarErro('Pedido de extensao nao encontrado.', 404);
+        throw criarErro('Pedido de extensão não encontrado.', 404);
     }
 
     if (pedido.EstadoAprovacao !== 'Pendente') {
@@ -124,7 +124,7 @@ const RegistarDevolucao = async ({ IdAluguer, EstadoEntrega, Multa = 0 }) => {
     }
 
     if (!['Em boas condicoes', 'Danificado'].includes(EstadoEntrega)) {
-        throw criarErro('EstadoEntrega invalido.', 400);
+        throw criarErro('EstadoEntrega inválido.', 400);
     }
 
     const aluguer = await rentalRepository.getAluguerById(IdAluguer);
@@ -133,12 +133,12 @@ const RegistarDevolucao = async ({ IdAluguer, EstadoEntrega, Multa = 0 }) => {
     }
 
     if (String(aluguer.EstadoAluguer || '').toLowerCase() === 'entregue') {
-        throw criarErro('A devolucao deste aluguer ja foi registada.', 400);
+        throw criarErro('A devolução deste aluguer já foi registada.', 400);
     }
 
     const multaNormalizada = Number(Multa || 0);
     if (Number.isNaN(multaNormalizada) || multaNormalizada < 0) {
-        throw criarErro('Multa invalida.', 400);
+        throw criarErro('Multa inválida.', 400);
     }
 
     const aluguerAtualizado = await rentalRepository.registarDevolucao(

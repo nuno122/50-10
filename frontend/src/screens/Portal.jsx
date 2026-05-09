@@ -33,7 +33,7 @@ const getNotificationToneLabel = (tone) => {
         case 'warning':
             return 'Alerta';
         case 'danger':
-            return 'Critico';
+            return 'Crítico';
         default:
             return 'Info';
     }
@@ -62,12 +62,12 @@ const Portal = () => {
             ? [
                 { id: 'dashboard', label: 'Resumo' },
                 { id: 'events', label: 'Eventos' },
-                { id: 'schedule', label: 'Horarios e Aulas' },
+                { id: 'schedule', label: 'Horários e Aulas' },
                 { id: 'users', label: 'Utilizadores' },
                 { id: 'rental-requests', label: 'Alugueres' },
-                { id: 'lesson-validations', label: 'Validacoes' },
+                { id: 'lesson-validations', label: 'Validações' },
                 { id: 'finance', label: 'Financeiro' },
-                { id: 'inventory', label: 'Inventario' }
+                { id: 'inventory', label: 'Inventário' }
             ]
             : userIsProfessor
                 ? [
@@ -75,21 +75,21 @@ const Portal = () => {
                     { id: 'events', label: 'Eventos' },
                     { id: 'teacher-schedule', label: 'Agenda e Disponibilidade' },
                     { id: 'teacher-private-requests', label: 'Pedidos de Coaching' },
-                    { id: 'inventory', label: 'Alugueres e Inventario' }
+                    { id: 'inventory', label: 'Alugueres e Inventário' }
                 ]
                 : userIsEncarregado
-                ? [
-                    { id: 'dashboard', label: 'Resumo' },
-                    { id: 'events', label: 'Eventos' },
-                    { id: 'lesson-request', label: 'Coaching' },
-                    { id: 'guardian-lessons', label: 'Marcacoes' },
-                    { id: 'finance', label: 'Pagamentos' },
-                    { id: 'inventory', label: 'Alugueres e Inventario' }
-                ]
-                        : [
-                            { id: 'dashboard', label: 'Resumo' },
-                            { id: 'inventory', label: 'Alugueres e Inventario' }
-                        ]
+                    ? [
+                        { id: 'dashboard', label: 'Resumo' },
+                        { id: 'events', label: 'Eventos' },
+                        { id: 'lesson-request', label: 'Coaching' },
+                        { id: 'guardian-lessons', label: 'Marcações' },
+                        { id: 'finance', label: 'Pagamentos' },
+                        { id: 'inventory', label: 'Alugueres e Inventário' }
+                    ]
+                    : [
+                        { id: 'dashboard', label: 'Resumo' },
+                        { id: 'inventory', label: 'Alugueres e Inventário' }
+                    ]
     ), [userIsDirecao, userIsEncarregado, userIsProfessor]);
 
     const visibleNotifications = useMemo(() => notifications.slice(0, 12), [notifications]);
@@ -207,7 +207,7 @@ const Portal = () => {
                             onClick={toggleNotifications}
                         >
                             <span className="portal-notification-button-copy">
-                                <strong>Notificacoes</strong>
+                                <strong>Notificações</strong>
                                 <small>{unreadCount > 0 ? `${unreadCount} por ler` : 'Tudo em dia'}</small>
                             </span>
                             <span className="portal-notification-icon-wrap" aria-hidden="true">
@@ -239,7 +239,7 @@ const Portal = () => {
                 </div>
 
                 <button type="button" className="portal-logout" onClick={logout}>
-                    Terminar Sessao
+                    Terminar sessão
                 </button>
             </aside>
 
@@ -251,12 +251,12 @@ const Portal = () => {
                         <section ref={notificationPanelRef} className="portal-notification-panel portal-notification-panel--overlay">
                             <div className="portal-notification-panel-header">
                                 <div>
-                                    <h2>Centro de Notificacoes</h2>
-                                    <p>Alertas recentes da tua atividade na aplicacao.</p>
+                                    <h2>Centro de notificações</h2>
+                                    <p>Alertas recentes da tua atividade na aplicação.</p>
                                 </div>
                                 <div className="portal-notification-panel-actions">
                                     <button type="button" className="portal-notification-action" onClick={markAllAsRead}>
-                                        Marcar lidas
+                                        Marcar como lidas
                                     </button>
                                     <button type="button" className="portal-notification-action portal-notification-action--danger" onClick={clearNotifications}>
                                         Limpar tudo
@@ -266,7 +266,7 @@ const Portal = () => {
 
                             {visibleNotifications.length === 0 ? (
                                 <div className="portal-notification-empty">
-                                    <p>Sem notificacoes recentes.</p>
+                                    <p>Sem notificações recentes.</p>
                                 </div>
                             ) : (
                                 <div className="portal-notification-list">
@@ -301,7 +301,7 @@ const Portal = () => {
                                                         removeNotification(notification.id);
                                                     }}
                                                 >
-                                                    Remover
+                                                    Eliminar
                                                 </button>
                                             </div>
                                         </article>
