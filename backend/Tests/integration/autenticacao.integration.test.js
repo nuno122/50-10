@@ -1,8 +1,5 @@
 const crypto = require('crypto');
-const { PrismaClient } = require('@prisma/client');
-const { makeRequest } = require('./setup');
-
-const prisma = new PrismaClient();
+const { makeRequest, prisma } = require('./setup');
 
 const hashPassword = (value) => crypto.createHash('sha256').update(value).digest('hex');
 
@@ -32,8 +29,7 @@ describe('Integracao - Autenticacao', () => {
         const utilizador = await prisma.utilizador.findFirst();
 
         if (!utilizador) {
-            console.warn('Nenhum utilizador encontrado na BD, a ignorar teste.');
-            return;
+            throw new Error('Setup falhou: Nenhum utilizador encontrado na BD para testar login.');
         }
 
         const response = await makeRequest('/autenticacao/login', 'POST', {
@@ -49,8 +45,7 @@ describe('Integracao - Autenticacao', () => {
         const codigoPostal = await prisma.codigoPostal.findFirst();
 
         if (!codigoPostal) {
-            console.warn('Nenhum codigo postal encontrado na BD, a ignorar teste.');
-            return;
+            throw new Error('Setup falhou: Nenhum codigo postal encontrado na BD para criar utilizador.');
         }
 
         const uniqueSuffix = `${Date.now()}${Math.floor(Math.random() * 1000)}`;

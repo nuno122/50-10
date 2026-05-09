@@ -1,8 +1,8 @@
-const userService = require('../../backend/src/services/userService');
-const userRepository = require('../../backend/src/repositories/userRepository');
-const PERMISSOES = require('../../backend/src/config/permissions');
+const userService = require('../../src/services/userService');
+const userRepository = require('../../src/repositories/userRepository');
+const PERMISSOES = require('../../src/config/permissions');
 
-jest.mock('../../backend/src/repositories/userRepository');
+jest.mock('../../src/repositories/userRepository');
 
 describe('User Service', () => {
     beforeEach(() => {
@@ -10,13 +10,17 @@ describe('User Service', () => {
     });
 
     describe('criarUtilizador', () => {
-        it('rejects when NomeCompleto is missing', async () => {
+        it('deve rejeitar quando o NomeCompleto não é fornecido', async () => {
+            // Act & Assert
             await expect(userService.criarUtilizador({ Email: 'teste@teste.com', Permissoes: PERMISSOES.DIRECAO }))
                 .rejects
                 .toMatchObject({ statusCode: 400, message: 'NomeCompleto e obrigatorio.' });
+
+            expect(userRepository.create).not.toHaveBeenCalled();
         });
 
-        it('rejects when permission is not managed in the portal', async () => {
+        it('deve rejeitar quando a permissão não é gerida no portal', async () => {
+            // Arrange
             const dados = {
                 NomeCompleto: 'Perfil Invalido',
                 NomeUtilizador: 'perfil.invalido',
@@ -28,12 +32,16 @@ describe('User Service', () => {
                 PalavraPasse: 'secret'
             };
 
+            // Act & Assert
             await expect(userService.criarUtilizador(dados))
                 .rejects
                 .toMatchObject({ statusCode: 400, message: 'So e permitido criar Encarregados, Professores e membros da Direcao.' });
+
+            expect(userRepository.create).not.toHaveBeenCalled();
         });
 
-        it('rejects when professor does not define styles', async () => {
+        it('deve rejeitar quando o professor não define estilos de dança', async () => {
+            // Arrange
             const dados = {
                 NomeCompleto: 'Prof Sem Estilo',
                 NomeUtilizador: 'prof.sem.estilo',
@@ -47,12 +55,16 @@ describe('User Service', () => {
                 IdsEstiloDanca: []
             };
 
+            // Act & Assert
             await expect(userService.criarUtilizador(dados))
                 .rejects
                 .toMatchObject({ statusCode: 400, message: 'Define pelo menos um estilo para o professor.' });
+
+            expect(userRepository.create).not.toHaveBeenCalled();
         });
 
-        it('creates professor with hashed password and style ids', async () => {
+        it('deve criar o professor com password encriptada e IDs de estilos', async () => {
+            // Arrange
             const dados = {
                 NomeCompleto: 'Professor OK',
                 NomeUtilizador: 'prof.ok',
@@ -68,8 +80,10 @@ describe('User Service', () => {
 
             userRepository.create.mockResolvedValue({ IdUtilizador: 'u-1', ...dados });
 
+            // Act
             const resultado = await userService.criarUtilizador(dados);
 
+            // Assert
             expect(resultado.IdUtilizador).toBe('u-1');
             expect(userRepository.create).toHaveBeenCalledTimes(1);
 
@@ -79,7 +93,8 @@ describe('User Service', () => {
             expect(payload.IdsEstiloDanca).toEqual(['estilo-1', 'estilo-2']);
         });
 
-        it('creates Direcao without professor fields', async () => {
+        it('deve criar utilizador da Direção sem campos de professor', async () => {
+            // Arrange
             const dados = {
                 NomeCompleto: 'Admin',
                 NomeUtilizador: 'admin',
@@ -93,11 +108,15 @@ describe('User Service', () => {
 
             userRepository.create.mockResolvedValue({ IdUtilizador: 'dir-1', ...dados });
 
+            // Act
             const resultado = await userService.criarUtilizador(dados);
+
+            // Assert
             expect(resultado.IdUtilizador).toBe('dir-1');
         });
 
-        it('translates duplicate username errors', async () => {
+        it('deve traduzir erros de nome de utilizador duplicado do Prisma', async () => {
+            // Arrange
             const dados = {
                 NomeCompleto: 'Admin',
                 NomeUtilizador: 'admin',
@@ -114,6 +133,7 @@ describe('User Service', () => {
                 meta: { target: ['NomeUtilizador'] }
             });
 
+            // Act & Assert
             await expect(userService.criarUtilizador(dados))
                 .rejects
                 .toMatchObject({ statusCode: 400, message: 'Ja existe um utilizador com esse nome de utilizador.' });

@@ -1,13 +1,13 @@
-const bookingService = require('../../backend/src/services/bookingService');
-const classRepo = require('../../backend/src/repositories/classRepository');
-const classService = require('../../backend/src/services/classService');
-const privateLessonRequestRepo = require('../../backend/src/repositories/privateLessonRequestRepository');
-const privateLessonRequestService = require('../../backend/src/services/privateLessonRequestService');
+﻿const bookingService = require('../../src/services/bookingService');
+const classRepo = require('../../src/repositories/classRepository');
+const classService = require('../../src/services/classService');
+const privateLessonRequestRepo = require('../../src/repositories/privateLessonRequestRepository');
+const privateLessonRequestService = require('../../src/services/privateLessonRequestService');
 
-jest.mock('../../backend/src/services/bookingService');
-jest.mock('../../backend/src/repositories/classRepository');
-jest.mock('../../backend/src/services/classService');
-jest.mock('../../backend/src/repositories/privateLessonRequestRepository');
+jest.mock('../../src/services/bookingService');
+jest.mock('../../src/repositories/classRepository');
+jest.mock('../../src/services/classService');
+jest.mock('../../src/repositories/privateLessonRequestRepository');
 
 describe('Private Lesson Request Service', () => {
     beforeEach(() => {

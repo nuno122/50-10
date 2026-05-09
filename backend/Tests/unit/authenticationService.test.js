@@ -1,9 +1,9 @@
-const crypto = require('crypto');
+﻿const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const authenticationService = require('../../backend/src/services/authenticationService');
-const userRepository = require('../../backend/src/repositories/userRepository');
+const authenticationService = require('../../src/services/authenticationService');
+const userRepository = require('../../src/repositories/userRepository');
 
-jest.mock('../../backend/src/repositories/userRepository');
+jest.mock('../../src/repositories/userRepository');
 jest.mock('jsonwebtoken');
 
 const hashPassword = (value) => crypto.createHash('sha256').update(value).digest('hex');

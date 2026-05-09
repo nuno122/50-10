@@ -1,8 +1,8 @@
 const jwt = require('jsonwebtoken');
-const { verificarToken, verificarPermissao } = require('../../backend/src/authMiddleware');
-const userRepository = require('../../backend/src/repositories/userRepository');
+const { verificarToken, verificarPermissao } = require('../../src/authMiddleware');
+const userRepository = require('../../src/repositories/userRepository');
 
-jest.mock('../../backend/src/repositories/userRepository');
+jest.mock('../../src/repositories/userRepository');
 
 describe('Auth Middleware', () => {
     let req;
@@ -42,7 +42,7 @@ describe('Auth Middleware', () => {
 
         it('deve chamar next e usar os dados atuais da base de dados quando o token for valido', async () => {
             const tokenValido = jwt.sign(
-                { IdUtilizador: 'user-1', Permissoes: 2 },
+                { IdUtilizador: 'user-1', Permissoes: 3 },
                 JWT_SECRET,
                 { expiresIn: '1h' }
             );

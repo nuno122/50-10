@@ -1,7 +1,7 @@
-const availabilityService = require('../../backend/src/services/availabilityService');
-const availabilityRepo = require('../../backend/src/repositories/availabilityRepository');
+﻿const availabilityService = require('../../src/services/availabilityService');
+const availabilityRepo = require('../../src/repositories/availabilityRepository');
 
-jest.mock('../../backend/src/repositories/availabilityRepository');
+jest.mock('../../src/repositories/availabilityRepository');
 
 describe('Availability Service', () => {
     const utilizadorProfessor = {

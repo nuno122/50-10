@@ -1,7 +1,7 @@
-const bookingController = require('../../backend/src/controllers/bookingController');
-const bookingService = require('../../backend/src/services/bookingService');
+const bookingController = require('../../src/controllers/bookingController');
+const bookingService = require('../../src/services/bookingService');
 
-jest.mock('../../backend/src/services/bookingService');
+jest.mock('../../src/services/bookingService');
 
 describe('Booking Controller', () => {
     let req;
@@ -76,6 +76,17 @@ describe('Booking Controller', () => {
 
             expect(res.status).toHaveBeenCalledWith(403);
             expect(res.json).toHaveBeenCalledWith({ erro: 'Nao tens permissao' });
+        });
+
+        it('deve retornar erro 400 como fallback quando o serviço lança erro sem statusCode definido', async () => {
+            req.params.idMarcacao = 1;
+            req.utilizador = { IdUtilizador: 2 };
+            bookingService.cancelarMarcacao.mockRejectedValue(new Error('Erro inesperado do Prisma'));
+
+            await bookingController.cancelarMarcacao(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalledWith({ erro: 'Erro inesperado do Prisma' });
         });
     });
 });

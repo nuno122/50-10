@@ -1,8 +1,8 @@
-const eventRepository = require('../../backend/src/repositories/eventRepository');
-const eventService = require('../../backend/src/services/eventService');
-const PERMISSOES = require('../../backend/src/config/permissions');
+const eventRepository = require('../../src/repositories/eventRepository');
+const eventService = require('../../src/services/eventService');
+const PERMISSOES = require('../../src/config/permissions');
 
-jest.mock('../../backend/src/repositories/eventRepository');
+jest.mock('../../src/repositories/eventRepository');
 
 describe('Event Service', () => {
     beforeEach(() => {
@@ -49,6 +49,8 @@ describe('Event Service', () => {
                 IdUtilizador: 'prof-1',
                 Permissoes: PERMISSOES.PROFESSOR
             })).rejects.toThrow('Apenas a Direcao pode criar eventos.');
+
+            expect(eventRepository.create).not.toHaveBeenCalled();
         });
     });
 

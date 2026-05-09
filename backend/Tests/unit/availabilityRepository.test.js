@@ -1,7 +1,7 @@
-jest.mock('@prisma/client');
+﻿jest.mock('@prisma/client');
 
 const { PrismaClient } = require('@prisma/client');
-const availabilityRepository = require('../../backend/src/repositories/availabilityRepository');
+const availabilityRepository = require('../../src/repositories/availabilityRepository');
 
 describe('Availability Repository', () => {
     const prisma = PrismaClient.mock.results[0].value;

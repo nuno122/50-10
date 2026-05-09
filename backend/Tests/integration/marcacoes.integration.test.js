@@ -1,14 +1,4 @@
-const { makeRequest, getAdminToken } = require('./setup');
-const jwt = require('jsonwebtoken');
-
-// Gera um token de Aluno (Permissoes: 1) para testes que requerem autenticação de aluno
-const getAlunoToken = (idUtilizador = 8888) => {
-    return jwt.sign(
-        { IdUtilizador: idUtilizador, Permissoes: 1, Email: 'aluno@integration.test' },
-        'ChaveSuperSecretaDaEntArtes_2026',
-        { expiresIn: '1h' }
-    );
-};
+const { makeRequest, getAdminToken, getAlunoToken } = require('./setup');
 
 describe('Integração - Marcações', () => {
 
@@ -16,6 +6,7 @@ describe('Integração - Marcações', () => {
 
         it('1️⃣ Deve rejeitar GET /marcacoes sem token (401)', async () => {
             // Arrange: sem token
+
             // Act
             const response = await makeRequest('/marcacoes', 'GET');
 
@@ -26,7 +17,7 @@ describe('Integração - Marcações', () => {
 
         it('2️⃣ Deve rejeitar GET /marcacoes com token de Aluno (403 - sem permissão de Direção)', async () => {
             // Arrange: token de aluno, mas a rota exige Direção
-            const tokenAluno = getAlunoToken();
+            const tokenAluno = await getAlunoToken();
 
             // Act
             const response = await makeRequest('/marcacoes', 'GET', null, tokenAluno);
@@ -37,7 +28,7 @@ describe('Integração - Marcações', () => {
 
         it('3️⃣ Deve aceitar GET /marcacoes com token de Direção (200)', async () => {
             // Arrange: token de Direção (Permissoes: 3)
-            const tokenAdmin = getAdminToken();
+            const tokenAdmin = await getAdminToken();
 
             // Act
             const response = await makeRequest('/marcacoes', 'GET', null, tokenAdmin);
@@ -56,7 +47,7 @@ describe('Integração - Marcações', () => {
             const payload = { IdAluno: 1, IdAula: 1 };
 
             // Act
-            const response = await makeRequest('/marcacoes', 'POST', payload);
+            const response = await makeRequest('/marcacoes/encarregado', 'POST', payload);
 
             // Assert
             expect(response.status).toBe(401);
@@ -64,14 +55,14 @@ describe('Integração - Marcações', () => {
 
         it('5️⃣ Deve rejeitar criação se aula não existir (400 ou 404)', async () => {
             // Arrange: IdAula inexistente na BD
-            const tokenAluno = getAlunoToken(1);
+            const tokenAluno = await getAlunoToken();
             const payload = {
                 IdAluno: 1,
                 IdAula: 'aula-que-nao-existe-00000000'
             };
 
             // Act
-            const response = await makeRequest('/marcacoes', 'POST', payload, tokenAluno);
+            const response = await makeRequest('/marcacoes/encarregado', 'POST', payload, tokenAluno);
 
             // Assert: deve retornar erro de negócio (não 2xx)
             expect(response.status).toBeGreaterThanOrEqual(400);

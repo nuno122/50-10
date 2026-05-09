@@ -1,4 +1,4 @@
-const { makeRequest, getAdminToken } = require('./setup');
+const { makeRequest, getAdminToken, prisma } = require('./setup');
 
 describe('Integração - Alugueres', () => {
 
@@ -6,6 +6,7 @@ describe('Integração - Alugueres', () => {
 
         it('1️⃣ Deve rejeitar GET /alugueres sem token (401)', async () => {
             // Arrange: sem token
+
             // Act
             const response = await makeRequest('/alugueres', 'GET');
 
@@ -16,7 +17,7 @@ describe('Integração - Alugueres', () => {
 
         it('2️⃣ Deve aceitar GET /alugueres com token válido (200)', async () => {
             // Arrange
-            const token = getAdminToken();
+            const token = await getAdminToken();
 
             // Act
             const response = await makeRequest('/alugueres', 'GET', null, token);
@@ -43,7 +44,7 @@ describe('Integração - Alugueres', () => {
 
         it('4️⃣ Deve rejeitar quando DataEntrega é anterior à DataLevantamento (400)', async () => {
             // Arrange: datas trocadas
-            const token = getAdminToken();
+            const token = await getAdminToken();
             const payload = {
                 IdUtilizador: 1,
                 DataLevantamento: '2030-01-15',
@@ -61,7 +62,7 @@ describe('Integração - Alugueres', () => {
 
         it('5️⃣ Deve rejeitar quando não há artigos na lista (400)', async () => {
             // Arrange: lista vazia
-            const token = getAdminToken();
+            const token = await getAdminToken();
             const payload = {
                 IdUtilizador: 1,
                 DataLevantamento: '2030-01-10',
@@ -78,18 +79,20 @@ describe('Integração - Alugueres', () => {
         });
 
         it('6️⃣ Deve rejeitar quando stock é insuficiente (400)', async () => {
-            // Arrange: ArticleId válido mas quantidade absurda
-            const { PrismaClient } = require('@prisma/client');
-            const prisma = new PrismaClient();
-            const artigo = await prisma.tamanhoArtigo.findFirst();
-            await prisma.$disconnect();
+            // Arrange: buscar artigo existente na BD usando Prisma partilhado
+            let artigo = await prisma.tamanhoArtigo.findFirst();
 
             if (!artigo) {
-                console.warn('Nenhum TamanhoArtigo encontrado na BD, a ignorar teste.');
-                return;
+                // Criar artigo temporário para o teste
+                const baseArtigo = await prisma.artigo.create({
+                    data: { Nome: `Artigo Integ ${Date.now()}`, CustoPorDia: 5 }
+                });
+                artigo = await prisma.tamanhoArtigo.create({
+                    data: { IdArtigo: baseArtigo.IdArtigo, Tamanho: 'M', Quantidade: 10 }
+                });
             }
 
-            const token = getAdminToken();
+            const token = await getAdminToken();
             const payload = {
                 IdUtilizador: 1,
                 DataLevantamento: '2030-01-10',
