@@ -7,25 +7,53 @@ import logo from '../../Images/logo.png';
 const Login = () => {
     const { login, isAuthenticated } = useAuth();
     const [credentials, setCredentials] = useState({
-        Email: 'geral@entartes.pt',
-        Password: '123456'
+        Email: '',
+        Password: ''
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    const validateCredentials = () => {
+        const normalizedEmail = String(credentials.Email || '').trim();
+        const password = String(credentials.Password || '');
+
+        if (!normalizedEmail) {
+            return 'Introduz o teu email.';
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+            return 'Introduz um email vÃ¡lido.';
+        }
+
+        if (!password.trim()) {
+            return 'Introduz a tua palavra-passe.';
+        }
+
+        return '';
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
         setError('');
+
+        const validationError = validateCredentials();
+        if (validationError) {
+            setError(validationError);
+            return;
+        }
+
+        setLoading(true);
+
+        const normalizedEmail = String(credentials.Email || '').trim();
 
         try {
             const result = await loginAutenticacao({
-                Email: credentials.Email,
+                Email: normalizedEmail,
                 Password: credentials.Password
             });
 
             if (result.token) {
-                login(result.token, result.utilizador || { email: credentials.Email });
+                login(result.token, result.utilizador || { email: normalizedEmail });
             } else {
                 setError(`Sem token na resposta: ${JSON.stringify(result, null, 2)}`);
             }
@@ -74,6 +102,9 @@ const Login = () => {
                                 value={credentials.Email}
                                 onChange={(e) => setCredentials({ ...credentials, Email: e.target.value })}
                                 className="login-input"
+                                autoComplete="username"
+                                inputMode="email"
+                                placeholder="nome@exemplo.pt"
                                 required
                             />
 
@@ -86,6 +117,8 @@ const Login = () => {
                                 value={credentials.Password}
                                 onChange={(e) => setCredentials({ ...credentials, Password: e.target.value })}
                                 className="login-input"
+                                autoComplete="current-password"
+                                placeholder="Introduz a tua palavra-passe"
                                 required
                             />
 

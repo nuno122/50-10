@@ -208,7 +208,7 @@ const Portal = () => {
                         >
                             <span className="portal-notification-button-copy">
                                 <strong>Notificações</strong>
-                                <small>{unreadCount > 0 ? `${unreadCount} por ler` : 'Tudo em dia'}</small>
+                                {unreadCount > 0 && <small>{`${unreadCount} por ler`}</small>}
                             </span>
                             <span className="portal-notification-icon-wrap" aria-hidden="true">
                                 <svg className="portal-notification-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">

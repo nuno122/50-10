@@ -752,6 +752,7 @@ button {
 .portal-sidebar-top {
   position: relative;
   display: grid;
+  align-content: start;
   gap: 18px;
   flex: 1 1 auto;
   min-height: 0;
@@ -786,6 +787,7 @@ button {
 
 .portal-utility-row {
   display: grid;
+  align-self: start;
   margin-top: -4px;
   margin-bottom: 10px;
 }
@@ -803,6 +805,7 @@ button {
   color: #f5f8fc;
   text-align: left;
   cursor: pointer;
+  align-self: start;
 }
 
 .portal-notification-button--active {
