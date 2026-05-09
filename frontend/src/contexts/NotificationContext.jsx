@@ -152,7 +152,7 @@ const buildDirectorSnapshot = async () => {
     const [aulas, requests, inventory, cancellationRequests] = await Promise.all([
         getAulas(),
         getPedidosAulaPrivada(),
-        getInventario(),
+        getInventario({ disponivelParaAluguer: false }),
         getPedidosCancelamentoPendentes()
     ]);
 
@@ -184,7 +184,7 @@ const buildTeacherSnapshot = async (user) => {
         getAulas(),
         getPedidosAulaPrivadaProfessor(),
         getEventos(),
-        getInventario()
+        getInventario({ disponivelParaAluguer: false })
     ]);
 
     const ownLessons = normalizeLessonsForRole(aulas, user);
@@ -216,7 +216,7 @@ const buildGuardianSnapshot = async () => {
         getPagamentosEncarregado(),
         getPedidosAulaPrivadaEncarregado(),
         getEventos(),
-        getInventario()
+        getInventario({ disponivelParaAluguer: false })
     ]);
 
     const availableLessons = (aulas || [])

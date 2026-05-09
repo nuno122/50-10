@@ -151,6 +151,7 @@ describe('Integracao - Alugueres', () => {
                     data: {
                         Nome: `Artigo Integ ${Date.now()}`,
                         CustoPorDia: 5,
+                        DisponivelParaAluguer: true,
                         IdUtilizadorCriador: utilizadorAluguer.IdUtilizador
                     }
                 });

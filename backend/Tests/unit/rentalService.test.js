@@ -1,5 +1,6 @@
 const rentalService = require('../../src/services/rentalService');
 const rentalRepository = require('../../src/repositories/rentalRepository');
+const PERMISSOES = require('../../src/config/permissions');
 
 jest.mock('../../src/repositories/rentalRepository');
 
@@ -38,7 +39,8 @@ describe('Rental Service', () => {
             // O repositório só consegue procurar 2 unidades ativas no stock para este artigo
             rentalRepository.buscarStockArtigo.mockResolvedValue({
                 IdTamanhoArtigo: 101,
-                Quantidade: 2
+                Quantidade: 2,
+                Artigo: { DisponivelParaAluguer: true }
             });
 
             // Act & Assert
@@ -58,7 +60,11 @@ describe('Rental Service', () => {
                 ListaArtigos: [{ IdTamanhoArtigo: 101, Quantidade: 1 }]
             };
 
-            rentalRepository.buscarStockArtigo.mockResolvedValue({ IdTamanhoArtigo: 101, Quantidade: 10 });
+            rentalRepository.buscarStockArtigo.mockResolvedValue({
+                IdTamanhoArtigo: 101,
+                Quantidade: 10,
+                Artigo: { DisponivelParaAluguer: true }
+            });
             rentalRepository.criarComTransacao.mockResolvedValue({
                 IdAluguer: 'aluguer-1',
                 EstadoAluguer: 'Pendente'
@@ -79,7 +85,11 @@ describe('Rental Service', () => {
                 ListaArtigos: [{ IdTamanhoArtigo: 101, Quantidade: 1 }]
             };
 
-            rentalRepository.buscarStockArtigo.mockResolvedValue({ IdTamanhoArtigo: 101, Quantidade: 10 });
+            rentalRepository.buscarStockArtigo.mockResolvedValue({
+                IdTamanhoArtigo: 101,
+                Quantidade: 10,
+                Artigo: { DisponivelParaAluguer: true }
+            });
 
             // Injeção do Problema Crítico no Prisma
             rentalRepository.criarComTransacao.mockRejectedValue(new Error('Prisma: Transaction Deadlock'));
@@ -88,6 +98,57 @@ describe('Rental Service', () => {
             await expect(rentalService.criarAluguer(dadosAluguerValidos))
                 .rejects
                 .toThrow('Prisma: Transaction Deadlock');
+        });
+
+        it('deve rejeitar artigos que nao pertencam ao catalogo de aluguer', async () => {
+            const dadosAluguerInvalidos = {
+                IdUtilizador: 1,
+                DataLevantamento: '2026-05-10',
+                DataEntrega: '2026-05-12',
+                ListaArtigos: [{ IdTamanhoArtigo: 101, Quantidade: 1 }]
+            };
+
+            rentalRepository.buscarStockArtigo.mockResolvedValue({
+                IdTamanhoArtigo: 101,
+                Quantidade: 10,
+                Artigo: { DisponivelParaAluguer: false }
+            });
+
+            await expect(rentalService.criarAluguer(dadosAluguerInvalidos))
+                .rejects
+                .toThrow('Artigo indisponivel para aluguer: 101.');
+
+            expect(rentalRepository.criarComTransacao).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('Listar Alugueres', () => {
+        it('deve devolver apenas os alugueres do utilizador quando nao for Direcao', async () => {
+            rentalRepository.buscarTodos.mockResolvedValue([{ IdAluguer: 'rent-1' }]);
+
+            const resultado = await rentalService.listarAlugueres({
+                IdUtilizador: 'user-1',
+                Permissoes: PERMISSOES.ENCARREGADO
+            });
+
+            expect(resultado).toEqual([{ IdAluguer: 'rent-1' }]);
+            expect(rentalRepository.buscarTodos).toHaveBeenCalledWith({
+                IdUtilizador: 'user-1'
+            });
+        });
+
+        it('deve devolver todos os alugueres para a Direcao', async () => {
+            rentalRepository.buscarTodos.mockResolvedValue([{ IdAluguer: 'rent-1' }, { IdAluguer: 'rent-2' }]);
+
+            const resultado = await rentalService.listarAlugueres({
+                IdUtilizador: 'dir-1',
+                Permissoes: PERMISSOES.DIRECAO
+            });
+
+            expect(resultado).toHaveLength(2);
+            expect(rentalRepository.buscarTodos).toHaveBeenCalledWith({
+                IdUtilizador: undefined
+            });
         });
     });
 

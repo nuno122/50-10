@@ -1,8 +1,15 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-const buscarTodos = async () => {
+const buscarTodos = async (filters = {}) => {
+    const where = {};
+
+    if (filters.IdUtilizador) {
+        where.IdUtilizador = filters.IdUtilizador;
+    }
+
     return await prisma.aluguer.findMany({
+        where,
         include: {
             Utilizador: true,
             PedidoExtensao: {

@@ -1,4 +1,5 @@
 const rentalRepository = require('../repositories/rentalRepository');
+const PERMISSOES = require('../config/permissions');
 
 const criarErro = (mensagem, statusCode) => {
     const erro = new Error(mensagem);
@@ -6,8 +7,12 @@ const criarErro = (mensagem, statusCode) => {
     return erro;
 };
 
-const listarAlugueres = async () => {
-    return await rentalRepository.buscarTodos();
+const listarAlugueres = async (utilizador) => {
+    const isDirecao = utilizador?.Permissoes === PERMISSOES.DIRECAO;
+
+    return await rentalRepository.buscarTodos({
+        IdUtilizador: isDirecao ? undefined : utilizador?.IdUtilizador
+    });
 };
 
 const podeUsarArtigoInativo = (utilizador, artigo) => (
@@ -43,6 +48,10 @@ const criarAluguer = async ({ IdUtilizador, DataLevantamento, DataEntrega, Lista
 
         if (!stock) {
             throw criarErro(`Artigo/Tamanho nao encontrado: ${artigo.IdTamanhoArtigo}`, 404);
+        }
+
+        if (stock.Artigo?.DisponivelParaAluguer !== true) {
+            throw criarErro(`Artigo indisponivel para aluguer: ${artigo.IdTamanhoArtigo}.`, 400);
         }
 
         if (stock.Artigo?.EstadoArtigo === false && !podeUsarArtigoInativo(utilizador, stock.Artigo)) {

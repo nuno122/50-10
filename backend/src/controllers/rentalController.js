@@ -2,7 +2,7 @@ const rentalService = require('../services/rentalService');
 
 const getAlugueres = async (req, res) => {
     try {
-        const alugueres = await rentalService.listarAlugueres();
+        const alugueres = await rentalService.listarAlugueres(req.utilizador);
         res.json(alugueres);
     } catch (erro) {
         console.error(erro);

@@ -417,8 +417,13 @@ const UserManagement = () => {
 
                             <div className="schedule-form-grid">
                                 <label>
-                                    <span>{editingUser ? 'Nova palavra-passe' : 'Palavra-passe *'}</span>
+                                    <span>{editingUser ? 'Nova palavra-passe (reset opcional)' : 'Palavra-passe inicial *'}</span>
                                     <input type="password" value={formData.PalavraPasse} onChange={(event) => handleChange('PalavraPasse', event.target.value)} />
+                                    <small className="inventory-field-hint">
+                                        {editingUser
+                                            ? 'Se preencheres este campo, a palavra-passe atual do utilizador será substituída.'
+                                            : 'Define aqui a palavra-passe com que o utilizador vai entrar pela primeira vez.'}
+                                    </small>
                                 </label>
 
                                 <label>

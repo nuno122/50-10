@@ -103,7 +103,7 @@ const RequestValidation = ({ embedded = false }) => {
             const [rentalsData, usersData, inventoryData] = await Promise.all([
                 getAlugueres(),
                 getUtilizadores(),
-                getInventario()
+                getInventario({ disponivelParaAluguer: true })
             ]);
 
             setRentals(rentalsData);

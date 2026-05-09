@@ -20,8 +20,77 @@ const podeVerArtigoInativo = (utilizador, artigo) => (
     utilizador?.IdUtilizador && artigo?.IdUtilizadorCriador === utilizador.IdUtilizador
 );
 
-const listarArtigos = async (utilizador) => {
-    const artigos = await inventoryRepo.findAll();
+const normalizeRentalFlag = (value) => {
+    if (value === undefined || value === null || value === '') {
+        return undefined;
+    }
+
+    if (typeof value === 'boolean') {
+        return value;
+    }
+
+    if (typeof value === 'string') {
+        return value.toLowerCase() === 'true';
+    }
+
+    return Boolean(value);
+};
+
+const normalizeSizeEntries = (value, { required = false } = {}) => {
+    if (value === undefined) {
+        if (required) {
+            throw criarErro('Indica pelo menos um tamanho com quantidade.', 400);
+        }
+
+        return undefined;
+    }
+
+    if (!Array.isArray(value)) {
+        throw criarErro('Os tamanhos do artigo devem ser enviados numa lista.', 400);
+    }
+
+    const normalized = value
+        .map((entry) => {
+            const quantidade = Number(entry?.Quantidade ?? 0);
+            const tamanhoRaw = String(entry?.Tamanho || '').trim();
+
+            return {
+                IdTamanhoArtigo: entry?.IdTamanhoArtigo ? String(entry.IdTamanhoArtigo) : undefined,
+                Tamanho: tamanhoRaw || (quantidade > 0 ? 'Único' : ''),
+                Quantidade: quantidade,
+                Condicao: String(entry?.Condicao || 'Bom').trim() || 'Bom'
+            };
+        })
+        .filter((entry) => (
+            entry.IdTamanhoArtigo
+            || entry.Tamanho
+            || entry.Quantidade !== 0
+            || entry.Condicao !== 'Bom'
+        ));
+
+    if (required && normalized.length === 0) {
+        throw criarErro('Indica pelo menos um tamanho com quantidade.', 400);
+    }
+
+    normalized.forEach((entry) => {
+        if (!entry.Tamanho) {
+            throw criarErro('Cada registo de stock deve incluir um tamanho.', 400);
+        }
+
+        if (!Number.isInteger(entry.Quantidade) || entry.Quantidade < 0) {
+            throw criarErro('A quantidade de cada tamanho deve ser um número inteiro igual ou superior a zero.', 400);
+        }
+    });
+
+    return normalized;
+};
+
+const listarArtigos = async (utilizador, filtros = {}) => {
+    const onlyMine = normalizeRentalFlag(filtros.mine) === true;
+    const artigos = await inventoryRepo.findAll({
+        DisponivelParaAluguer: normalizeRentalFlag(filtros.DisponivelParaAluguer),
+        IdUtilizadorCriador: onlyMine ? utilizador?.IdUtilizador : undefined
+    });
 
     return artigos.filter((artigo) => (
         artigo.EstadoArtigo !== false || podeVerArtigoInativo(utilizador, artigo)
@@ -30,6 +99,8 @@ const listarArtigos = async (utilizador) => {
 
 const criarArtigo = async (dados, utilizador) => {
     const { Nome, CustoPorDia } = dados || {};
+    const disponivelParaAluguer = normalizeRentalFlag(dados?.DisponivelParaAluguer) === true;
+    const tamanhos = normalizeSizeEntries(dados?.TamanhoArtigo, { required: true });
 
     if (!Nome) {
         throw criarErro('Nome do artigo é obrigatório.', 400);
@@ -45,7 +116,9 @@ const criarArtigo = async (dados, utilizador) => {
 
     return await inventoryRepo.create({
         ...dados,
-        IdUtilizadorCriador: utilizador.IdUtilizador
+        IdUtilizadorCriador: utilizador.IdUtilizador,
+        DisponivelParaAluguer: disponivelParaAluguer,
+        TamanhoArtigo: tamanhos
     });
 };
 
@@ -55,7 +128,7 @@ const editarArtigo = async (id, dados, utilizador) => {
     }
 
     if (!dados || typeof dados !== 'object') {
-        throw criarErro('Dados do artigo são obrigatórios para edição.', 400);
+        throw criarErro('Os dados do artigo são obrigatórios para edição.', 400);
     }
 
     const artigoAtual = await inventoryRepo.findById(id);
@@ -68,7 +141,17 @@ const editarArtigo = async (id, dados, utilizador) => {
         throw criarErro('Não tens permissão para editar este anúncio.', 403);
     }
 
-    return await inventoryRepo.update(id, dados);
+    const payload = { ...dados };
+
+    if (Object.prototype.hasOwnProperty.call(dados, 'DisponivelParaAluguer')) {
+        payload.DisponivelParaAluguer = normalizeRentalFlag(dados.DisponivelParaAluguer) === true;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(dados, 'TamanhoArtigo')) {
+        payload.TamanhoArtigo = normalizeSizeEntries(dados.TamanhoArtigo, { required: true });
+    }
+
+    return await inventoryRepo.update(id, payload);
 };
 
 const removerArtigo = async (id, utilizador) => {

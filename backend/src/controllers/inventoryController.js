@@ -1,8 +1,27 @@
 const inventoryService = require('../services/inventoryService');
 
+const parseInventoryPayload = (body = {}) => {
+    const dados = { ...body };
+
+    if (typeof dados.TamanhoArtigo === 'string') {
+        try {
+            dados.TamanhoArtigo = JSON.parse(dados.TamanhoArtigo);
+        } catch (erro) {
+            const invalidPayloadError = new Error('Formato inválido para os tamanhos do artigo.');
+            invalidPayloadError.statusCode = 400;
+            throw invalidPayloadError;
+        }
+    }
+
+    return dados;
+};
+
 const getInventario = async (req, res) => {
     try {
-        const artigos = await inventoryService.listarArtigos(req.utilizador);
+        const artigos = await inventoryService.listarArtigos(req.utilizador, {
+            DisponivelParaAluguer: req.query.disponivelParaAluguer,
+            mine: req.query.mine
+        });
         res.json(artigos);
     } catch (erro) {
         console.error(erro);
@@ -15,7 +34,7 @@ const getInventario = async (req, res) => {
 const criarArtigo = async (req, res) => {
     try {
         const dados = {
-            ...req.body,
+            ...parseInventoryPayload(req.body),
             ...(req.file?.filename ? { ImagemPath: req.file.filename } : {})
         };
         const novoArtigo = await inventoryService.criarArtigo(dados, req.utilizador);
@@ -31,7 +50,7 @@ const criarArtigo = async (req, res) => {
 const editarArtigo = async (req, res) => {
     try {
         const dados = {
-            ...req.body,
+            ...parseInventoryPayload(req.body),
             ...(req.file?.filename ? { ImagemPath: req.file.filename } : {})
         };
         const artigoAtualizado = await inventoryService.editarArtigo(req.params.id, dados, req.utilizador);

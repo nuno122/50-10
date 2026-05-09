@@ -105,7 +105,20 @@ export const loginAutenticacao = async ({ Email, Password }) =>
         body: JSON.stringify({ Email, Password })
     });
 
-export const getInventario = async () => request('/inventario');
+export const getInventario = async ({ disponivelParaAluguer, mine } = {}) => {
+    const params = new URLSearchParams();
+
+    if (typeof disponivelParaAluguer === 'boolean') {
+        params.set('disponivelParaAluguer', String(disponivelParaAluguer));
+    }
+
+    if (typeof mine === 'boolean') {
+        params.set('mine', String(mine));
+    }
+
+    const query = params.toString();
+    return request(`/inventario${query ? `?${query}` : ''}`);
+};
 
 const buildInventoryPayload = (dados = {}) => {
     if (dados.ImagemFile) {
@@ -113,6 +126,11 @@ const buildInventoryPayload = (dados = {}) => {
 
         Object.entries(dados).forEach(([key, value]) => {
             if (key === 'ImagemFile' || value === undefined || value === null) {
+                return;
+            }
+
+            if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+                formData.append(key, JSON.stringify(value));
                 return;
             }
 

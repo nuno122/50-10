@@ -1,14 +1,26 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNotifications } from '../contexts/NotificationContext';
+import { useAuth } from '../contexts/AuthContext';
 import { criarArtigo, editarArtigo, getInventario } from '../services/api';
 import { resolveInventoryImageUrl } from '../utils/imagePaths';
 
-const emptyForm = {
+const SIZE_CONDITIONS = ['Bom', 'Muito bom', 'Usado', 'Danificado'];
+
+const createEmptySize = () => ({
+    IdTamanhoArtigo: '',
+    Tamanho: '',
+    Quantidade: 0,
+    Condicao: 'Bom'
+});
+
+const createEmptyForm = (disponivelParaAluguer = false) => ({
     Nome: '',
     CustoPorDia: '',
     ImagemPath: '',
-    EstadoArtigo: true
-};
+    EstadoArtigo: true,
+    DisponivelParaAluguer: disponivelParaAluguer,
+    TamanhoArtigo: [createEmptySize()]
+});
 
 const getTotalStock = (item) => (
     (item.TamanhoArtigo || []).reduce((sum, size) => sum + Number(size.Quantidade || 0), 0)
@@ -16,33 +28,95 @@ const getTotalStock = (item) => (
 
 const getConditionSummary = (item) => {
     const conditions = [...new Set((item.TamanhoArtigo || []).map((size) => size.Condicao || 'Bom'))];
-    if (conditions.length === 0) return 'Sem informacao';
+    if (conditions.length === 0) return 'Sem informação';
     return conditions.join(', ');
 };
 
 const getFallbackLabel = (name) => String(name || '?').trim().charAt(0).toUpperCase() || '?';
 
-const InventoryManagement = () => {
+const buildSizeDrafts = (sizes = []) => (
+    sizes.length > 0
+        ? sizes.map((size) => ({
+            IdTamanhoArtigo: size.IdTamanhoArtigo || '',
+            Tamanho: size.Tamanho || '',
+            Quantidade: Number(size.Quantidade || 0),
+            Condicao: size.Condicao || 'Bom'
+        }))
+        : [createEmptySize()]
+);
+
+const buildSizePayload = (sizes = []) => (
+    sizes
+        .map((size) => {
+            const quantidade = Number(size.Quantidade ?? 0);
+            const tamanho = String(size.Tamanho || '').trim() || (quantidade > 0 ? 'Único' : '');
+
+            return {
+                ...(size.IdTamanhoArtigo ? { IdTamanhoArtigo: size.IdTamanhoArtigo } : {}),
+                Tamanho: tamanho,
+                Quantidade: quantidade,
+                Condicao: String(size.Condicao || 'Bom').trim() || 'Bom'
+            };
+        })
+        .filter((size) => size.Tamanho)
+);
+
+const InventoryManagement = ({ inventoryType = 'marketplace' }) => {
+    const { user } = useAuth();
     const { notify, refreshSnapshot } = useNotifications();
+    const isRentalCatalog = inventoryType === 'rental';
     const [inventory, setInventory] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
     const [selectedItem, setSelectedItem] = useState(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
-    const [formData, setFormData] = useState(emptyForm);
+    const [formData, setFormData] = useState(createEmptyForm(isRentalCatalog));
     const [selectedImageFile, setSelectedImageFile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+
+    const pageCopy = {
+        title: isRentalCatalog ? 'Catálogo de aluguer' : 'Meu inventário',
+        subtitle: isRentalCatalog
+            ? 'Todos veem aqui os artigos disponibilizados para aluguer e o respetivo stock.'
+            : 'Consulta e gere apenas os artigos criados pela tua conta.',
+        button: isRentalCatalog ? 'Adicionar artigo de aluguer' : 'Adicionar artigo',
+        loading: isRentalCatalog ? 'A carregar artigos de aluguer...' : 'A carregar inventário...',
+        saveError: isRentalCatalog ? 'Não foi possível guardar o artigo de aluguer.' : 'Não foi possível guardar o artigo.',
+        publishTitle: isRentalCatalog ? 'Artigo de aluguer criado' : 'Artigo publicado',
+        publishMessage: isRentalCatalog
+            ? `${formData.Nome || 'O artigo'} ficou disponível no catálogo de aluguer.`
+            : `${formData.Nome || 'O artigo'} foi guardado no teu inventário.`,
+        updateTitle: isRentalCatalog ? 'Artigo de aluguer atualizado' : 'Artigo atualizado',
+        updateMessage: isRentalCatalog
+            ? `${formData.Nome || 'O artigo'} foi atualizado no catálogo de aluguer.`
+            : `${formData.Nome || 'O artigo'} foi atualizado no teu inventário.`
+    };
 
     const loadInventory = async () => {
         setLoading(true);
         setError('');
 
         try {
-            const data = await getInventario();
-            setInventory(data);
+            const data = await getInventario(
+                isRentalCatalog
+                    ? { disponivelParaAluguer: true }
+                    : { disponivelParaAluguer: false }
+            );
+            const visibleData = (data || []).filter((item) => {
+                if (isRentalCatalog) {
+                    return item.EstadoArtigo !== false;
+                }
+
+                if (item.EstadoArtigo === false && item.IdUtilizadorCriador !== user?.IdUtilizador) {
+                    return false;
+                }
+
+                return true;
+            });
+            setInventory(visibleData);
         } catch (err) {
             setError(err.message || 'Não foi possível carregar o inventário.');
         } finally {
@@ -52,7 +126,7 @@ const InventoryManagement = () => {
 
     useEffect(() => {
         loadInventory();
-    }, []);
+    }, [isRentalCatalog, user?.IdUtilizador]);
 
     const filteredInventory = useMemo(() => (
         inventory.filter((item) => {
@@ -69,8 +143,9 @@ const InventoryManagement = () => {
         })
     ), [filterStatus, inventory, searchQuery]);
 
-    const availableCount = inventory.filter((item) => item.EstadoArtigo !== false && (item.TamanhoArtigo || []).some((size) => Number(size.Quantidade || 0) > 0)).length;
+    const availableCount = inventory.filter((item) => item.EstadoArtigo !== false && getTotalStock(item) > 0).length;
     const outOfStockCount = inventory.filter((item) => item.EstadoArtigo !== false && getTotalStock(item) === 0).length;
+
     const selectedImagePreviewUrl = useMemo(() => (
         selectedImageFile ? URL.createObjectURL(selectedImageFile) : ''
     ), [selectedImageFile]);
@@ -85,7 +160,7 @@ const InventoryManagement = () => {
     const openCreate = () => {
         setIsCreating(true);
         setSelectedItem(null);
-        setFormData(emptyForm);
+        setFormData(createEmptyForm(isRentalCatalog));
         setSelectedImageFile(null);
         setIsDialogOpen(true);
     };
@@ -97,62 +172,109 @@ const InventoryManagement = () => {
             Nome: item.Nome || '',
             CustoPorDia: item.CustoPorDia ?? '',
             ImagemPath: item.ImagemPath || '',
-            EstadoArtigo: item.EstadoArtigo !== false
+            EstadoArtigo: item.EstadoArtigo !== false,
+            DisponivelParaAluguer: item.DisponivelParaAluguer === true,
+            TamanhoArtigo: buildSizeDrafts(item.TamanhoArtigo || [])
         });
         setSelectedImageFile(null);
         setIsDialogOpen(true);
+        setError('');
     };
 
     const handleImageChange = (event) => {
         const file = event.target.files?.[0] || null;
-
         setSelectedImageFile(file);
+
         if (file) {
             setFormData((current) => ({ ...current, ImagemPath: file.name }));
         }
     };
 
+    const handleSizeChange = (index, field, value) => {
+        setFormData((current) => ({
+            ...current,
+            TamanhoArtigo: current.TamanhoArtigo.map((size, sizeIndex) => (
+                sizeIndex === index
+                    ? {
+                        ...size,
+                        [field]: field === 'Quantidade'
+                            ? (value === '' ? '' : Number(value))
+                            : value
+                    }
+                    : size
+            ))
+        }));
+    };
+
+    const addSizeRow = () => {
+        setFormData((current) => ({
+            ...current,
+            TamanhoArtigo: [...current.TamanhoArtigo, createEmptySize()]
+        }));
+    };
+
+    const removeSizeRow = (index) => {
+        setFormData((current) => {
+            const nextSizes = current.TamanhoArtigo.filter((_, sizeIndex) => sizeIndex !== index);
+            return {
+                ...current,
+                TamanhoArtigo: nextSizes.length > 0 ? nextSizes : [createEmptySize()]
+            };
+        });
+    };
+
     const handleSave = async () => {
+        const sizePayload = buildSizePayload(formData.TamanhoArtigo);
+
+        if (!formData.Nome.trim() || !formData.CustoPorDia) {
+            setError('Indica pelo menos o nome do artigo e o custo por dia.');
+            return;
+        }
+
+        if (sizePayload.length === 0) {
+            setError('Define pelo menos um tamanho com quantidade.');
+            return;
+        }
+
         setSaving(true);
         setError('');
 
         try {
+            const payload = {
+                Nome: formData.Nome,
+                CustoPorDia: formData.CustoPorDia,
+                ImagemPath: formData.ImagemPath,
+                EstadoArtigo: formData.EstadoArtigo,
+                DisponivelParaAluguer: formData.DisponivelParaAluguer,
+                TamanhoArtigo: sizePayload,
+                ImagemFile: selectedImageFile
+            };
+
             if (isCreating) {
-                await criarArtigo({
-                    Nome: formData.Nome,
-                    CustoPorDia: formData.CustoPorDia,
-                    ImagemPath: formData.ImagemPath,
-                    ImagemFile: selectedImageFile
-                });
+                await criarArtigo(payload);
                 await refreshSnapshot();
                 notify({
-                    title: 'Artigo publicado',
-                    message: `${formData.Nome || 'O artigo'} ficou visível no marketplace.`,
+                    title: pageCopy.publishTitle,
+                    message: pageCopy.publishMessage,
                     tone: 'success'
                 });
             } else if (selectedItem) {
-                await editarArtigo(selectedItem.IdArtigo, {
-                    Nome: formData.Nome,
-                    CustoPorDia: formData.CustoPorDia,
-                    ImagemPath: formData.ImagemPath,
-                    EstadoArtigo: formData.EstadoArtigo,
-                    ImagemFile: selectedImageFile
-                });
+                await editarArtigo(selectedItem.IdArtigo, payload);
                 await refreshSnapshot();
                 notify({
-                    title: 'Artigo atualizado',
-                    message: `${formData.Nome || 'O artigo'} foi atualizado no marketplace.`,
+                    title: pageCopy.updateTitle,
+                    message: pageCopy.updateMessage,
                     tone: 'success'
                 });
             }
 
             setIsDialogOpen(false);
             setSelectedItem(null);
-            setFormData(emptyForm);
+            setFormData(createEmptyForm(isRentalCatalog));
             setSelectedImageFile(null);
             await loadInventory();
         } catch (err) {
-            setError(err.message || 'Não foi possível guardar o artigo.');
+            setError(err.message || pageCopy.saveError);
         } finally {
             setSaving(false);
         }
@@ -163,14 +285,12 @@ const InventoryManagement = () => {
             <div className="inventory-header">
                 <div>
                     <p className="inventory-eyebrow">Direção</p>
-                    <h1>Gestão de inventário</h1>
-                    <p className="inventory-subtitle">
-                        Acompanha os anuncios publicados no marketplace e o stock associado.
-                    </p>
+                    <h1>{pageCopy.title}</h1>
+                    <p className="inventory-subtitle">{pageCopy.subtitle}</p>
                 </div>
 
                 <button type="button" className="inventory-primary-button" onClick={openCreate}>
-                    Adicionar Artigo
+                    {pageCopy.button}
                 </button>
             </div>
 
@@ -230,7 +350,7 @@ const InventoryManagement = () => {
 
             {loading ? (
                 <section className="inventory-card inventory-empty">
-                    <p>A carregar inventário...</p>
+                    <p>{pageCopy.loading}</p>
                 </section>
             ) : (
                 <div className="inventory-grid">
@@ -259,8 +379,11 @@ const InventoryManagement = () => {
                                     </div>
                                     <div className="inventory-badges">
                                         <span className={`inventory-badge ${totalStock > 0 ? 'inventory-badge--available' : 'inventory-badge--empty'}`}>
-                                            {totalStock > 0 ? 'Disponivel' : 'Sem stock'}
+                                            {totalStock > 0 ? 'Disponível' : 'Sem stock'}
                                         </span>
+                                        {item.DisponivelParaAluguer === true && (
+                                            <span className="inventory-badge inventory-badge--available">Para aluguer</span>
+                                        )}
                                         {isInactive && <span className="inventory-badge inventory-badge--inactive">Inativo</span>}
                                     </div>
                                 </div>
@@ -271,8 +394,12 @@ const InventoryManagement = () => {
                                         <strong>{totalStock}</strong>
                                     </div>
                                     <div className="inventory-meta-row">
-                                        <span>Email do anunciante</span>
-                                        <strong>{item.Criador?.Email || 'Anúncio antigo'}</strong>
+                                        <span>Condição</span>
+                                        <strong>{getConditionSummary(item)}</strong>
+                                    </div>
+                                    <div className="inventory-meta-row">
+                                        <span>Email do criador</span>
+                                        <strong>{item.Criador?.Email || 'Artigo antigo'}</strong>
                                     </div>
                                 </div>
 
@@ -307,7 +434,10 @@ const InventoryManagement = () => {
                         <div className="inventory-modal-header">
                             <div>
                                 <p className="inventory-eyebrow">{isCreating ? 'Novo artigo' : 'Editar artigo'}</p>
-                                <h2>{isCreating ? 'Adicionar Artigo' : 'Atualizar Artigo'}</h2>
+                                <h2>{isCreating ? 'Adicionar artigo' : 'Atualizar artigo'}</h2>
+                                <p className="inventory-modal-subtitle">
+                                    Organiza os dados principais do artigo e gere o stock por tamanho num só passo.
+                                </p>
                             </div>
                             <button type="button" className="inventory-close" onClick={() => setIsDialogOpen(false)}>
                                 Fechar
@@ -315,26 +445,45 @@ const InventoryManagement = () => {
                         </div>
 
                         <div className="inventory-form">
-                            <label>
-                                <span>Nome do artigo</span>
-                                <input
-                                    value={formData.Nome}
-                                    onChange={(event) => setFormData((current) => ({ ...current, Nome: event.target.value }))}
-                                    placeholder="Ex: Tutu Classico"
-                                />
-                            </label>
+                            <div className="inventory-form-note inventory-form-note--highlight">
+                                <p>Dados principais</p>
 
-                            <label>
-                                <span>Custo por dia (EUR)</span>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={formData.CustoPorDia}
-                                    onChange={(event) => setFormData((current) => ({ ...current, CustoPorDia: event.target.value }))}
-                                    placeholder="Ex: 5"
-                                />
-                            </label>
+                                <label>
+                                    <span>Nome do artigo</span>
+                                    <input
+                                        value={formData.Nome}
+                                        onChange={(event) => setFormData((current) => ({ ...current, Nome: event.target.value }))}
+                                        placeholder="Ex: Tutu clássico"
+                                    />
+                                </label>
+
+                                <label>
+                                    <span>Custo por dia (EUR)</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={formData.CustoPorDia}
+                                        onChange={(event) => setFormData((current) => ({ ...current, CustoPorDia: event.target.value }))}
+                                        placeholder="Ex: 5"
+                                    />
+                                </label>
+
+                                <label className="inventory-switch inventory-switch--spaced">
+                                    <span>Disponibilizar para aluguer</span>
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.DisponivelParaAluguer === true}
+                                        onChange={(event) => setFormData((current) => ({ ...current, DisponivelParaAluguer: event.target.checked }))}
+                                    />
+                                </label>
+
+                                <small className="inventory-field-hint">
+                                    {formData.DisponivelParaAluguer
+                                        ? 'Este artigo ficará visível no catálogo de aluguer.'
+                                        : 'Este artigo ficará apenas no inventário do respetivo criador.'}
+                                </small>
+                            </div>
 
                             <label>
                                 <span>Imagem</span>
@@ -359,16 +508,6 @@ const InventoryManagement = () => {
                                 </div>
                             )}
 
-                            {selectedItem && (
-                                <div className="inventory-form-note">
-                                    <p>Publicação atual.</p>
-                                    <div className="inventory-meta-row">
-                                        <span>Email do anunciante</span>
-                                        <strong>{selectedItem.Criador?.Email || 'Anúncio antigo'}</strong>
-                                    </div>
-                                </div>
-                            )}
-
                             {!isCreating && (
                                 <label className="inventory-switch">
                                     <span>Artigo ativo</span>
@@ -380,19 +519,67 @@ const InventoryManagement = () => {
                                 </label>
                             )}
 
-                            {selectedItem && (
                             <div className="inventory-form-note">
-                                <p>Tamanhos, condicao e quantidades atuais.</p>
-                                <div className="inventory-size-list">
-                                        {(selectedItem.TamanhoArtigo || []).map((size) => (
-                                            <div key={size.IdTamanhoArtigo} className="inventory-size-chip">
-                                                <span>Tam. {size.Tamanho} | Condicao: {size.Condicao || 'Bom'}</span>
-                                                <strong>{size.Quantidade}</strong>
+                                <p>Stock por tamanho</p>
+                                <div className="inventory-stock-editor">
+                                    {formData.TamanhoArtigo.map((size, index) => (
+                                        <div key={size.IdTamanhoArtigo || `new-${index}`} className="inventory-stock-card">
+                                            <div className="inventory-stock-card-header">
+                                                <strong>{`Tamanho ${index + 1}`}</strong>
+                                                {!size.IdTamanhoArtigo && formData.TamanhoArtigo.length > 1 && (
+                                                    <button
+                                                        type="button"
+                                                        className="inventory-secondary-button"
+                                                        onClick={() => removeSizeRow(index)}
+                                                    >
+                                                        Remover
+                                                    </button>
+                                                )}
                                             </div>
-                                        ))}
-                                    </div>
+
+                                            <div className="inventory-role-detail-grid inventory-role-detail-grid--triple">
+                                                <label>
+                                                    <span>Tamanho</span>
+                                                    <input
+                                                        value={size.Tamanho}
+                                                        onChange={(event) => handleSizeChange(index, 'Tamanho', event.target.value)}
+                                                        placeholder="Ex: M"
+                                                    />
+                                                </label>
+
+                                                <label>
+                                                    <span>Quantidade</span>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="1"
+                                                        value={size.Quantidade}
+                                                        onChange={(event) => handleSizeChange(index, 'Quantidade', event.target.value)}
+                                                    />
+                                                </label>
+
+                                                <label>
+                                                    <span>Condição</span>
+                                                    <select
+                                                        value={size.Condicao}
+                                                        onChange={(event) => handleSizeChange(index, 'Condicao', event.target.value)}
+                                                    >
+                                                        {SIZE_CONDITIONS.map((condition) => (
+                                                            <option key={condition} value={condition}>{condition}</option>
+                                                        ))}
+                                                    </select>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                            )}
+
+                                <div className="inventory-stock-editor-actions">
+                                    <button type="button" className="inventory-secondary-button" onClick={addSizeRow}>
+                                        Adicionar tamanho
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="inventory-modal-actions">

@@ -874,7 +874,7 @@ button {
 }
 
 .portal-notification-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
   padding: 28px;
   display: flex;
@@ -882,12 +882,14 @@ button {
   justify-content: center;
   background: rgba(15, 23, 42, 0.14);
   backdrop-filter: blur(3px);
-  z-index: 18;
+  z-index: 120;
 }
 
 .portal-notification-panel--overlay {
   width: min(680px, calc(100% - 24px));
-  margin-top: 8px;
+  margin-top: min(8vh, 56px);
+  max-height: min(82vh, 720px);
+  overflow: hidden;
 }
 
 .portal-notification-panel-header {
@@ -2903,6 +2905,14 @@ button {
   margin-bottom: 24px;
 }
 
+.inventory-modal-subtitle {
+  margin: 10px 0 0;
+  max-width: 52ch;
+  color: #60758f;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
 .inventory-form {
   display: grid;
   gap: 16px;
@@ -2926,11 +2936,22 @@ button {
   align-items: center;
 }
 
+.inventory-switch--spaced {
+  margin-top: 10px;
+}
+
 .inventory-form-note {
   padding: 16px;
   border-radius: 18px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
+}
+
+.inventory-form-note--highlight {
+  background:
+    linear-gradient(145deg, rgba(244, 114, 182, 0.08), rgba(251, 191, 36, 0.08)),
+    #fff;
+  border-color: rgba(244, 114, 182, 0.18);
 }
 
 .inventory-form-note p {
@@ -3081,6 +3102,42 @@ button {
   display: grid;
   gap: 12px;
   margin-top: 16px;
+}
+
+.inventory-role-detail-grid--triple {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+}
+
+.inventory-stock-editor {
+  display: grid;
+  gap: 14px;
+}
+
+.inventory-stock-editor-actions {
+  margin-top: 14px;
+}
+
+.inventory-stock-card {
+  padding: 16px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid #dbe4ee;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+}
+
+.inventory-stock-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 760px) {
+  .inventory-role-detail-grid--triple {
+    grid-template-columns: 1fr;
+  }
 }
 
 .inventory-modal--narrow {

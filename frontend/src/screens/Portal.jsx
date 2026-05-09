@@ -10,6 +10,7 @@ import GuardianLessonRequest from './GuardianLessonRequest';
 import InventoryManagement from './InventoryManagement';
 import LessonValidation from './LessonValidation';
 import RoleInventory from './RoleInventory';
+import RoleRental from './RoleRental';
 import RequestValidation from './RequestValidation';
 import ScheduleManagement from './ScheduleManagement';
 import TeacherSchedule from './TeacherSchedule';
@@ -64,10 +65,11 @@ const Portal = () => {
                 { id: 'events', label: 'Eventos' },
                 { id: 'schedule', label: 'Horários e Aulas' },
                 { id: 'users', label: 'Utilizadores' },
-                { id: 'rental-requests', label: 'Alugueres' },
+                { id: 'rental-catalog', label: 'Catálogo de Aluguer' },
+                { id: 'rental-requests', label: 'Registo de Alugueres' },
                 { id: 'lesson-validations', label: 'Validações' },
                 { id: 'finance', label: 'Financeiro' },
-                { id: 'inventory', label: 'Inventário' }
+                { id: 'inventory', label: 'Meu Inventario' }
             ]
             : userIsProfessor
                 ? [
@@ -75,7 +77,8 @@ const Portal = () => {
                     { id: 'events', label: 'Eventos' },
                     { id: 'teacher-schedule', label: 'Agenda e Disponibilidade' },
                     { id: 'teacher-private-requests', label: 'Pedidos de Coaching' },
-                    { id: 'inventory', label: 'Alugueres e Inventário' }
+                    { id: 'inventory', label: 'Meu Inventario' },
+                    { id: 'rentals', label: 'Aluguer' }
                 ]
                 : userIsEncarregado
                     ? [
@@ -84,11 +87,13 @@ const Portal = () => {
                         { id: 'lesson-request', label: 'Coaching' },
                         { id: 'guardian-lessons', label: 'Marcações' },
                         { id: 'finance', label: 'Pagamentos' },
-                        { id: 'inventory', label: 'Alugueres e Inventário' }
+                        { id: 'inventory', label: 'Meu Inventario' },
+                        { id: 'rentals', label: 'Aluguer' }
                     ]
                     : [
                         { id: 'dashboard', label: 'Resumo' },
-                        { id: 'inventory', label: 'Alugueres e Inventário' }
+                        { id: 'inventory', label: 'Meu Inventario' },
+                        { id: 'rentals', label: 'Aluguer' }
                     ]
     ), [userIsDirecao, userIsEncarregado, userIsProfessor]);
 
@@ -138,6 +143,10 @@ const Portal = () => {
     };
 
     const renderContent = () => {
+        if (activeView === 'rental-catalog' && userIsDirecao) {
+            return <InventoryManagement inventoryType="rental" />;
+        }
+
         if (activeView === 'rental-requests' && userIsDirecao) {
             return <RequestValidation embedded />;
         }
@@ -151,7 +160,7 @@ const Portal = () => {
         }
 
         if (activeView === 'inventory' && userIsDirecao) {
-            return <InventoryManagement />;
+            return <InventoryManagement inventoryType="marketplace" />;
         }
 
         if (activeView === 'users' && userIsDirecao) {
@@ -176,6 +185,10 @@ const Portal = () => {
 
         if (activeView === 'inventory' && !userIsDirecao) {
             return <RoleInventory />;
+        }
+
+        if (activeView === 'rentals' && !userIsDirecao) {
+            return <RoleRental />;
         }
 
         if (activeView === 'teacher-schedule' && userIsProfessor) {
@@ -317,3 +330,4 @@ const Portal = () => {
 };
 
 export default Portal;
+

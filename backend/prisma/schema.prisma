@@ -34,6 +34,7 @@ model Artigo {
   Nome                String          @db.NVarChar(100)
   CustoPorDia         Decimal         @db.Decimal(18, 2)
   EstadoArtigo        Boolean         @default(true, map: "DF__Artigo__EstadoAr__10566F31")
+  DisponivelParaAluguer Boolean       @default(false, map: "DF_Artigo_DisponivelParaAluguer")
   ImagemPath          String?         @db.NVarChar(500)
   IdUtilizadorCriador String?         @db.UniqueIdentifier
   Criador             Utilizador?     @relation("ArtigoCriador", fields: [IdUtilizadorCriador], references: [IdUtilizador], onDelete: NoAction, onUpdate: NoAction)
