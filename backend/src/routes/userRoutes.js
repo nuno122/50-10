@@ -4,7 +4,6 @@ const userController = require('../controllers/userController');
 const { verificarToken, verificarPermissao } = require('../authMiddleware');
 const PERMISSOES = require('../config/permissions');
 
-router.post('/login', userController.login);
 router.post('/registar', userController.criarUtilizador);
 router.get('/', verificarToken, userController.getUtilizadores);
 router.post('/', verificarToken, verificarPermissao(PERMISSOES.DIRECAO), userController.criarUtilizador);

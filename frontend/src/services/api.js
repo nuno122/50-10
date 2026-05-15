@@ -93,12 +93,6 @@ export const atualizarEstadoUtilizador = async (idUtilizador, EstaAtivo) =>
         body: JSON.stringify({ EstaAtivo })
     });
 
-export const loginUtilizador = async ({ Email, PalavraPasseHash }) =>
-    request('/utilizadores/login', {
-        method: 'POST',
-        body: JSON.stringify({ Email, PalavraPasseHash })
-    });
-
 export const loginAutenticacao = async ({ Email, Password }) =>
     request('/autenticacao/login', {
         method: 'POST',

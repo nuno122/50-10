@@ -48,23 +48,9 @@ const atualizarEstadoUtilizador = async (req, res) => {
     }
 };
 
-const login = async (req, res) => {
-    try {
-        const { Email, PalavraPasseHash } = req.body;
-        const resultado = await userService.autenticarUtilizador(Email, PalavraPasseHash);
-        res.json(resultado);
-    } catch (erro) {
-        console.error(erro);
-        res.status(erro.statusCode || 500).json({
-            erro: erro.message || 'Erro no processo de login.'
-        });
-    }
-};
-
 module.exports = {
     getUtilizadores,
     criarUtilizador,
     atualizarUtilizador,
-    atualizarEstadoUtilizador,
-    login
+    atualizarEstadoUtilizador
 };
