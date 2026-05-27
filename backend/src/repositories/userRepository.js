@@ -1,6 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const { query } = require('../database/sqlServer');
 const PERMISSOES = require('../config/permissions');
 
 const normalizeOptionalValue = (value) => {
@@ -28,42 +27,21 @@ const normalizeStyleIds = (value) => {
 const userRepository = {
     // Buscar todos
     findAll: async () => {
-        try {
-            return await prisma.utilizador.findMany({
-                include: {
-                    Aluno: true,
-                    Professor: {
-                        include: {
-                            EstiloProfessor: {
-                                include: {
-                                    EstiloDanca: true
-                                }
+        return await prisma.utilizador.findMany({
+            include: {
+                Aluno: true,
+                Professor: {
+                    include: {
+                        EstiloProfessor: {
+                            include: {
+                                EstiloDanca: true
                             }
                         }
-                    },
-                    Encarregado: true
+                    }
                 }
-            });
-        } catch (error) {
-            return await query(`
-                SELECT
-                    IdUtilizador,
-                    CodigoPostal,
-                    Morada,
-                    Permissoes,
-                    NomeCompleto,
-                    NomeUtilizador,
-                    Email,
-                    NumeroTelemovel,
-                    Nif,
-                    EstaAtivo,
-                    NumeroCartaoCidadao,
-                    ValidadeCartaoCidadao,
-                    CASE WHEN Permissoes = ${PERMISSOES.PROFESSOR} THEN 1 ELSE 0 END AS ProfessorValido
-                FROM Utilizador
-                ORDER BY NomeCompleto
-            `);
-        }
+                Encarregado: true
+            }
+        });
     },
 
     // Buscar um unico por Email (Usado no Login)

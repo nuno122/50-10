@@ -4,10 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "test": "jest",
     "test:coverage": "jest --coverage --collectCoverageFrom=\"src/**/*.js\"",
     "test:integration": "jest --config jest.integration.config.js",
     "tests:integration": "npm run test:integration",
+    "migrate:supabase": "node scripts/migrateSqlServerToPostgres.js",
     "start": "npm --prefix .. run build && electron ../electron/main.cjs",
     "open": "electron ../electron/main.cjs",
     "open:direcao": "electron ../electron/main.cjs --profile=direcao",

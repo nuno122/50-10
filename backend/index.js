@@ -41,5 +41,5 @@ app.use('/api/eventos', eventRoutes);
 app.use('/api/master', masterRoutes);
 
 app.listen(PORT, () => {
-    console.log(`Servidor a correr em http://localhost:${PORT}`);
+    console.log(`Servidor a correr na porta ${PORT}`);
 });
