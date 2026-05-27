@@ -38,7 +38,7 @@ const userRepository = {
                             }
                         }
                     }
-                }
+                },
                 Encarregado: true
             }
         });
