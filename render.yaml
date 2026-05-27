@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: entartes-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate
+    startCommand: npm start
+    autoDeploy: true

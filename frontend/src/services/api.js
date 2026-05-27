@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3000/api';
+import { API_BASE_URL } from '../config/api';
 
 const handleResponse = async (response, { method = 'GET', suppressErrorNotification = false, errorTitle = 'Operação não concluída' } = {}) => {
     const data = await response.json().catch(() => null);
