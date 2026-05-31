@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { ROLE_LABELS } from '../utils/permissions';
 import { getAlugueres, getInventario, solicitarExtensaoAluguer } from '../services/api';
@@ -159,7 +159,7 @@ const RoleRental = () => {
             <div className="inventory-header">
                 <div>
                     <p className="inventory-eyebrow">{ROLE_LABELS[user?.Permissoes] || 'Portal'}</p>
-                    <h1>Aluguer</h1>
+                    <h1>Alugueres</h1>
                     <p className="inventory-subtitle">Consulta todos os artigos disponíveis para aluguer e acompanha os teus pedidos.</p>
                 </div>
             </div>
@@ -551,3 +551,6 @@ const RoleRental = () => {
 };
 
 export default RoleRental;
+
+
+

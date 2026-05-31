@@ -1,5 +1,6 @@
 const classRepo = require('../repositories/classRepository');
 const PERMISSOES = require('../config/permissions');
+const notificationService = require('./notificationService');
 
 const criarErro = (mensagem, statusCode) => {
     const erro = new Error(mensagem);
@@ -10,6 +11,19 @@ const criarErro = (mensagem, statusCode) => {
 const TIPOS_AULA_VALIDOS = ['Regular', 'Particular'];
 
 const normalizeText = (value) => String(value || '').trim().toLowerCase();
+const normalizeStudentIds = (dados = {}) => {
+    const ids = Array.isArray(dados.IdsAluno)
+        ? dados.IdsAluno
+        : dados.IdAluno !== undefined && dados.IdAluno !== null && dados.IdAluno !== ''
+            ? [dados.IdAluno]
+            : [];
+
+    return [...new Set(
+        ids
+            .map((value) => String(value || '').trim())
+            .filter(Boolean)
+    )];
+};
 
 const relationMatchesStyle = (relation, estilo) => (
     relation.IdEstiloDanca === estilo?.IdEstiloDanca ||
@@ -87,38 +101,11 @@ const estudioTemCapacidade = (estudio, capacidade) => (
     Number(estudio?.Capacidade || 0) >= Number(capacidade || 0)
 );
 
-const estudioTemConflito = (estudio, aulas = [], horaInicio, horaFim) => {
-    const novaHoraInicio = toMinutes(horaInicio);
-    const novaHoraFim = toMinutes(horaFim);
-
-    return aulas.some((aulaExistente) => {
-        const existenteInicio = toMinutes(aulaExistente.HoraInicio);
-        const existenteFim = toMinutes(aulaExistente.HoraFim);
-
-        return aulaExistente.IdEstudio === estudio.IdEstudio &&
-            novaHoraInicio < existenteFim &&
-            novaHoraFim > existenteInicio;
-    });
-};
-
 const podeUsarEstudioAlternativo = (dados) => dados?.PermitirEstudioAlternativo === true;
 const podeUsarProfessorAlternativo = (dados, tipoAula) => (
     tipoAula === 'Regular' &&
     dados?.PermitirProfessorAlternativo === true
 );
-
-const existemEstudiosCompativeisDisponiveis = async ({ data, horaInicio, horaFim, capacidade, estilo }) => {
-    const [estudios, aulasNoDia] = await Promise.all([
-        classRepo.findAllStudios(),
-        classRepo.findClassesByDate(data)
-    ]);
-
-    return estudios.some((estudio) => (
-        estudioSuportaEstilo(estudio, estilo) &&
-        estudioTemCapacidade(estudio, capacidade) &&
-        !estudioTemConflito(estudio, aulasNoDia, horaInicio, horaFim)
-    ));
-};
 
 const ConsultarVagas = async () => {
     return await classRepo.GetAulasDisponiveis();
@@ -145,10 +132,24 @@ const criarAula = async (dados) => {
         throw criarErro(`Campos obrigatorios em falta: ${emFalta.join(', ')}`, 400);
     }
 
+    if (!Number.isFinite(Number(dados.Preco)) || Number(dados.Preco) < 0) {
+        throw criarErro('O preço da aula tem de ser superior a 0.', 400);
+    }
+
     const tipoAula = dados.TipoAula || 'Regular';
+    const shouldCreateDirectorBooking = tipoAula === 'Particular' && dados?.OrigemAula === 'Direcao';
+    const studentIds = shouldCreateDirectorBooking ? normalizeStudentIds(dados) : [];
+
+    if (tipoAula === 'Particular' && Number(dados.Preco) <= 0) {
+        throw criarErro('O preco do Coaching tem de ser superior a 0.', 400);
+    }
 
     if (!TIPOS_AULA_VALIDOS.includes(tipoAula)) {
-        throw criarErro('TipoAula inválido. Use Regular ou Coaching.', 400);
+        throw criarErro('TipoAula invalido. Use Regular ou Coaching.', 400);
+    }
+
+    if (shouldCreateDirectorBooking && studentIds.length === 0) {
+        throw criarErro('Escolha pelo menos um aluno antes de criar o Coaching.', 400);
     }
 
     const [professor, estudio, estilo] = await Promise.all([
@@ -166,7 +167,7 @@ const criarAula = async (dados) => {
     }
 
     if (!estudio) {
-        throw criarErro('O estúdio selecionado não existe.', 400);
+        throw criarErro('O estudio selecionado nao existe.', 400);
     }
 
     if (!estilo) {
@@ -174,39 +175,26 @@ const criarAula = async (dados) => {
     }
 
     if (!estudioTemCapacidade(estudio, dados.CapacidadeMaxima)) {
-        throw criarErro('A capacidade da aula excede a capacidade do estúdio selecionado.', 400);
+        throw criarErro('A capacidade da aula excede a capacidade do estudio selecionado.', 400);
+    }
+
+    if (shouldCreateDirectorBooking && Number(dados.CapacidadeMaxima) < studentIds.length) {
+        throw criarErro('A capacidade do Coaching tem de ser igual ou superior ao numero de alunos selecionados.', 400);
     }
 
     const novaHoraInicio = toMinutes(dados.HoraInicio);
     const novaHoraFim = toMinutes(dados.HoraFim);
 
     if (!Number.isFinite(novaHoraInicio) || !Number.isFinite(novaHoraFim)) {
-        throw criarErro('Horário da aula inválido.', 400);
+        throw criarErro('Horario da aula invalido.', 400);
     }
 
     if (novaHoraFim <= novaHoraInicio) {
         throw criarErro('A hora de fim tem de ser posterior a hora de inicio.', 400);
     }
 
-    if (!estudioSuportaEstilo(estudio, estilo)) {
-        if (!podeUsarEstudioAlternativo(dados)) {
-            throw criarErro('O estúdio selecionado não suporta o estilo escolhido.', 400);
-        }
-
-        const existeEstudioCompativelDisponivel = await existemEstudiosCompativeisDisponiveis({
-            data: dados.Data,
-            horaInicio: dados.HoraInicio,
-            horaFim: dados.HoraFim,
-            capacidade: dados.CapacidadeMaxima,
-            estilo
-        });
-
-        if (existeEstudioCompativelDisponivel) {
-            throw criarErro(
-                'Existem estúdios compatíveis disponíveis para este horário. Escolha primeiro um estúdio associado ao estilo.',
-                400
-            );
-        }
+    if (!estudioSuportaEstilo(estudio, estilo) && !podeUsarEstudioAlternativo(dados)) {
+        throw criarErro('O estudio selecionado nao suporta o estilo escolhido.', 400);
     }
 
     const shouldValidateProfessorAvailability = tipoAula === 'Particular';
@@ -220,7 +208,7 @@ const criarAula = async (dados) => {
     ]);
 
     if (shouldValidateProfessorAvailability && !intervaloCabeNaDisponibilidade(dados.HoraInicio, dados.HoraFim, disponibilidadesProfessor)) {
-        throw criarErro('O professor não tem disponibilidade registada para este horário.', 400);
+        throw criarErro('O professor nao tem disponibilidade registada para este horario.', 400);
     }
 
     const aulaSobrepostaNoEstudio = aulasNoEstudio.find((aulaExistente) => {
@@ -230,7 +218,7 @@ const criarAula = async (dados) => {
     });
 
     if (aulaSobrepostaNoEstudio) {
-        throw criarErro('Conflito de horário: estúdio ocupado.', 400);
+        throw criarErro('Conflito de horario: estudio ocupado.', 400);
     }
 
     const aulaSobrepostaDoProfessor = aulasDoProfessorNoDia.find((aulaExistente) => {
@@ -240,7 +228,7 @@ const criarAula = async (dados) => {
     });
 
     if (aulaSobrepostaDoProfessor) {
-        throw criarErro('Conflito de horário: professor ocupado.', 400);
+        throw criarErro('Conflito de horario: professor ocupado.', 400);
     }
 
     const novaAula = await classRepo.create({
@@ -249,9 +237,56 @@ const criarAula = async (dados) => {
         OrigemAula: dados.OrigemAula || 'Direcao'
     });
 
+    let marcacoes = [];
+
+    if (shouldCreateDirectorBooking) {
+        const bookingService = require('./bookingService');
+        const bookingRepo = require('../repositories/bookingRepository');
+
+        try {
+            const alunosValidos = await Promise.all(
+                studentIds.map((studentId) => bookingRepo.findAlunoById(studentId))
+            );
+
+            const alunoEmFaltaIndex = alunosValidos.findIndex((aluno) => !aluno);
+            if (alunoEmFaltaIndex >= 0) {
+                throw criarErro('Um dos alunos selecionados nao foi encontrado.', 404);
+            }
+
+            for (const studentId of studentIds) {
+                const resultadoMarcacao = await bookingService.FazerMarcacao(novaAula.IdAula, studentId);
+                marcacoes.push(resultadoMarcacao.marcacao);
+            }
+        } catch (erro) {
+            await classRepo.cancelarAula(novaAula.IdAula);
+            throw erro;
+        }
+    }
+
+    if (shouldCreateDirectorBooking && marcacoes.length > 0) {
+        const guardianIds = await notificationService.getGuardianIdsByStudentIds(studentIds);
+        const when = new Intl.DateTimeFormat('pt-PT').format(new Date(novaAula.Data));
+        const time = String(novaAula.HoraInicio || '').match(/(\d{2}):(\d{2})/);
+        const whenLabel = `${when}${time ? ` às ${time[1]}:${time[2]}` : ''}`;
+        const styleLabel = estilo?.Nome || 'Coaching';
+
+        await notificationService.createForUsers(
+            [dados.IdProfessor, ...guardianIds],
+            {
+                title: 'Novo Coaching agendado',
+                message: `${styleLabel} agendado para ${whenLabel}.`,
+                tone: 'info',
+                entityType: 'Aula',
+                entityId: novaAula.IdAula
+            }
+        );
+    }
+
     return {
         mensagem: 'Aula agendada!',
-        aula: novaAula
+        aula: novaAula,
+        marcacao: marcacoes[0] || null,
+        marcacoes
     };
 };
 
@@ -275,7 +310,7 @@ const criarAulasEmLote = async (dados = {}) => {
             erros.push({
                 indice: index + 1,
                 referencia: aula?.Referencia || `${aula?.Data || 'sem-data'} ${aula?.HoraInicio || ''}`.trim(),
-                mensagem: erro.message || 'Não foi possível criar a aula.'
+                mensagem: erro.message || 'Nao foi possivel criar a aula.'
             });
         }
     }
@@ -288,7 +323,7 @@ const criarAulasEmLote = async (dados = {}) => {
     if (totalFalhas > 0 && totalCriadas > 0) {
         mensagem = `${totalCriadas} aula(s) criada(s) e ${totalFalhas} com erro.`;
     } else if (totalFalhas > 0) {
-        mensagem = 'Não foi possível criar as aulas enviadas.';
+        mensagem = 'Nao foi possivel criar as aulas enviadas.';
     }
 
     return {
@@ -304,20 +339,20 @@ const criarAulasEmLote = async (dados = {}) => {
 const ConfirmarPresenca = async (idAula) => {
     const aula = await classRepo.findByIdComAlunos(idAula);
     if (!aula) {
-        throw criarErro('Aula não encontrada.', 404);
+        throw criarErro('Aula nao encontrada.', 404);
     }
 
     if (aula.EstaAtivo === false) {
-        throw criarErro('Não é possível confirmar uma aula cancelada.', 400);
+        throw criarErro('Nao e possivel confirmar uma aula cancelada.', 400);
     }
 
     if (!aulaTerminou(aula)) {
-        throw criarErro('Só é possível confirmar a conclusão depois de a aula terminar.', 400);
+        throw criarErro('So e possivel confirmar a conclusao depois de a aula terminar.', 400);
     }
 
     const marcacoesAtivas = aula.Marcacao || [];
     if (marcacoesAtivas.length === 0) {
-        throw criarErro('Não é possível confirmar uma aula sem alunos inscritos.', 400);
+        throw criarErro('Nao e possivel confirmar uma aula sem alunos inscritos.', 400);
     }
 
     return await classRepo.ValidarConclusaoAula(idAula, true);
@@ -326,7 +361,7 @@ const ConfirmarPresenca = async (idAula) => {
 const cancelarAula = async (idAula, utilizador) => {
     const aula = await classRepo.findById(idAula);
     if (!aula) {
-        throw criarErro('Aula não encontrada.', 404);
+        throw criarErro('Aula nao encontrada.', 404);
     }
 
     if (aula.EstaAtivo === false) {
@@ -334,7 +369,7 @@ const cancelarAula = async (idAula, utilizador) => {
     }
 
     if (aulaTerminou(aula)) {
-        throw criarErro('Não é possível cancelar uma aula que já terminou.', 400);
+        throw criarErro('Nao e possivel cancelar uma aula que ja terminou.', 400);
     }
 
     if (utilizador?.Permissoes === PERMISSOES.PROFESSOR && aula.IdProfessor !== utilizador.IdUtilizador) {
@@ -342,6 +377,26 @@ const cancelarAula = async (idAula, utilizador) => {
     }
 
     const aulaCancelada = await classRepo.cancelarAula(idAula);
+
+    const guardianIds = await notificationService.getGuardianIdsByStudentIds(
+        (aulaCancelada.Marcacao || []).map((booking) => booking.IdAluno)
+    );
+    const styleLabel = aulaCancelada.EstiloDanca?.Nome || 'Aula';
+    const when = new Intl.DateTimeFormat('pt-PT').format(new Date(aulaCancelada.Data));
+    const time = String(aulaCancelada.HoraInicio || '').match(/(\d{2}):(\d{2})/);
+    const whenLabel = `${when}${time ? ` às ${time[1]}:${time[2]}` : ''}`;
+    const isCoaching = (aulaCancelada.TipoAula || 'Regular') === 'Particular';
+
+    await notificationService.createForUsers(
+        [aulaCancelada.IdProfessor, ...guardianIds],
+        {
+            title: isCoaching ? 'Coaching cancelado' : 'Aula cancelada',
+            message: `${styleLabel} de ${whenLabel} foi cancelada.`,
+            tone: 'warning',
+            entityType: 'Aula',
+            entityId: aulaCancelada.IdAula
+        }
+    );
 
     return {
         mensagem: 'Aula cancelada com sucesso.',
@@ -352,26 +407,26 @@ const cancelarAula = async (idAula, utilizador) => {
 const validarAula = async (idAula, opcoes = {}) => {
     const aula = await classRepo.findByIdComAlunos(idAula);
     if (!aula) {
-        throw criarErro('Aula não encontrada.', 404);
+        throw criarErro('Aula nao encontrada.', 404);
     }
 
     if (aula.EstaAtivo === false) {
-        throw criarErro('Não é possível validar uma aula cancelada.', 400);
+        throw criarErro('Nao e possivel validar uma aula cancelada.', 400);
     }
 
     const concluirPorExcecao = opcoes?.ConcluirPorExcecao === true;
 
     if (!aula.ConfirmacaoProfessor && !concluirPorExcecao) {
-        throw criarErro('A aula tem de ser confirmada pelo professor antes da validação da Direção.', 400);
+        throw criarErro('A aula tem de ser confirmada pelo professor antes da validacao da Direcao.', 400);
     }
 
     if (!aula.ConfirmacaoProfessor && concluirPorExcecao && !aulaTerminou(aula)) {
-        throw criarErro('A Direção só pode concluir por exceção depois de a aula terminar.', 400);
+        throw criarErro('A Direcao so pode concluir por excecao depois de a aula terminar.', 400);
     }
 
     const marcacoesAtivas = aula.Marcacao;
     if (marcacoesAtivas.length === 0) {
-        throw criarErro('Não é possível validar uma aula sem alunos inscritos.', 400);
+        throw criarErro('Nao e possivel validar uma aula sem alunos inscritos.', 400);
     }
 
     await classRepo.atualizarValidacaoDirecao(idAula);
@@ -381,7 +436,7 @@ const validarAula = async (idAula, opcoes = {}) => {
     const resumoPagamentos = descreverQuantidadePagamentos(resultadoPagamentos.pagamentos.length);
 
     const mensagem = concluirPorExcecao && !aula.ConfirmacaoProfessor
-        ? `Aula concluída por exceção pela Direção e ${resumoPagamentos}.`
+        ? `Aula concluida por excecao pela Direcao e ${resumoPagamentos}.`
         : `Aula validada e ${resumoPagamentos}.`;
 
     return {

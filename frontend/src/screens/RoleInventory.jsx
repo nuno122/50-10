@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { ROLE_LABELS } from '../utils/permissions';
@@ -275,7 +275,7 @@ const RoleInventory = () => {
             <div className="inventory-header">
                 <div>
                     <p className="inventory-eyebrow">{ROLE_LABELS[user?.Permissoes] || 'Portal'}</p>
-                    <h1>Meu inventário</h1>
+                    <h1>Inventário</h1>
                     <p className="inventory-subtitle">{getRoleSubtitle(user?.Permissoes)}</p>
                 </div>
 
@@ -665,3 +665,6 @@ const RoleInventory = () => {
 };
 
 export default RoleInventory;
+
+
+

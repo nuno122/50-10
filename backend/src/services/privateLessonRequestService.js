@@ -2,6 +2,7 @@ const bookingService = require('./bookingService');
 const classRepo = require('../repositories/classRepository');
 const classService = require('./classService');
 const privateLessonRequestRepo = require('../repositories/privateLessonRequestRepository');
+const notificationService = require('./notificationService');
 
 const ESTADOS_PEDIDO = {
     PENDENTE_PROFESSOR: 'PendenteProfessor',
@@ -315,6 +316,14 @@ const confirmarPedidoProfessor = async (idPedidoAulaPrivada, dados, idProfessor)
         DataRespostaProfessor: new Date()
     });
 
+    await notificationService.createForUser(pedido.IdEncarregado, {
+        title: 'Coaching confirmado pelo professor',
+        message: `${pedido.EstiloDanca?.Nome || 'O pedido de Coaching'} segue agora para decisão da Direção.`,
+        tone: 'info',
+        entityType: 'PedidoAula',
+        entityId: pedido.IdPedidoAulaPrivada
+    });
+
     return {
         mensagem: 'Disponibilidade confirmada pelo professor. O pedido segue para validação da Direção.',
         pedido: pedidoAtualizado
@@ -345,6 +354,14 @@ const rejeitarPedidoProfessor = async (idPedidoAulaPrivada, observacaoProfessor,
         DataRespostaProfessor: new Date()
     });
 
+    await notificationService.createForUser(pedido.IdEncarregado, {
+        title: 'Coaching rejeitado pelo professor',
+        message: pedidoAtualizado.ObservacaoProfessor || `${pedido.EstiloDanca?.Nome || 'O pedido de Coaching'} não foi confirmado pelo professor.`,
+        tone: 'danger',
+        entityType: 'PedidoAula',
+        entityId: pedido.IdPedidoAulaPrivada
+    });
+
     return {
         mensagem: 'Pedido rejeitado pelo professor.',
         pedido: pedidoAtualizado
@@ -367,6 +384,7 @@ const aprovarPedido = async (idPedidoAulaPrivada, dados, idDiretor) => {
 
     const IdProfessor = pedido.IdProfessorConfirmado;
     const IdEstudio = dados?.IdEstudio;
+    const PermitirEstudioAlternativo = dados?.PermitirEstudioAlternativo === true;
     const preco = Number(dados?.Preco);
     const dataPretendida = pedido.DataPretendida;
     const horaPretendida = pedido.HoraPretendida;
@@ -377,7 +395,7 @@ const aprovarPedido = async (idPedidoAulaPrivada, dados, idDiretor) => {
         throw criarErro('O pedido precisa de professor confirmado e IdEstudio para ser aprovado.', 400);
     }
 
-    if (!Number.isFinite(preco) || preco < 0) {
+    if (!Number.isFinite(preco) || preco <= 0) {
         throw criarErro('Preço inválido.', 400);
     }
 
@@ -402,7 +420,8 @@ const aprovarPedido = async (idPedidoAulaPrivada, dados, idDiretor) => {
         OrigemAula: 'PedidoEncarregado',
         IdProfessor,
         IdEstudio,
-        IdEstiloDanca: pedido.IdEstiloDanca
+        IdEstiloDanca: pedido.IdEstiloDanca,
+        PermitirEstudioAlternativo
     };
 
     const resultadoAula = await classService.criarAula(payloadAula);
@@ -422,6 +441,14 @@ const aprovarPedido = async (idPedidoAulaPrivada, dados, idDiretor) => {
         DataDecisao: new Date(),
         IdDiretorDecisao: idDiretor,
         IdAulaCriada: resultadoAula.aula.IdAula
+    });
+
+    await notificationService.createForUsers([pedido.IdEncarregado, IdProfessor].filter(Boolean), {
+        title: 'Coaching aprovado',
+        message: `${pedido.EstiloDanca?.Nome || 'O Coaching'} foi aprovado para ${new Intl.DateTimeFormat('pt-PT').format(new Date(dataPretendida))}.`,
+        tone: 'success',
+        entityType: 'PedidoAula',
+        entityId: pedido.IdPedidoAulaPrivada
     });
 
     return {
@@ -451,6 +478,14 @@ const rejeitarPedido = async (idPedidoAulaPrivada, observacaoDirecao, idDiretor)
         ObservacaoDirecao: observacaoDirecao ? String(observacaoDirecao).trim() : null,
         DataDecisao: new Date(),
         IdDiretorDecisao: idDiretor
+    });
+
+    await notificationService.createForUsers([pedido.IdEncarregado, pedido.IdProfessorConfirmado].filter(Boolean), {
+        title: 'Coaching rejeitado pela Direção',
+        message: pedidoAtualizado.ObservacaoDirecao || `${pedido.EstiloDanca?.Nome || 'O pedido de Coaching'} não foi aprovado pela Direção.`,
+        tone: 'danger',
+        entityType: 'PedidoAula',
+        entityId: pedido.IdPedidoAulaPrivada
     });
 
     return {

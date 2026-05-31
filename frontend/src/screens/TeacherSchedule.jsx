@@ -147,6 +147,14 @@ const getLessonCompletionLabel = (lesson, now = new Date()) => {
     return 'Por concluir';
 };
 
+const getLessonListCategory = (lesson, now = new Date()) => {
+    if (lesson.status === 'cancelled') return 'cancelled';
+    if (lesson.confirmed) return 'completed';
+    if (lesson.endDateTime > now) return 'upcoming';
+    if (lesson.students.length > 0) return 'needs-confirmation';
+    return 'past-empty';
+};
+
 const buildWeeklyDates = (weekday, startDate, endDate) => {
     const dates = [];
     const current = new Date(startDate);
@@ -510,6 +518,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     const [cancelReason, setCancelReason] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+    const [lessonFilter, setLessonFilter] = useState('focus');
     const [loading, setLoading] = useState(true);
     const [savingLesson, setSavingLesson] = useState(false);
     const [savingAvailability, setSavingAvailability] = useState(false);
@@ -536,6 +545,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                     id: lesson.IdAula,
                     title: lesson.EstiloDanca?.Nome || 'Aula',
                     date: formatDate(lesson.Data),
+                    startDateTime: buildLessonDateTime(lesson.Data, lesson.HoraInicio),
                     endDateTime: buildLessonDateTime(lesson.Data, lesson.HoraFim),
                     time: `${extractTime(lesson.HoraInicio) || '--:--'} - ${extractTime(lesson.HoraFim) || '--:--'}`,
                     studio: lesson.Estudio?.Numero ? `Estudio ${lesson.Estudio.Numero}` : lesson.IdEstudio,
@@ -582,6 +592,51 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
             lesson.studio.toLowerCase().includes(term)
         ));
     }, [lessons, searchQuery]);
+
+    const lessonCounts = useMemo(() => {
+        const now = new Date();
+        return filteredLessons.reduce((accumulator, lesson) => {
+            const category = getLessonListCategory(lesson, now);
+            accumulator[category] += 1;
+            return accumulator;
+        }, {
+            upcoming: 0,
+            'needs-confirmation': 0,
+            completed: 0,
+            cancelled: 0,
+            'past-empty': 0
+        });
+    }, [filteredLessons]);
+
+    const visibleLessons = useMemo(() => {
+        const now = new Date();
+        const sortedLessons = [...filteredLessons].sort((left, right) => {
+            const leftTime = (left.startDateTime || left.endDateTime).getTime();
+            const rightTime = (right.startDateTime || right.endDateTime).getTime();
+            return leftTime - rightTime;
+        });
+
+        return sortedLessons.filter((lesson) => {
+            const category = getLessonListCategory(lesson, now);
+
+            switch (lessonFilter) {
+                case 'focus':
+                    return category === 'needs-confirmation' || category === 'upcoming';
+                case 'upcoming':
+                    return category === 'upcoming';
+                case 'needs-confirmation':
+                    return category === 'needs-confirmation';
+                case 'completed':
+                    return category === 'completed';
+                case 'cancelled':
+                    return category === 'cancelled';
+                case 'all':
+                    return true;
+                default:
+                    return category === 'needs-confirmation' || category === 'upcoming';
+            }
+        });
+    }, [filteredLessons, lessonFilter]);
 
     const pendingPrivateRequests = useMemo(() => (
         privateRequests.filter((request) => request.EstadoPedido === 'PendenteProfessor')
@@ -1121,9 +1176,23 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                             placeholder="Pesquisar por estilo ou estúdio..."
                         />
                         <div className="teacher-filter-badges">
-                            <span className="teacher-chip teacher-chip--active">Proximas</span>
-                            <span className="teacher-chip">Concluidas</span>
-                            <span className="teacher-chip">Canceladas</span>
+                            {[
+                                ['focus', `Em destaque (${lessonCounts['needs-confirmation'] + lessonCounts.upcoming})`],
+                                ['needs-confirmation', `Por concluir (${lessonCounts['needs-confirmation']})`],
+                                ['upcoming', `Pr\u00F3ximas (${lessonCounts.upcoming})`],
+                                ['completed', `Conclu\u00EDdas (${lessonCounts.completed})`],
+                                ['cancelled', `Canceladas (${lessonCounts.cancelled})`],
+                                ['all', `Todas (${filteredLessons.length})`]
+                            ].map(([value, label]) => (
+                                <button
+                                    key={value}
+                                    type="button"
+                                    className={`teacher-chip ${lessonFilter === value ? 'teacher-chip--active' : ''}`}
+                                    onClick={() => setLessonFilter(value)}
+                                >
+                                    {label}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
@@ -1131,9 +1200,18 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                         <div className="teacher-empty">
                             <p className="teacher-empty-title">A carregar aulas...</p>
                         </div>
+                    ) : visibleLessons.length === 0 ? (
+                        <div className="teacher-empty">
+                            <p className="teacher-empty-title">Sem aulas para este filtro</p>
+                            <p>
+                                {lessonFilter === 'focus'
+                                    ? 'A vista inicial mostra apenas aulas por concluir e pr\u00F3ximas aulas.'
+                                    : 'Ajuste o filtro para ver outras aulas.'}
+                            </p>
+                        </div>
                     ) : (
                         <div className="teacher-grid">
-                            {filteredLessons.filter((lesson) => lesson.status !== 'cancelled').map((lesson) => {
+                            {visibleLessons.filter((lesson) => lesson.status !== 'cancelled').map((lesson) => {
                                 const now = new Date();
                                 const lessonEnded = lesson.endDateTime <= now;
                                 const hasStudents = lesson.students.length > 0;
@@ -1181,7 +1259,7 @@ const TeacherSchedule = ({ initialTab = 'lessons' }) => {
                                 );
                             })}
 
-                            {filteredLessons.filter((lesson) => lesson.status === 'cancelled').map((lesson) => (
+                            {visibleLessons.filter((lesson) => lesson.status === 'cancelled').map((lesson) => (
                                 <article key={lesson.id} className="teacher-card teacher-card--cancelled">
                                     <div className="teacher-card-header">
                                         <span className="teacher-badge teacher-badge--danger">Cancelada</span>

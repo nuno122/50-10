@@ -13,6 +13,8 @@ const availabilityRoutes = require('./src/routes/availabilityRoutes');
 const masterRoutes = require('./src/routes/masterRoutes');
 const privateLessonRequestRoutes = require('./src/routes/privateLessonRequestRoutes');
 const eventRoutes = require('./src/routes/eventRoutes');
+const notificationRoutes = require('./src/routes/notificationRoutes');
+const notificationService = require('./src/services/notificationService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -37,9 +39,19 @@ app.use('/api/autenticacao', authenticationRoutes);
 app.use('/api/alugueres', rentalRoutes);
 app.use('/api/disponibilidades', availabilityRoutes);
 app.use('/api/eventos', eventRoutes);
+app.use('/api/notificacoes', notificationRoutes);
 
 app.use('/api/master', masterRoutes);
 
-app.listen(PORT, () => {
-    console.log(`Servidor a correr em http://localhost:${PORT}`);
+const startServer = async () => {
+    await notificationService.ensureStorage();
+
+    app.listen(PORT, () => {
+        console.log(`Servidor a correr em http://localhost:${PORT}`);
+    });
+};
+
+startServer().catch((error) => {
+    console.error('Nao foi possivel iniciar o servidor.', error);
+    process.exit(1);
 });

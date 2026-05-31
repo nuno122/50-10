@@ -229,6 +229,22 @@ model Pagamento {
   Marcacao        Marcacao? @relation(fields: [IdMarcacao], references: [IdMarcacao], onDelete: NoAction, onUpdate: NoAction, map: "FK__Pagamento__IdMar__2180FB33")
 }
 
+model Notificacao {
+  IdNotificacao String     @id @default(dbgenerated("newsequentialid()")) @db.UniqueIdentifier
+  IdUtilizador  String     @db.UniqueIdentifier
+  Titulo        String     @db.NVarChar(200)
+  Mensagem      String?    @db.NVarChar(Max)
+  Tipo          String     @default("info") @db.NVarChar(20)
+  Lida          Boolean    @default(false)
+  DataCriacao   DateTime   @default(now())
+  EntidadeTipo  String?    @db.NVarChar(100)
+  EntidadeId    String?    @db.UniqueIdentifier
+  Utilizador    Utilizador @relation(fields: [IdUtilizador], references: [IdUtilizador], onUpdate: NoAction)
+
+  @@index([IdUtilizador, DataCriacao])
+  @@index([IdUtilizador, Lida, DataCriacao])
+}
+
 model Pais {
   IdPais   String     @id(map: "PK__Pais__FC850A7BBDD42FB7") @default(dbgenerated("newsequentialid()"), map: "DF__Pais__IdPais__49C3F6B7") @db.UniqueIdentifier
   Nome     String     @db.NVarChar(100)
@@ -298,6 +314,7 @@ model Utilizador {
   Encarregado                                        Encarregado?
   EventosCriados                                     Evento[]     @relation("EventoCriador")
   Marcacao                                           Marcacao[]
+  Notificacao                                        Notificacao[]
   PedidoAula                                         PedidoAula[]
   Professor                                          Professor?
   CodigoPostal_Utilizador_CodigoPostalToCodigoPostal CodigoPostal @relation("Utilizador_CodigoPostalToCodigoPostal", fields: [CodigoPostal], references: [CodigoPostal], onUpdate: NoAction, map: "FK__Utilizado__Codig__5DCAEF64")

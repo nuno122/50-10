@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { loginAutenticacao } from '../services/api';
 import Portal from './Portal';
@@ -22,7 +22,7 @@ const Login = () => {
         }
 
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-            return 'Introduz um email vÃ¡lido.';
+            return 'Introduz um email válido.';
         }
 
         if (!password.trim()) {
@@ -140,3 +140,5 @@ const Login = () => {
 };
 
 export default Login;
+
+

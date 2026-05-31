@@ -57,4 +57,4 @@ async function query(queryText) {
     }
 }
 
-module.exports = { query };
+module.exports = { query, getSqlConfig, sql };

@@ -224,7 +224,8 @@ const PrivateLessonValidationPanel = ({
                         const showAlternativeSelector = studioSelectionMode === 'alternative' && canUnlockAlternative && studioState.allAvailableOptions.length > 0;
                         const normalizedForm = {
                             ...form,
-                            IdEstudio: selectedStudioId
+                            IdEstudio: selectedStudioId,
+                            PermitirEstudioAlternativo: studioSelectionMode === 'alternative'
                         };
                         delete normalizedForm.StudioSelectionMode;
 
