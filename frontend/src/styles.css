@@ -2694,6 +2694,18 @@ button {
   background: #dbeafe;
   color: #1d4f91;
   font-weight: 800;
+  font-size: 1.4rem;
+}
+
+.inventory-stat-card--active {
+  border-color: #2563eb;
+  background: linear-gradient(145deg, rgba(37, 99, 235, 0.06), rgba(255, 255, 255, 0.95));
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.12);
+}
+
+.inventory-stat-card--active span {
+  background: linear-gradient(135deg, #1d5ca3 0%, #14355f 100%);
+  color: #fff;
 }
 
 .inventory-toolbar {

@@ -8,6 +8,18 @@ const buscarTodos = async (filters = {}) => {
         where.IdUtilizador = filters.IdUtilizador;
     }
 
+    if (filters.IdUtilizadorCriadorArtigo) {
+        where.ArtigoAluguer = {
+            some: {
+                TamanhoArtigo: {
+                    Artigo: {
+                        IdUtilizadorCriador: filters.IdUtilizadorCriadorArtigo
+                    }
+                }
+            }
+        };
+    }
+
     return await prisma.aluguer.findMany({
         where,
         include: {

@@ -7,12 +7,41 @@ const criarErro = (mensagem, statusCode) => {
     return erro;
 };
 
-const listarAlugueres = async (utilizador) => {
-    const isDirecao = utilizador?.Permissoes === PERMISSOES.DIRECAO;
+const utilizadorEDirecao = (utilizador) => utilizador?.Permissoes === PERMISSOES.DIRECAO;
+
+const utilizadorEDonoDoArtigo = (aluguer, utilizador) => {
+    if (!aluguer || !utilizador?.IdUtilizador) return false;
+    return (aluguer.ArtigoAluguer || []).some(
+        (entry) => entry.TamanhoArtigo?.Artigo?.IdUtilizadorCriador === utilizador.IdUtilizador
+    );
+};
+
+const listarAlugueres = async (utilizador, { asOwner = false } = {}) => {
+    const isDirecao = utilizadorEDirecao(utilizador);
+
+    if (asOwner) {
+        return await rentalRepository.buscarTodos({
+            IdUtilizadorCriadorArtigo: utilizador?.IdUtilizador
+        });
+    }
 
     return await rentalRepository.buscarTodos({
         IdUtilizador: isDirecao ? undefined : utilizador?.IdUtilizador
     });
+};
+
+const garantirAcessoAoAluguer = (aluguer, utilizador) => {
+    if (!aluguer) {
+        throw criarErro('Aluguer nao encontrado.', 404);
+    }
+
+    if (
+        !utilizadorEDirecao(utilizador)
+        && String(aluguer.IdUtilizador) !== String(utilizador?.IdUtilizador)
+        && !utilizadorEDonoDoArtigo(aluguer, utilizador)
+    ) {
+        throw criarErro('Nao tem permissao para alterar este aluguer.', 403);
+    }
 };
 
 const podeUsarArtigoInativo = (utilizador, artigo) => (
@@ -39,6 +68,8 @@ const criarAluguer = async ({ IdUtilizador, DataLevantamento, DataEntrega, Lista
         throw criarErro('A DataEntrega nao pode ser anterior a DataLevantamento.', 400);
     }
 
+    let isOwnerOfAllArticles = true;
+
     for (const artigo of ListaArtigos) {
         if (!artigo.IdTamanhoArtigo || !artigo.Quantidade) {
             throw criarErro('Cada artigo deve ter IdTamanhoArtigo e Quantidade.', 400);
@@ -61,6 +92,18 @@ const criarAluguer = async ({ IdUtilizador, DataLevantamento, DataEntrega, Lista
         if (stock.Quantidade < artigo.Quantidade) {
             throw criarErro(`Stock insuficiente para o artigo ${artigo.IdTamanhoArtigo}.`, 400);
         }
+
+        if (stock.Artigo?.IdUtilizadorCriador !== utilizador?.IdUtilizador) {
+            isOwnerOfAllArticles = false;
+        }
+    }
+
+    if (
+        !utilizadorEDirecao(utilizador)
+        && String(IdUtilizador) !== String(utilizador?.IdUtilizador)
+        && !isOwnerOfAllArticles
+    ) {
+        throw criarErro('Nao pode criar alugueres para outra conta sem ser dono dos artigos.', 403);
     }
 
     const aluguer = await rentalRepository.criarComTransacao(
@@ -76,10 +119,13 @@ const criarAluguer = async ({ IdUtilizador, DataLevantamento, DataEntrega, Lista
     };
 };
 
-const SolicitarExtensaoPrazo = async ({ IdAluguer, NovaDataProposta }) => {
+const SolicitarExtensaoPrazo = async ({ IdAluguer, NovaDataProposta }, utilizador) => {
     if (!IdAluguer || !NovaDataProposta) {
         throw criarErro('IdAluguer e NovaDataProposta sao obrigatorios.', 400);
     }
+
+    const aluguer = await rentalRepository.getAluguerById(IdAluguer);
+    garantirAcessoAoAluguer(aluguer, utilizador);
 
     const dataProposta = new Date(NovaDataProposta);
     if (Number.isNaN(dataProposta.getTime())) {
@@ -93,7 +139,7 @@ const SolicitarExtensaoPrazo = async ({ IdAluguer, NovaDataProposta }) => {
     };
 };
 
-const AvaliarPedidoExtensao = async ({ IdPedido, Aprovado, ValorAdicional = 0 }) => {
+const AvaliarPedidoExtensao = async ({ IdPedido, Aprovado, ValorAdicional = 0 }, utilizador) => {
     const pedido = await rentalRepository.getPedidoExtensaoById(IdPedido);
     if (!pedido) {
         throw criarErro('Pedido de extensão não encontrado.', 404);
@@ -101,6 +147,12 @@ const AvaliarPedidoExtensao = async ({ IdPedido, Aprovado, ValorAdicional = 0 })
 
     if (pedido.EstadoAprovacao !== 'Pendente') {
         throw criarErro('Pedido ja foi avaliado.', 400);
+    }
+
+    const aluguer = await rentalRepository.getAluguerById(pedido.IdAluguer);
+
+    if (!utilizadorEDirecao(utilizador) && !utilizadorEDonoDoArtigo(aluguer, utilizador)) {
+        throw criarErro('Apenas o dono do artigo ou a Direcao podem avaliar pedidos de extensao.', 403);
     }
 
     await rentalRepository.atualizarPedidoValorAdicional(IdPedido, ValorAdicional);
@@ -127,7 +179,7 @@ const AvaliarPedidoExtensao = async ({ IdPedido, Aprovado, ValorAdicional = 0 })
     };
 };
 
-const RegistarDevolucao = async ({ IdAluguer, EstadoEntrega, Multa = 0 }) => {
+const RegistarDevolucao = async ({ IdAluguer, EstadoEntrega, Multa = 0 }, utilizador) => {
     if (!IdAluguer || !EstadoEntrega) {
         throw criarErro('IdAluguer e EstadoEntrega sao obrigatorios.', 400);
     }
@@ -137,9 +189,7 @@ const RegistarDevolucao = async ({ IdAluguer, EstadoEntrega, Multa = 0 }) => {
     }
 
     const aluguer = await rentalRepository.getAluguerById(IdAluguer);
-    if (!aluguer) {
-        throw criarErro('Aluguer nao encontrado.', 404);
-    }
+    garantirAcessoAoAluguer(aluguer, utilizador);
 
     if (String(aluguer.EstadoAluguer || '').toLowerCase() === 'entregue') {
         throw criarErro('A devolução deste aluguer já foi registada.', 400);
@@ -148,6 +198,14 @@ const RegistarDevolucao = async ({ IdAluguer, EstadoEntrega, Multa = 0 }) => {
     const multaNormalizada = Number(Multa || 0);
     if (Number.isNaN(multaNormalizada) || multaNormalizada < 0) {
         throw criarErro('Multa inválida.', 400);
+    }
+
+    if (
+        !utilizadorEDirecao(utilizador)
+        && !utilizadorEDonoDoArtigo(aluguer, utilizador)
+        && multaNormalizada > 0
+    ) {
+        throw criarErro('Apenas o dono do artigo ou a Direcao pode aplicar multa na devolucao.', 403);
     }
 
     const aluguerAtualizado = await rentalRepository.registarDevolucao(

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { criarPedidoAulaPrivada, getAlunosEncarregado, getAulas, getDisponibilidades, getEstilos, getPedidosAulaPrivadaEncarregado, getProfessores } from '../services/api';
+import { criarPedidoAulaPrivada, getAlunosEncarregado, getAulas, getDisponibilidades, getEstilos, getPedidosAulaPrivadaEncarregado, getProfessores, getUtilizadores } from '../services/api';
 import { useNotifications } from '../contexts/NotificationContext';
 
 const emptyForm = {
@@ -9,9 +9,13 @@ const emptyForm = {
     teacherId: '',
     duration: '60',
     capacity: '1',
+    additionalParticipantIds: [],
     time: '',
     notes: ''
 };
+
+const PARTICIPANT_MARKER_PATTERN = /\n?\[PARTICIPANTES_ADICIONAIS:[^\]]*\]/;
+const PARTICIPANT_SUMMARY_PATTERN = /^Participantes adicionais:.*(?:\r?\n\r?\n)?/;
 
 const getTodayInputDate = () => {
     const today = new Date();
@@ -68,6 +72,16 @@ const toMinutes = (value) => {
 };
 
 const minutesToTime = (value) => `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
+
+const stripParticipantMarker = (value) => String(value || '')
+    .replace(PARTICIPANT_MARKER_PATTERN, '')
+    .replace(PARTICIPANT_SUMMARY_PATTERN, '')
+    .trim();
+
+const getParticipantSummary = (value) => {
+    const match = String(value || '').match(/Participantes adicionais:[^\n\r]*/);
+    return match ? match[0] : '';
+};
 
 const buildAvailableTimeSlots = (availabilityEntries = [], scheduledLessons = [], durationMinutes = 0) => {
     const requiredDuration = Number(durationMinutes || 0);
@@ -148,6 +162,7 @@ const GuardianLessonRequest = () => {
     const [styles, setStyles] = useState([]);
     const [teachers, setTeachers] = useState([]);
     const [students, setStudents] = useState([]);
+    const [allStudents, setAllStudents] = useState([]);
     const [requests, setRequests] = useState([]);
     const [teacherAvailability, setTeacherAvailability] = useState([]);
     const [scheduledLessons, setScheduledLessons] = useState([]);
@@ -162,17 +177,26 @@ const GuardianLessonRequest = () => {
         setError('');
 
         try {
-            const [stylesData, teachersData, studentsData, requestsData, lessonsData] = await Promise.all([
+            const [stylesData, teachersData, studentsData, requestsData, lessonsData, usersData] = await Promise.all([
                 getEstilos(),
                 getProfessores(),
                 getAlunosEncarregado(),
                 getPedidosAulaPrivadaEncarregado(),
-                getAulas()
+                getAulas(),
+                getUtilizadores()
             ]);
 
             setStyles(stylesData || []);
             setTeachers((teachersData || []).filter((teacher) => teacher.Utilizador?.EstaAtivo !== false));
             setStudents(studentsData || []);
+            setAllStudents((usersData || [])
+                .filter((user) => user.Aluno && user.EstaAtivo !== false)
+                .map((user) => ({
+                    IdAluno: user.IdUtilizador,
+                    Nome: user.NomeCompleto || user.NomeUtilizador || 'Aluno',
+                    Email: user.Email || ''
+                }))
+                .sort((left, right) => left.Nome.localeCompare(right.Nome, 'pt')));
             setRequests(requestsData || []);
             setScheduledLessons((lessonsData || []).filter((lesson) => lesson.EstaAtivo !== false));
 
@@ -266,10 +290,35 @@ const GuardianLessonRequest = () => {
 
     const canChooseTeacher = Boolean(formData.styleId);
     const canChooseTime = Boolean(formData.date && formData.teacherId);
+    const additionalParticipantSlots = Math.max(0, Number(formData.capacity || 1) - 1);
+    const selectedAdditionalParticipantIds = formData.additionalParticipantIds.slice(0, additionalParticipantSlots);
+
+    const updateCapacity = (capacity) => {
+        const nextCapacity = String(capacity || '1');
+        const nextSlots = Math.max(0, Number(nextCapacity) - 1);
+
+        setFormData((current) => ({
+            ...current,
+            capacity: nextCapacity,
+            additionalParticipantIds: current.additionalParticipantIds.slice(0, nextSlots)
+        }));
+    };
+
+    const updateAdditionalParticipant = (index, idAluno) => {
+        setFormData((current) => {
+            const nextIds = current.additionalParticipantIds.slice(0, additionalParticipantSlots);
+            nextIds[index] = idAluno;
+            return {
+                ...current,
+                additionalParticipantIds: nextIds
+            };
+        });
+    };
 
     const resetForm = () => {
         setFormData((current) => ({
             ...emptyForm,
+            additionalParticipantIds: [],
             studentId: students[0]?.IdAluno || current.studentId || ''
         }));
         setError('');
@@ -281,6 +330,22 @@ const GuardianLessonRequest = () => {
 
         if (!formData.studentId || !formData.date || !formData.time || !formData.styleId || !formData.teacherId) {
             setError('Por favor, preencha todos os campos obrigatórios.');
+            setFeedback('');
+            return;
+        }
+
+        const expectedAdditionalParticipants = Math.max(0, Number(formData.capacity || 1) - 1);
+        const additionalParticipantIds = selectedAdditionalParticipantIds.filter(Boolean);
+        const uniqueParticipantIds = new Set([formData.studentId, ...additionalParticipantIds]);
+
+        if (additionalParticipantIds.length !== expectedAdditionalParticipants) {
+            setError('Selecione todos os participantes adicionais para a capacidade escolhida.');
+            setFeedback('');
+            return;
+        }
+
+        if (uniqueParticipantIds.size !== 1 + additionalParticipantIds.length) {
+            setError('Cada participante so pode ser selecionado uma vez.');
             setFeedback('');
             return;
         }
@@ -298,6 +363,7 @@ const GuardianLessonRequest = () => {
                 HoraPretendida: formData.time,
                 DuracaoMinutos: Number(formData.duration),
                 CapacidadePretendida: Number(formData.capacity),
+                IdsParticipantesAdicionais: additionalParticipantIds,
                 Observacoes: formData.notes
             });
 
@@ -448,7 +514,7 @@ const GuardianLessonRequest = () => {
                                     <span>Capacidade</span>
                                     <select
                                         value={formData.capacity}
-                                        onChange={(event) => setFormData((current) => ({ ...current, capacity: event.target.value }))}
+                                        onChange={(event) => updateCapacity(event.target.value)}
                                     >
                                         <option value="1">1 participante</option>
                                         <option value="2">2 participantes</option>
@@ -457,6 +523,43 @@ const GuardianLessonRequest = () => {
                                     </select>
                                 </label>
                             </div>
+
+                            {additionalParticipantSlots > 0 && (
+                                <div className="guardian-request-note">
+                                    <p className="guardian-request-note-title">Participantes adicionais</p>
+                                    <p className="guardian-request-field-hint guardian-request-field-hint--block">
+                                        Escolha alunos ja registados na app para completar a capacidade do Coaching.
+                                    </p>
+                                    <div className="guardian-request-note-grid">
+                                        {Array.from({ length: additionalParticipantSlots }).map((_, index) => {
+                                            const selectedIds = new Set([
+                                                formData.studentId,
+                                                ...selectedAdditionalParticipantIds.filter((id, selectedIndex) => selectedIndex !== index && id)
+                                            ]);
+
+                                            return (
+                                                <label key={`participant-${index}`}>
+                                                    <span>{`Participante ${index + 2} *`}</span>
+                                                    <select
+                                                        value={selectedAdditionalParticipantIds[index] || ''}
+                                                        onChange={(event) => updateAdditionalParticipant(index, event.target.value)}
+                                                    >
+                                                        <option value="">Selecionar aluno</option>
+                                                        {allStudents.map((student) => {
+                                                            const disabled = selectedIds.has(student.IdAluno);
+                                                            return (
+                                                                <option key={student.IdAluno} value={student.IdAluno} disabled={disabled}>
+                                                                    {student.Nome}{student.Email ? ` - ${student.Email}` : ''}
+                                                                </option>
+                                                            );
+                                                        })}
+                                                    </select>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="guardian-request-note">
                                 <p className="guardian-request-note-title">Disponibilidade do Professor</p>
@@ -572,6 +675,8 @@ const GuardianLessonRequest = () => {
                                             <span className={`guardian-request-banner guardian-request-banner--${tone}`}>
                                                 {request.EstadoPedido || 'Pendente'}
                                             </span>
+                                            {getParticipantSummary(request.Observacoes) ? ` | ${getParticipantSummary(request.Observacoes)}` : ''}
+                                            {stripParticipantMarker(request.Observacoes) ? ` | ${stripParticipantMarker(request.Observacoes)}` : ''}
                                             {request.ObservacaoDirecao ? ` | ${request.ObservacaoDirecao}` : ''}
                                         </li>
                                     );

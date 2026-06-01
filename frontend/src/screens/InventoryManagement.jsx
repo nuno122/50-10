@@ -78,7 +78,7 @@ const InventoryManagement = ({ inventoryType = 'marketplace' }) => {
     const [error, setError] = useState('');
 
     const pageCopy = {
-        title: isRentalCatalog ? 'Catálogo de aluguer' : 'Inventário',
+        title: isRentalCatalog ? 'Marketplace' : 'Inventário',
         subtitle: isRentalCatalog
             ? 'Todos veem aqui os artigos disponibilizados para aluguer e o respetivo stock.'
             : 'Consulta e gere apenas os artigos criados pela tua conta.',
@@ -87,11 +87,11 @@ const InventoryManagement = ({ inventoryType = 'marketplace' }) => {
         saveError: isRentalCatalog ? 'Não foi possível guardar o artigo de aluguer.' : 'Não foi possível guardar o artigo.',
         publishTitle: isRentalCatalog ? 'Artigo de aluguer criado' : 'Artigo publicado',
         publishMessage: isRentalCatalog
-            ? `${formData.Nome || 'O artigo'} ficou disponível no catálogo de aluguer.`
+            ? `${formData.Nome || 'O artigo'} ficou disponível no marketplace.`
             : `${formData.Nome || 'O artigo'} foi guardado no teu inventário.`,
         updateTitle: isRentalCatalog ? 'Artigo de aluguer atualizado' : 'Artigo atualizado',
         updateMessage: isRentalCatalog
-            ? `${formData.Nome || 'O artigo'} foi atualizado no catálogo de aluguer.`
+            ? `${formData.Nome || 'O artigo'} foi atualizado no marketplace.`
             : `${formData.Nome || 'O artigo'} foi atualizado no teu inventário.`
     };
 
@@ -476,7 +476,7 @@ const InventoryManagement = ({ inventoryType = 'marketplace' }) => {
 
                                 <small className="inventory-field-hint">
                                     {formData.DisponivelParaAluguer
-                                        ? 'Este artigo ficará visível no catálogo de aluguer.'
+                                        ? 'Este artigo ficará visível no marketplace.'
                                         : 'Este artigo ficará apenas no inventário do respetivo criador.'}
                                 </small>
                             </div>
