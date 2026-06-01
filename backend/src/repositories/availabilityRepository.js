@@ -13,6 +13,51 @@ const normalizeDateKey = (value) => {
     return `${year}-${month}-${day}`;
 };
 
+const normalizeDateOnly = (value) => {
+    const dateKey = normalizeDateKey(value);
+    if (!dateKey) {
+        return null;
+    }
+
+    return new Date(`${dateKey}T00:00:00.000Z`);
+};
+
+const nextDateOnly = (value) => {
+    const date = normalizeDateOnly(value);
+    if (!date) {
+        return null;
+    }
+
+    const next = new Date(date);
+    next.setUTCDate(next.getUTCDate() + 1);
+    return next;
+};
+
+const buildDateRangeFilter = (from, to) => {
+    const start = normalizeDateOnly(from);
+    const end = normalizeDateOnly(to);
+
+    if (!start && !end) {
+        return null;
+    }
+
+    if (start && end && start.getTime() === end.getTime()) {
+        return {
+            equals: start
+        };
+    }
+
+    const filter = {};
+    if (start) {
+        filter.gte = start;
+    }
+    if (end) {
+        filter.lt = nextDateOnly(end);
+    }
+
+    return filter;
+};
+
 const extractTime = (value) => {
     if (value instanceof Date && !Number.isNaN(value.getTime())) {
         const hours = String(value.getUTCHours()).padStart(2, '0');
@@ -102,14 +147,9 @@ const findByProfessor = async (idProfessor, range = {}) => {
     };
 
     if (range.from || range.to) {
-        where.Data = {};
-
-        if (range.from) {
-            where.Data.gte = new Date(range.from);
-        }
-
-        if (range.to) {
-            where.Data.lte = new Date(range.to);
+        const dateFilter = buildDateRangeFilter(range.from, range.to);
+        if (dateFilter) {
+            where.Data = dateFilter;
         }
     }
 
@@ -130,14 +170,9 @@ const findAll = async (range = {}) => {
     }
 
     if (range.from || range.to) {
-        where.Data = {};
-
-        if (range.from) {
-            where.Data.gte = new Date(range.from);
-        }
-
-        if (range.to) {
-            where.Data.lte = new Date(range.to);
+        const dateFilter = buildDateRangeFilter(range.from, range.to);
+        if (dateFilter) {
+            where.Data = dateFilter;
         }
     }
 
@@ -170,15 +205,12 @@ const buildWhereForScope = (idProfessor, scope) => {
 
     if (scope.type === 'dates') {
         where.Data = {
-            in: scope.dates.map((date) => new Date(date))
+            in: scope.dates.map((date) => normalizeDateOnly(date)).filter(Boolean)
         };
         return where;
     }
 
-    where.Data = {
-        gte: new Date(scope.from),
-        lte: new Date(scope.to)
-    };
+    where.Data = buildDateRangeFilter(scope.from, scope.to);
 
     return where;
 };
@@ -247,7 +279,7 @@ const replaceByProfessorInScope = async (idProfessor, { scope, disponibilidades 
             await tx.disponibilidade.createMany({
                 data: finalDisponibilidades.map((item) => ({
                     IdProfessor: idProfessor,
-                    Data: new Date(item.Data),
+                    Data: normalizeDateOnly(item.Data),
                     HoraInicio: new Date(item.HoraInicio),
                     HoraFim: new Date(item.HoraFim)
                 }))

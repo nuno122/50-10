@@ -101,6 +101,27 @@ const userRepository = {
         });
     },
 
+    findActiveIdsByPermissions: async (permissions = []) => {
+        const normalizedPermissions = [...new Set((Array.isArray(permissions) ? permissions : []).filter(Boolean))];
+
+        if (normalizedPermissions.length === 0) {
+            return [];
+        }
+
+        return await prisma.utilizador.findMany({
+            where: {
+                EstaAtivo: true,
+                Permissoes: {
+                    in: normalizedPermissions
+                }
+            },
+            select: {
+                IdUtilizador: true,
+                Permissoes: true
+            }
+        });
+    },
+
     updatePasswordHash: async (idUtilizador, palavraPasseHash) => {
         return await prisma.utilizador.update({
             where: { IdUtilizador: idUtilizador },

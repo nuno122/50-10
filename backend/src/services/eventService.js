@@ -1,5 +1,7 @@
 const PERMISSOES = require('../config/permissions');
 const eventRepo = require('../repositories/eventRepository');
+const userRepository = require('../repositories/userRepository');
+const notificationService = require('./notificationService');
 
 const criarErro = (mensagem, statusCode) => {
     const erro = new Error(mensagem);
@@ -32,6 +34,45 @@ const buildDateOnly = (value) => {
 
     date.setUTCHours(0, 0, 0, 0);
     return date;
+};
+
+const isPublishedNow = (eventData) => {
+    const now = new Date();
+    const publicationStart = new Date(eventData?.DataPublicacaoInicio);
+    const publicationEnd = new Date(eventData?.DataPublicacaoFim);
+
+    if (eventData?.EstadoEvento === false) {
+        return false;
+    }
+
+    return !Number.isNaN(publicationStart.getTime())
+        && !Number.isNaN(publicationEnd.getTime())
+        && publicationStart <= now
+        && publicationEnd >= now;
+};
+
+const notifyPublishedEvent = async (evento, title = 'Novo evento publicado') => {
+    if (!isPublishedNow(evento)) {
+        return;
+    }
+
+    const recipients = await userRepository.findActiveIdsByPermissions([
+        PERMISSOES.PROFESSOR,
+        PERMISSOES.ENCARREGADO
+    ]);
+
+    const recipientIds = recipients.map((item) => item.IdUtilizador).filter(Boolean);
+    if (recipientIds.length === 0) {
+        return;
+    }
+
+    await notificationService.createForUsers(recipientIds, {
+        title,
+        message: `${evento.Titulo || 'Novo evento'} para ${new Intl.DateTimeFormat('pt-PT').format(new Date(evento.DataEvento))}.`,
+        tone: 'info',
+        entityType: 'Evento',
+        entityId: evento.IdEvento
+    });
 };
 
 const validarEvento = (dados) => {
@@ -80,10 +121,13 @@ const criarEvento = async (dados, utilizador) => {
 
     const payload = validarEvento(dados);
 
-    return await eventRepo.create({
+    const evento = await eventRepo.create({
         ...payload,
         IdUtilizadorCriador: utilizador.IdUtilizador
     });
+
+    await notifyPublishedEvent(evento, 'Novo evento publicado');
+    return evento;
 };
 
 const editarEvento = async (idEvento, dados, utilizador) => {
@@ -102,7 +146,9 @@ const editarEvento = async (idEvento, dados, utilizador) => {
 
     const payload = validarEvento(dados);
 
-    return await eventRepo.update(idEvento, payload);
+    const eventoAtualizado = await eventRepo.update(idEvento, payload);
+    await notifyPublishedEvent(eventoAtualizado, 'Evento atualizado');
+    return eventoAtualizado;
 };
 
 const listarEventos = async (utilizador) => {
