@@ -79,6 +79,24 @@ const findByUser = async (idUtilizador, { apenasNaoLidas = false, limit = 100 } 
     });
 };
 
+const findEntityIdsByUserAndType = async (idUtilizador, entidadeTipo) => {
+    return await withPool(async (pool) => {
+        const request = pool.request();
+        request.input('idUtilizador', sql.UniqueIdentifier, idUtilizador);
+        request.input('entidadeTipo', sql.NVarChar(100), entidadeTipo);
+
+        const result = await request.query(`
+            SELECT EntidadeId
+            FROM dbo.Notificacao
+            WHERE IdUtilizador = @idUtilizador
+              AND EntidadeTipo = @entidadeTipo
+              AND EntidadeId IS NOT NULL
+        `);
+
+        return result.recordset.map((row) => String(row.EntidadeId));
+    });
+};
+
 const createMany = async (notifications = []) => {
     const items = (Array.isArray(notifications) ? notifications : [])
         .filter((item) => item?.IdUtilizador && item?.Titulo);
@@ -208,6 +226,7 @@ const removeAllByUser = async (idUtilizador) => {
 module.exports = {
     ensureTable,
     findByUser,
+    findEntityIdsByUserAndType,
     createMany,
     markAsRead,
     markAllAsRead,

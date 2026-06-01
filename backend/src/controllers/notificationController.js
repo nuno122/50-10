@@ -6,7 +6,11 @@ const getNotifications = async (req, res) => {
         const idUtilizador = req.utilizador?.IdUtilizador;
         const apenasNaoLidas = String(req.query?.apenasNaoLidas || '').toLowerCase() === 'true';
         const limit = req.query?.limit;
-        const notifications = await notificationService.listForUser(idUtilizador, { apenasNaoLidas, limit });
+        const notifications = await notificationService.listForUser(
+            idUtilizador,
+            { apenasNaoLidas, limit },
+            req.utilizador
+        );
         res.json(notifications);
     } catch (erro) {
         handleControllerError(res, erro, 'Erro ao carregar notificacoes.', 'notificationController.getNotifications');

@@ -16,6 +16,16 @@ import ScheduleManagement from './ScheduleManagement';
 import TeacherSchedule from './TeacherSchedule';
 import UserManagement from './UserManagement';
 
+const SIDEBAR_STORAGE_KEY = 'entartes-portal-sidebar-width';
+const SIDEBAR_DEFAULT_WIDTH = 280;
+const SIDEBAR_MIN_WIDTH = 220;
+const SIDEBAR_MAX_WIDTH = 380;
+
+const clampSidebarWidth = (value) => Math.min(
+    SIDEBAR_MAX_WIDTH,
+    Math.max(SIDEBAR_MIN_WIDTH, Number(value) || SIDEBAR_DEFAULT_WIDTH)
+);
+
 const formatNotificationTime = (value) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '';
@@ -55,6 +65,10 @@ const Portal = () => {
     const userIsEncarregado = isEncarregado(user);
     const [activeView, setActiveView] = useState('dashboard');
     const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+    const [sidebarWidth, setSidebarWidth] = useState(() => {
+        if (typeof window === 'undefined') return SIDEBAR_DEFAULT_WIDTH;
+        return clampSidebarWidth(localStorage.getItem(SIDEBAR_STORAGE_KEY));
+    });
     const notificationButtonRef = useRef(null);
     const notificationPanelRef = useRef(null);
 
@@ -142,6 +156,33 @@ const Portal = () => {
         setIsNotificationPanelOpen(false);
     };
 
+    const handleSidebarResizeStart = (event) => {
+        if (event.button !== undefined && event.button !== 0) return;
+
+        event.preventDefault();
+
+        const startX = event.clientX;
+        const startWidth = sidebarWidth;
+        let nextWidth = sidebarWidth;
+
+        document.body.classList.add('portal-sidebar-is-resizing');
+
+        const handlePointerMove = (moveEvent) => {
+            nextWidth = clampSidebarWidth(startWidth + moveEvent.clientX - startX);
+            setSidebarWidth(nextWidth);
+        };
+
+        const handlePointerUp = () => {
+            document.body.classList.remove('portal-sidebar-is-resizing');
+            localStorage.setItem(SIDEBAR_STORAGE_KEY, String(nextWidth));
+            window.removeEventListener('pointermove', handlePointerMove);
+            window.removeEventListener('pointerup', handlePointerUp);
+        };
+
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
+    };
+
     const renderContent = () => {
         if (activeView === 'rental-catalog' && userIsDirecao) {
             return <InventoryManagement inventoryType="rental" />;
@@ -203,7 +244,7 @@ const Portal = () => {
     };
 
     return (
-        <main className="portal-shell">
+        <main className="portal-shell" style={{ '--portal-sidebar-width': `${sidebarWidth}px` }}>
             <aside className="portal-sidebar">
                 <div className="portal-sidebar-top">
                     <div>
@@ -255,6 +296,14 @@ const Portal = () => {
                     Terminar sessão
                 </button>
             </aside>
+
+            <button
+                type="button"
+                className="portal-sidebar-resizer"
+                aria-label="Ajustar largura do menu"
+                title="Arrastar para ajustar a largura do menu"
+                onPointerDown={handleSidebarResizeStart}
+            />
 
             <section className="portal-content">
                 {renderContent()}

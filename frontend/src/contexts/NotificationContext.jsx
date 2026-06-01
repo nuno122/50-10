@@ -1,4 +1,4 @@
-﻿import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from './AuthContext';
 import {
     getAulas,
@@ -28,7 +28,9 @@ const SUPPRESSED_NOTIFICATION_TITLES = new Set([
     'Artigo publicado',
     'Artigo atualizado',
     'Artigo de aluguer criado',
-    'Artigo de aluguer atualizado'
+    'Artigo de aluguer atualizado',
+    'Novo evento publicado',
+    'Novos eventos publicados'
 ]);
 
 const getUserId = (user) => user?.IdUtilizador || user?.Id || null;
@@ -709,11 +711,11 @@ export const NotificationProvider = ({ children }) => {
     }, []);
 
     const markAsRead = useCallback(async (id) => {
-        let persisted = false;
+        const notification = notificationFeed.find((item) => item.id === id);
+        const persisted = Boolean(notification?.persisted);
 
         setNotificationFeed((current) => current.map((item) => {
             if (item.id !== id) return item;
-            persisted = Boolean(item.persisted);
             return { ...item, read: true };
         }));
 
@@ -724,7 +726,7 @@ export const NotificationProvider = ({ children }) => {
                 // Mantemos a UI otimista; o próximo sync do servidor repõe o estado real se falhar.
             }
         }
-    }, []);
+    }, [notificationFeed]);
 
     const markAllAsRead = useCallback(async () => {
         setNotificationFeed((current) => current.map((item) => ({ ...item, read: true })));
@@ -737,14 +739,11 @@ export const NotificationProvider = ({ children }) => {
     }, []);
 
     const removeNotification = useCallback(async (id) => {
-        let persisted = false;
+        const notification = notificationFeed.find((item) => item.id === id);
+        const persisted = Boolean(notification?.persisted);
 
         setNotificationFeed((current) => current.filter((item) => {
-            if (item.id === id) {
-                persisted = Boolean(item.persisted);
-                return false;
-            }
-            return true;
+            return item.id !== id;
         }));
         setPopupNotifications((current) => current.filter((item) => item.id !== id));
 
@@ -755,7 +754,7 @@ export const NotificationProvider = ({ children }) => {
                 // O próximo sync do servidor volta a inserir se a remoção falhar.
             }
         }
-    }, []);
+    }, [notificationFeed]);
 
     const clearNotifications = useCallback(async () => {
         const previousFeed = notificationFeed;

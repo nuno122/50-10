@@ -1,5 +1,7 @@
 const PERMISSOES = require('../config/permissions');
 const eventRepo = require('../repositories/eventRepository');
+const notificationService = require('./notificationService');
+const userRepository = require('../repositories/userRepository');
 
 const criarErro = (mensagem, statusCode) => {
     const erro = new Error(mensagem);
@@ -80,10 +82,31 @@ const criarEvento = async (dados, utilizador) => {
 
     const payload = validarEvento(dados);
 
-    return await eventRepo.create({
+    const evento = await eventRepo.create({
         ...payload,
         IdUtilizadorCriador: utilizador.IdUtilizador
     });
+
+    // Notificar todos os professores e encarregados (excluindo a Direção) apenas quando o evento ja esta publicado.
+    try {
+        const agora = new Date();
+
+        if (payload.DataPublicacaoInicio <= agora && payload.DataPublicacaoFim >= agora) {
+            const destinatarios = await userRepository.findIdsByPermissions([
+                PERMISSOES.PROFESSOR,
+                PERMISSOES.ENCARREGADO
+            ]);
+
+            if (destinatarios.length > 0) {
+                const notificacoesCriadas = await notificationService.createEventPublishedForUsers(destinatarios, evento);
+                console.log(`[EventService] Notificacoes criadas: ${notificacoesCriadas.length}`);
+            }
+        }
+    } catch (erroNotificacao) {
+        console.error('Erro ao enviar notificacoes de evento:', erroNotificacao);
+    }
+
+    return evento;
 };
 
 const editarEvento = async (idEvento, dados, utilizador) => {
