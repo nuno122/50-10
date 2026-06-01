@@ -82,6 +82,21 @@ const userRepository = {
         });
     },
 
+    findIdsByPermissions: async (permissoes = []) => {
+        const lista = Array.isArray(permissoes) ? permissoes : [permissoes];
+        if (lista.length === 0) return [];
+
+        const utilizadores = await prisma.utilizador.findMany({
+            where: {
+                Permissoes: { in: lista },
+                EstaAtivo: true
+            },
+            select: { IdUtilizador: true }
+        });
+
+        return utilizadores.map((u) => u.IdUtilizador);
+    },
+
     findGuardianIdsByStudentIds: async (studentIds = []) => {
         const ids = [...new Set((Array.isArray(studentIds) ? studentIds : []).filter(Boolean))];
         if (ids.length === 0) {

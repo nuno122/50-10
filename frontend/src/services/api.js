@@ -324,7 +324,9 @@ export const rejeitarCancelamentoMarcacao = async (idMarcacao, ObservacaoDirecao
         body: JSON.stringify({ ObservacaoDirecao })
     });
 
-export const getAlugueres = async () => request('/alugueres');
+export const getAlugueres = async ({ asOwner = false } = {}) => {
+    return await request(`/alugueres${asOwner ? '?asOwner=true' : ''}`);
+};
 
 export const criarAluguer = async (dados) =>
     request('/alugueres', {

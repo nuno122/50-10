@@ -3,6 +3,7 @@ const classRepo = require('../repositories/classRepository');
 const classService = require('./classService');
 const privateLessonRequestRepo = require('../repositories/privateLessonRequestRepository');
 const notificationService = require('./notificationService');
+const userRepository = require('../repositories/userRepository');
 
 const ESTADOS_PEDIDO = {
     PENDENTE_PROFESSOR: 'PendenteProfessor',
@@ -17,6 +18,8 @@ const criarErro = (mensagem, statusCode) => {
     erro.statusCode = statusCode;
     return erro;
 };
+
+const PARTICIPANT_MARKER_PATTERN = /\n?\[PARTICIPANTES_ADICIONAIS:([^\]]*)\]/;
 
 const extrairHorasEMinutos = (value) => {
     const text = String(value || '');
@@ -106,6 +109,38 @@ const intervaloCabeNaDisponibilidade = (horaInicio, horaFim, disponibilidades = 
 
 const normalizeText = (value) => String(value || '').trim().toLowerCase();
 
+const normalizeParticipantIds = (value) => (
+    (Array.isArray(value) ? value : [])
+        .map((entry) => String(entry || '').trim())
+        .filter(Boolean)
+);
+
+const stripParticipantMarker = (value) => String(value || '').replace(PARTICIPANT_MARKER_PATTERN, '').trim();
+
+const extractAdditionalParticipantIds = (observacoes) => {
+    const match = String(observacoes || '').match(PARTICIPANT_MARKER_PATTERN);
+    if (!match) {
+        return [];
+    }
+
+    return [...new Set(normalizeParticipantIds(match[1].split(',')))];
+};
+
+const buildObservationsWithParticipants = (observacoes, participantes = []) => {
+    const cleanNotes = stripParticipantMarker(observacoes);
+    const participantIds = participantes.map((participante) => participante.IdAluno);
+
+    if (participantIds.length === 0) {
+        return cleanNotes || null;
+    }
+
+    const participantNames = participantes.map((participante) => participante.Nome).join(', ');
+    const participantSummary = `Participantes adicionais: ${participantNames}.`;
+    const marker = `[PARTICIPANTES_ADICIONAIS:${participantIds.join(',')}]`;
+
+    return [participantSummary, cleanNotes, marker].filter(Boolean).join('\n\n');
+};
+
 const relationMatchesStyle = (relation, estilo) => (
     relation.IdEstiloDanca === estilo?.IdEstiloDanca ||
     (
@@ -129,6 +164,43 @@ const garantirAlunoDoEncarregado = async (idEncarregado, idAluno) => {
     }
 
     return aluno;
+};
+
+const garantirParticipantesAdicionais = async (idsParticipantes, idAlunoPrincipal, capacidade) => {
+    const ids = normalizeParticipantIds(idsParticipantes);
+    const expectedAdditionalParticipants = capacidade - 1;
+
+    if (ids.length !== expectedAdditionalParticipants) {
+        throw criarErro('Selecione todos os participantes adicionais para a capacidade escolhida.', 400);
+    }
+
+    if (ids.includes(idAlunoPrincipal)) {
+        throw criarErro('O educando principal nao pode ser repetido como participante adicional.', 400);
+    }
+
+    const uniqueIds = new Set(ids);
+    if (uniqueIds.size !== ids.length) {
+        throw criarErro('Cada participante adicional so pode ser selecionado uma vez.', 400);
+    }
+
+    if (ids.length === 0) {
+        return [];
+    }
+
+    const utilizadores = await userRepository.findAll();
+    const alunosAtivos = new Map((utilizadores || [])
+        .filter((utilizador) => utilizador.Aluno && utilizador.EstaAtivo !== false)
+        .map((utilizador) => [utilizador.IdUtilizador, {
+            IdAluno: utilizador.IdUtilizador,
+            Nome: utilizador.NomeCompleto || utilizador.NomeUtilizador || 'Aluno'
+        }]));
+
+    const participantes = ids.map((idAluno) => alunosAtivos.get(idAluno));
+    if (participantes.some((participante) => !participante)) {
+        throw criarErro('Um ou mais participantes adicionais nao existem ou estao inativos.', 400);
+    }
+
+    return participantes;
 };
 
 const validarCapacidade = (capacidade) => {
@@ -220,6 +292,7 @@ const criarPedido = async (dados, idEncarregado) => {
         HoraPretendida,
         DuracaoMinutos,
         CapacidadePretendida,
+        IdsParticipantesAdicionais,
         Observacoes
     } = dados || {};
 
@@ -238,6 +311,11 @@ const criarPedido = async (dados, idEncarregado) => {
 
     const duracao = validarDuracao(DuracaoMinutos);
     const capacidade = validarCapacidade(CapacidadePretendida);
+    const participantesAdicionais = await garantirParticipantesAdicionais(
+        IdsParticipantesAdicionais,
+        IdAluno,
+        capacidade
+    );
 
     const dataHoraPretendida = construirDataHora(DataPretendida, HoraPretendida);
     if (!dataHoraPretendida) {
@@ -263,9 +341,33 @@ const criarPedido = async (dados, idEncarregado) => {
         HoraPretendida: dataHoraPretendida,
         DuracaoMinutos: duracao,
         CapacidadePretendida: capacidade,
-        Observacoes: Observacoes ? String(Observacoes).trim() : null,
         EstadoPedido: ESTADOS_PEDIDO.PENDENTE_PROFESSOR
     });
+
+    const when = new Intl.DateTimeFormat('pt-PT').format(construirData(DataPretendida));
+    const time = String(dataHoraPretendida.toISOString().slice(11, 16));
+    const whenLabel = `${when} às ${time}`;
+
+    await notificationService.createForUser(IdProfessorSolicitado, {
+        title: 'Novo pedido de Coaching',
+        message: `Novo pedido de Coaching para ${whenLabel}.`,
+        tone: 'warning',
+        entityType: 'PedidoAula',
+        entityId: novoPedido.IdPedidoAulaPrivada
+    });
+
+    const diretores = await userRepository.findIdsByPermissions([PERMISSOES.DIRECAO]);
+    if (diretores.length > 0) {
+        await notificationService.createForUsers(diretores, {
+            title: 'Novo pedido de Coaching',
+            message: `Novo pedido de Coaching criado, aguarda validação do professor.`,
+            tone: 'warning',
+            entityType: 'PedidoAula',
+            entityId: novoPedido.IdPedidoAulaPrivada
+        });
+    }
+
+    return novoPedido;
 };
 
 const listarPedidos = async () => {
@@ -390,6 +492,7 @@ const aprovarPedido = async (idPedidoAulaPrivada, dados, idDiretor) => {
     const horaPretendida = pedido.HoraPretendida;
     const duracao = pedido.DuracaoMinutos;
     const capacidade = dados?.CapacidadeMaxima ? validarCapacidade(dados.CapacidadeMaxima) : pedido.CapacidadePretendida;
+    const participantesDoPedido = [pedido.IdAluno, ...extractAdditionalParticipantIds(pedido.Observacoes)];
 
     if (!IdProfessor || !IdEstudio) {
         throw criarErro('O pedido precisa de professor confirmado e IdEstudio para ser aprovado.', 400);
@@ -406,6 +509,10 @@ const aprovarPedido = async (idPedidoAulaPrivada, dados, idDiretor) => {
 
     if (inicio <= new Date()) {
         throw criarErro('A aula aprovada tem de ficar num horário futuro.', 400);
+    }
+
+    if (capacidade < participantesDoPedido.length) {
+        throw criarErro('A capacidade aprovada nao pode ser inferior ao numero de participantes selecionados.', 400);
     }
 
     const fim = construirFim(inicio, duracao);
@@ -426,10 +533,14 @@ const aprovarPedido = async (idPedidoAulaPrivada, dados, idDiretor) => {
 
     const resultadoAula = await classService.criarAula(payloadAula);
 
-    let resultadoMarcacao;
+    let resultadosMarcacao;
 
     try {
-        resultadoMarcacao = await bookingService.FazerMarcacao(resultadoAula.aula.IdAula, pedido.IdAluno);
+        resultadosMarcacao = [];
+        for (const idAluno of participantesDoPedido) {
+            const resultado = await bookingService.FazerMarcacao(resultadoAula.aula.IdAula, idAluno);
+            resultadosMarcacao.push(resultado.marcacao);
+        }
     } catch (erro) {
         await classRepo.cancelarAula(resultadoAula.aula.IdAula);
         throw erro;
@@ -455,7 +566,8 @@ const aprovarPedido = async (idPedidoAulaPrivada, dados, idDiretor) => {
         mensagem: 'Pedido aprovado com sucesso e convertido em sessao de Coaching.',
         pedido: pedidoAtualizado,
         aula: resultadoAula.aula,
-        marcacao: resultadoMarcacao.marcacao
+        marcacao: resultadosMarcacao[0],
+        marcacoes: resultadosMarcacao
     };
 };
 

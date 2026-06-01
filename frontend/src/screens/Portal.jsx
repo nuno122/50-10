@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { getRoleLabel, isDirecao, isEncarregado, isProfessor } from '../utils/permissions';
@@ -7,7 +7,6 @@ import EventManagement from './EventManagement';
 import FinanceManagement from './FinanceManagement';
 import GuardianLessons from './GuardianLessons';
 import GuardianLessonRequest from './GuardianLessonRequest';
-import InventoryManagement from './InventoryManagement';
 import LessonValidation from './LessonValidation';
 import RoleInventory from './RoleInventory';
 import RoleRental from './RoleRental';
@@ -15,6 +14,16 @@ import RequestValidation from './RequestValidation';
 import ScheduleManagement from './ScheduleManagement';
 import TeacherSchedule from './TeacherSchedule';
 import UserManagement from './UserManagement';
+
+const SIDEBAR_STORAGE_KEY = 'entartes-portal-sidebar-width';
+const SIDEBAR_DEFAULT_WIDTH = 280;
+const SIDEBAR_MIN_WIDTH = 220;
+const SIDEBAR_MAX_WIDTH = 380;
+
+const clampSidebarWidth = (value) => Math.min(
+    SIDEBAR_MAX_WIDTH,
+    Math.max(SIDEBAR_MIN_WIDTH, Number(value) || SIDEBAR_DEFAULT_WIDTH)
+);
 
 const formatNotificationTime = (value) => {
     const date = new Date(value);
@@ -55,6 +64,10 @@ const Portal = () => {
     const userIsEncarregado = isEncarregado(user);
     const [activeView, setActiveView] = useState('dashboard');
     const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+    const [sidebarWidth, setSidebarWidth] = useState(() => {
+        if (typeof window === 'undefined') return SIDEBAR_DEFAULT_WIDTH;
+        return clampSidebarWidth(localStorage.getItem(SIDEBAR_STORAGE_KEY));
+    });
     const notificationButtonRef = useRef(null);
     const notificationPanelRef = useRef(null);
 
@@ -65,11 +78,9 @@ const Portal = () => {
                 { id: 'events', label: 'Eventos' },
                 { id: 'schedule', label: 'Horários e Aulas' },
                 { id: 'users', label: 'Utilizadores' },
-                { id: 'rental-catalog', label: 'Catálogo de Aluguer' },
-                { id: 'rental-requests', label: 'Alugueres' },
+                { id: 'rentals', label: 'Marketplace' },
                 { id: 'lesson-validations', label: 'Validações' },
-                { id: 'finance', label: 'Financeiro' },
-                { id: 'inventory', label: 'Inventário' }
+                { id: 'finance', label: 'Financeiro' }
             ]
             : userIsProfessor
                 ? [
@@ -77,8 +88,7 @@ const Portal = () => {
                     { id: 'events', label: 'Eventos' },
                     { id: 'teacher-schedule', label: 'Agenda e Disponibilidade' },
                     { id: 'teacher-private-requests', label: 'Pedidos de Coaching' },
-                    { id: 'inventory', label: 'Inventário' },
-                    { id: 'rentals', label: 'Alugueres' }
+                    { id: 'rentals', label: 'Marketplace' }
                 ]
                 : userIsEncarregado
                     ? [
@@ -87,13 +97,10 @@ const Portal = () => {
                         { id: 'lesson-request', label: 'Pedido de Coaching' },
                         { id: 'guardian-lessons', label: 'Aulas e cancelamentos' },
                         { id: 'finance', label: 'Pagamentos' },
-                        { id: 'inventory', label: 'Inventário' },
-                        { id: 'rentals', label: 'Alugueres' }
+                        { id: 'rentals', label: 'Marketplace' }
                     ]
                     : [
-                        { id: 'dashboard', label: 'Resumo' },
-                        { id: 'inventory', label: 'Inventário' },
-                        { id: 'rentals', label: 'Alugueres' }
+                        { id: 'dashboard', label: 'Resumo' }
                     ]
     ), [userIsDirecao, userIsEncarregado, userIsProfessor]);
 
@@ -142,25 +149,40 @@ const Portal = () => {
         setIsNotificationPanelOpen(false);
     };
 
+    const handleSidebarResizeStart = (event) => {
+        if (event.button !== undefined && event.button !== 0) return;
+
+        event.preventDefault();
+
+        const startX = event.clientX;
+        const startWidth = sidebarWidth;
+        let nextWidth = sidebarWidth;
+
+        document.body.classList.add('portal-sidebar-is-resizing');
+
+        const handlePointerMove = (moveEvent) => {
+            nextWidth = clampSidebarWidth(startWidth + moveEvent.clientX - startX);
+            setSidebarWidth(nextWidth);
+        };
+
+        const handlePointerUp = () => {
+            document.body.classList.remove('portal-sidebar-is-resizing');
+            localStorage.setItem(SIDEBAR_STORAGE_KEY, String(nextWidth));
+            window.removeEventListener('pointermove', handlePointerMove);
+            window.removeEventListener('pointerup', handlePointerUp);
+        };
+
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
+    };
+
     const renderContent = () => {
-        if (activeView === 'rental-catalog' && userIsDirecao) {
-            return <InventoryManagement inventoryType="rental" />;
-        }
-
-        if (activeView === 'rental-requests' && userIsDirecao) {
-            return <RequestValidation embedded />;
-        }
-
         if (activeView === 'lesson-validations' && userIsDirecao) {
             return <LessonValidation embedded />;
         }
 
         if (activeView === 'schedule' && userIsDirecao) {
             return <ScheduleManagement />;
-        }
-
-        if (activeView === 'inventory' && userIsDirecao) {
-            return <InventoryManagement inventoryType="marketplace" />;
         }
 
         if (activeView === 'users' && userIsDirecao) {
@@ -183,11 +205,11 @@ const Portal = () => {
             return <GuardianLessons />;
         }
 
-        if (activeView === 'inventory' && !userIsDirecao) {
+        if (activeView === 'inventory') {
             return <RoleInventory />;
         }
 
-        if (activeView === 'rentals' && !userIsDirecao) {
+        if (activeView === 'rentals') {
             return <RoleRental />;
         }
 
@@ -203,7 +225,7 @@ const Portal = () => {
     };
 
     return (
-        <main className="portal-shell">
+        <main className="portal-shell" style={{ '--portal-sidebar-width': `${sidebarWidth}px` }}>
             <aside className="portal-sidebar">
                 <div className="portal-sidebar-top">
                     <div>
@@ -255,6 +277,14 @@ const Portal = () => {
                     Terminar sessão
                 </button>
             </aside>
+
+            <button
+                type="button"
+                className="portal-sidebar-resizer"
+                aria-label="Ajustar largura do menu"
+                title="Arrastar para ajustar a largura do menu"
+                onPointerDown={handleSidebarResizeStart}
+            />
 
             <section className="portal-content">
                 {renderContent()}
@@ -330,7 +360,3 @@ const Portal = () => {
 };
 
 export default Portal;
-
-
-
-

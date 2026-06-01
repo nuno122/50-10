@@ -45,6 +45,18 @@ const toMinutes = (value) => {
 const overlaps = (startA, endA, startB, endB) => startA < endB && endA > startB;
 
 const normalizeText = (value) => String(value || '').trim().toLowerCase();
+const PARTICIPANT_MARKER_PATTERN = /\n?\[PARTICIPANTES_ADICIONAIS:[^\]]*\]/;
+const PARTICIPANT_SUMMARY_PATTERN = /^Participantes adicionais:.*(?:\r?\n\r?\n)?/;
+
+const stripParticipantMarker = (value) => String(value || '')
+    .replace(PARTICIPANT_MARKER_PATTERN, '')
+    .replace(PARTICIPANT_SUMMARY_PATTERN, '')
+    .trim();
+
+const getParticipantSummary = (value) => {
+    const match = String(value || '').match(/Participantes adicionais:[^\n\r]*/);
+    return match ? match[0] : '';
+};
 
 const relationMatchesStyle = (relation, request) => (
     relation.IdEstiloDanca === request.IdEstiloDanca ||
@@ -203,6 +215,8 @@ const PrivateLessonValidationPanel = ({
                             ...(forms[request.IdPedidoAulaPrivada] || {})
                         };
                         const confirmedTeacher = (users || []).find((user) => user.IdUtilizador === request.IdProfessorConfirmado);
+                        const participantSummary = getParticipantSummary(request.Observacoes);
+                        const guardianNotes = stripParticipantMarker(request.Observacoes);
                         const studioState = getStudioOptions(studios, request, form, aulas);
                         const hasCompatibleSelection = studioState.compatibleOptions.some((studio) => studio.IdEstudio === form.IdEstudio);
                         const hasAvailableSelection = studioState.allAvailableOptions.some((studio) => studio.IdEstudio === form.IdEstudio);
@@ -258,11 +272,20 @@ const PrivateLessonValidationPanel = ({
                                         </div>
                                     </div>
 
-                                    {request.Observacoes && (
+                                    {participantSummary && (
+                                        <div className="rental-extension">
+                                            <div>
+                                                <p className="rental-extension-title">Participantes adicionais</p>
+                                                <p>{participantSummary.replace('Participantes adicionais:', '').trim()}</p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {guardianNotes && (
                                         <div className="rental-extension">
                                             <div>
                                                 <p className="rental-extension-title">Observações do encarregado</p>
-                                                <p>{request.Observacoes}</p>
+                                                <p>{guardianNotes}</p>
                                             </div>
                                         </div>
                                     )}

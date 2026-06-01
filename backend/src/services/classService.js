@@ -280,6 +280,30 @@ const criarAula = async (dados) => {
                 entityId: novaAula.IdAula
             }
         );
+    } else if (tipoAula === 'Regular') {
+        const userRepository = require('../repositories/userRepository');
+        const destinatarios = await userRepository.findIdsByPermissions([
+            PERMISSOES.PROFESSOR,
+            PERMISSOES.ENCARREGADO
+        ]);
+
+        if (destinatarios.length > 0) {
+            const when = new Intl.DateTimeFormat('pt-PT').format(new Date(novaAula.Data));
+            const time = String(novaAula.HoraInicio || '').match(/(\d{2}):(\d{2})/);
+            const whenLabel = `${when}${time ? ` às ${time[1]}:${time[2]}` : ''}`;
+            const styleLabel = estilo?.Nome || 'Nova Aula';
+
+            await notificationService.createForUsers(
+                destinatarios,
+                {
+                    title: 'Nova aula disponível',
+                    message: `${styleLabel} em ${whenLabel}.`,
+                    tone: 'info',
+                    entityType: 'Aula',
+                    entityId: novaAula.IdAula
+                }
+            );
+        }
     }
 
     return {
@@ -438,6 +462,16 @@ const validarAula = async (idAula, opcoes = {}) => {
     const mensagem = concluirPorExcecao && !aula.ConfirmacaoProfessor
         ? `Aula concluida por excecao pela Direcao e ${resumoPagamentos}.`
         : `Aula validada e ${resumoPagamentos}.`;
+
+    if (aula.IdProfessor) {
+        await notificationService.createForUser(aula.IdProfessor, {
+            title: 'Aula validada pela Direção',
+            message: `${aula.EstiloDanca?.Nome || 'A aula'} foi validada pela Direção.`,
+            tone: 'success',
+            entityType: 'Aula',
+            entityId: idAula
+        });
+    }
 
     return {
         mensagem,

@@ -2,12 +2,16 @@
 const classRepo = require('../../src/repositories/classRepository');
 const classService = require('../../src/services/classService');
 const privateLessonRequestRepo = require('../../src/repositories/privateLessonRequestRepository');
+const notificationService = require('../../src/services/notificationService');
+const userRepository = require('../../src/repositories/userRepository');
 const privateLessonRequestService = require('../../src/services/privateLessonRequestService');
 
 jest.mock('../../src/services/bookingService');
 jest.mock('../../src/repositories/classRepository');
 jest.mock('../../src/services/classService');
 jest.mock('../../src/repositories/privateLessonRequestRepository');
+jest.mock('../../src/services/notificationService');
+jest.mock('../../src/repositories/userRepository');
 
 describe('Private Lesson Request Service', () => {
     beforeEach(() => {
@@ -28,6 +32,13 @@ describe('Private Lesson Request Service', () => {
             }
         ]);
         privateLessonRequestRepo.findProfessorPendingApprovalByDate.mockResolvedValue([]);
+        userRepository.findAll.mockResolvedValue([
+            { IdUtilizador: 'aluno-1', NomeCompleto: 'Educando Teste', EstaAtivo: true, Aluno: {} },
+            { IdUtilizador: 'aluno-2', NomeCompleto: 'Aluno Dois', EstaAtivo: true, Aluno: {} },
+            { IdUtilizador: 'aluno-3', NomeCompleto: 'Aluno Tres', EstaAtivo: true, Aluno: {} }
+        ]);
+        notificationService.createForUser.mockResolvedValue({});
+        notificationService.createForUsers.mockResolvedValue({});
     });
 
     describe('criarPedido', () => {
@@ -47,6 +58,40 @@ describe('Private Lesson Request Service', () => {
 
             expect(resultado.IdPedidoAulaPrivada).toBe('pedido-1');
             expect(privateLessonRequestRepo.create).toHaveBeenCalled();
+        });
+
+        it('deve guardar participantes adicionais quando a capacidade for superior a 1', async () => {
+            privateLessonRequestRepo.create.mockResolvedValue({ IdPedidoAulaPrivada: 'pedido-2' });
+
+            await privateLessonRequestService.criarPedido({
+                IdAluno: 'aluno-1',
+                IdEstiloDanca: 'estilo-1',
+                IdProfessorSolicitado: 'prof-1',
+                DataPretendida: '2028-01-15',
+                HoraPretendida: '10:30',
+                DuracaoMinutos: 60,
+                CapacidadePretendida: 3,
+                IdsParticipantesAdicionais: ['aluno-2', 'aluno-3'],
+                Observacoes: 'Preferencia por horario da manha'
+            }, 'enc-1');
+
+            expect(privateLessonRequestRepo.create).toHaveBeenCalledWith(expect.objectContaining({
+                CapacidadePretendida: 3,
+                Observacoes: expect.stringContaining('[PARTICIPANTES_ADICIONAIS:aluno-2,aluno-3]')
+            }));
+        });
+
+        it('deve falhar se repetir um participante adicional', async () => {
+            await expect(privateLessonRequestService.criarPedido({
+                IdAluno: 'aluno-1',
+                IdEstiloDanca: 'estilo-1',
+                IdProfessorSolicitado: 'prof-1',
+                DataPretendida: '2028-01-15',
+                HoraPretendida: '10:30',
+                DuracaoMinutos: 60,
+                CapacidadePretendida: 3,
+                IdsParticipantesAdicionais: ['aluno-2', 'aluno-2']
+            }, 'enc-1')).rejects.toThrow('Cada participante adicional so pode ser selecionado uma vez.');
         });
 
         it('deve falhar se o aluno nao estiver associado ao encarregado', async () => {
@@ -93,14 +138,16 @@ describe('Private Lesson Request Service', () => {
                 DataPretendida: new Date('2028-01-15T00:00:00.000Z'),
                 HoraPretendida: new Date('1970-01-01T10:30:00.000Z'),
                 DuracaoMinutos: 60,
-                CapacidadePretendida: 1
+                CapacidadePretendida: 3,
+                Observacoes: 'Participantes adicionais: Aluno Dois, Aluno Tres.\n\n[PARTICIPANTES_ADICIONAIS:aluno-2,aluno-3]'
             });
             classService.criarAula.mockResolvedValue({
                 aula: { IdAula: 'aula-1' }
             });
-            bookingService.FazerMarcacao.mockResolvedValue({
-                marcacao: { IdMarcacao: 'marc-1' }
-            });
+            bookingService.FazerMarcacao
+                .mockResolvedValueOnce({ marcacao: { IdMarcacao: 'marc-1', IdAluno: 'aluno-1' } })
+                .mockResolvedValueOnce({ marcacao: { IdMarcacao: 'marc-2', IdAluno: 'aluno-2' } })
+                .mockResolvedValueOnce({ marcacao: { IdMarcacao: 'marc-3', IdAluno: 'aluno-3' } });
             privateLessonRequestRepo.update.mockResolvedValue({
                 IdPedidoAulaPrivada: 'pedido-1',
                 EstadoPedido: 'Aprovado'
@@ -120,6 +167,9 @@ describe('Private Lesson Request Service', () => {
                 IdEstiloDanca: 'estilo-1'
             }));
             expect(bookingService.FazerMarcacao).toHaveBeenCalledWith('aula-1', 'aluno-1');
+            expect(bookingService.FazerMarcacao).toHaveBeenCalledWith('aula-1', 'aluno-2');
+            expect(bookingService.FazerMarcacao).toHaveBeenCalledWith('aula-1', 'aluno-3');
+            expect(resultado.marcacoes).toHaveLength(3);
             expect(resultado.pedido.EstadoPedido).toBe('Aprovado');
         });
 

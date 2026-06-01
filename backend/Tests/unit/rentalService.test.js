@@ -5,6 +5,9 @@ const PERMISSOES = require('../../src/config/permissions');
 jest.mock('../../src/repositories/rentalRepository');
 
 describe('Rental Service', () => {
+    const direcaoUser = { IdUtilizador: 'dir-1', Permissoes: PERMISSOES.DIRECAO };
+    const regularUser = { IdUtilizador: 'user-1', Permissoes: PERMISSOES.ENCARREGADO };
+
     beforeEach(() => {
         jest.clearAllMocks();
     });
@@ -20,7 +23,7 @@ describe('Rental Service', () => {
             };
 
             // Act & Assert
-            await expect(rentalService.criarAluguer(dadosAluguerInvalido))
+            await expect(rentalService.criarAluguer(dadosAluguerInvalido, direcaoUser))
                 .rejects
                 .toThrow('A DataEntrega nao pode ser anterior a DataLevantamento.');
 
@@ -44,7 +47,7 @@ describe('Rental Service', () => {
             });
 
             // Act & Assert
-            await expect(rentalService.criarAluguer(dadosAluguerSemStock))
+            await expect(rentalService.criarAluguer(dadosAluguerSemStock, direcaoUser))
                 .rejects
                 .toThrow('Stock insuficiente para o artigo 101.');
 
@@ -71,7 +74,7 @@ describe('Rental Service', () => {
             });
 
             // Act
-            const resultado = await rentalService.criarAluguer(dadosAluguerValidos);
+            const resultado = await rentalService.criarAluguer(dadosAluguerValidos, direcaoUser);
 
             // Assert
             expect(resultado).toBeDefined();
@@ -95,7 +98,7 @@ describe('Rental Service', () => {
             rentalRepository.criarComTransacao.mockRejectedValue(new Error('Prisma: Transaction Deadlock'));
 
             // Act & Assert
-            await expect(rentalService.criarAluguer(dadosAluguerValidos))
+            await expect(rentalService.criarAluguer(dadosAluguerValidos, direcaoUser))
                 .rejects
                 .toThrow('Prisma: Transaction Deadlock');
         });
@@ -114,7 +117,7 @@ describe('Rental Service', () => {
                 Artigo: { DisponivelParaAluguer: false }
             });
 
-            await expect(rentalService.criarAluguer(dadosAluguerInvalidos))
+            await expect(rentalService.criarAluguer(dadosAluguerInvalidos, direcaoUser))
                 .rejects
                 .toThrow('Artigo indisponivel para aluguer: 101.');
 
@@ -178,13 +181,66 @@ describe('Rental Service', () => {
                 IdPedido: idPedido,
                 Aprovado: true,
                 ValorAdicional: 10.50
-            });
+            }, direcaoUser);
 
             // Assert
             expect(resultado.mensagem).toBe('Extensao aprovada e aluguer atualizado!');
             expect(rentalRepository.atualizarPedidoValorAdicional).toHaveBeenCalledWith(5, 10.50);
             expect(rentalRepository.atualizarEstadoPedido).toHaveBeenCalledWith(5, 'Aprovado');
             expect(rentalRepository.atualizarAluguer).toHaveBeenCalledWith(22, '2026-05-20');
+        });
+    });
+
+    describe('Registar Devolucao', () => {
+        it('deve permitir que o utilizador registe a devolucao do proprio aluguer sem multa', async () => {
+            rentalRepository.getAluguerById.mockResolvedValue({
+                IdAluguer: 'rent-1',
+                IdUtilizador: 'user-1',
+                EstadoAluguer: 'Ativo'
+            });
+            rentalRepository.registarDevolucao.mockResolvedValue({
+                IdAluguer: 'rent-1',
+                EstadoAluguer: 'Entregue'
+            });
+
+            const resultado = await rentalService.registarDevolucao({
+                IdAluguer: 'rent-1',
+                EstadoEntrega: 'Em boas condicoes',
+                Multa: 0
+            }, regularUser);
+
+            expect(resultado.aluguer.EstadoAluguer).toBe('Entregue');
+            expect(rentalRepository.registarDevolucao).toHaveBeenCalledWith('rent-1', 'Em boas condicoes', 0);
+        });
+
+        it('deve impedir que um utilizador registe devolucao de outro utilizador', async () => {
+            rentalRepository.getAluguerById.mockResolvedValue({
+                IdAluguer: 'rent-2',
+                IdUtilizador: 'other-user',
+                EstadoAluguer: 'Ativo'
+            });
+
+            await expect(rentalService.registarDevolucao({
+                IdAluguer: 'rent-2',
+                EstadoEntrega: 'Em boas condicoes',
+                Multa: 0
+            }, regularUser)).rejects.toThrow('Nao tem permissao para alterar este aluguer.');
+
+            expect(rentalRepository.registarDevolucao).not.toHaveBeenCalled();
+        });
+
+        it('deve impedir multa registada por utilizador sem permissao de Direcao', async () => {
+            rentalRepository.getAluguerById.mockResolvedValue({
+                IdAluguer: 'rent-1',
+                IdUtilizador: 'user-1',
+                EstadoAluguer: 'Ativo'
+            });
+
+            await expect(rentalService.registarDevolucao({
+                IdAluguer: 'rent-1',
+                EstadoEntrega: 'Danificado',
+                Multa: 5
+            }, regularUser)).rejects.toThrow('Apenas a Direcao pode aplicar multa na devolucao.');
         });
     });
 });
