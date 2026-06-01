@@ -1,7 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const paymentRepository = require('./paymentRepository');
-
 const ESTADOS_CANCELAMENTO = {
     SEM_PEDIDO: 'SemPedido',
     PENDENTE: 'Pendente',
@@ -181,7 +179,6 @@ const bookingRepository = {
                 include: marcacaoDetalhadaInclude
             });
 
-            await paymentRepository.cancelarPagamentosPendentesDaMarcacao(idMarcacao, tx);
             return marcacao;
         });
     },
@@ -227,7 +224,6 @@ const bookingRepository = {
                 include: marcacaoDetalhadaInclude
             });
 
-            await paymentRepository.cancelarPagamentosPendentesDaMarcacao(idMarcacao, tx);
             return marcacao;
         });
     },

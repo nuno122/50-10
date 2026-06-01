@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { getRoleLabel, isDirecao, isEncarregado, isProfessor } from '../utils/permissions';
@@ -66,10 +66,10 @@ const Portal = () => {
                 { id: 'schedule', label: 'Horários e Aulas' },
                 { id: 'users', label: 'Utilizadores' },
                 { id: 'rental-catalog', label: 'Catálogo de Aluguer' },
-                { id: 'rental-requests', label: 'Registo de Alugueres' },
+                { id: 'rental-requests', label: 'Alugueres' },
                 { id: 'lesson-validations', label: 'Validações' },
                 { id: 'finance', label: 'Financeiro' },
-                { id: 'inventory', label: 'Meu Inventario' }
+                { id: 'inventory', label: 'Inventário' }
             ]
             : userIsProfessor
                 ? [
@@ -77,23 +77,23 @@ const Portal = () => {
                     { id: 'events', label: 'Eventos' },
                     { id: 'teacher-schedule', label: 'Agenda e Disponibilidade' },
                     { id: 'teacher-private-requests', label: 'Pedidos de Coaching' },
-                    { id: 'inventory', label: 'Meu Inventario' },
-                    { id: 'rentals', label: 'Aluguer' }
+                    { id: 'inventory', label: 'Inventário' },
+                    { id: 'rentals', label: 'Alugueres' }
                 ]
                 : userIsEncarregado
                     ? [
                         { id: 'dashboard', label: 'Resumo' },
                         { id: 'events', label: 'Eventos' },
-                        { id: 'lesson-request', label: 'Coaching' },
-                        { id: 'guardian-lessons', label: 'Marcações' },
+                        { id: 'lesson-request', label: 'Pedido de Coaching' },
+                        { id: 'guardian-lessons', label: 'Aulas e cancelamentos' },
                         { id: 'finance', label: 'Pagamentos' },
-                        { id: 'inventory', label: 'Meu Inventario' },
-                        { id: 'rentals', label: 'Aluguer' }
+                        { id: 'inventory', label: 'Inventário' },
+                        { id: 'rentals', label: 'Alugueres' }
                     ]
                     : [
                         { id: 'dashboard', label: 'Resumo' },
-                        { id: 'inventory', label: 'Meu Inventario' },
-                        { id: 'rentals', label: 'Aluguer' }
+                        { id: 'inventory', label: 'Inventário' },
+                        { id: 'rentals', label: 'Alugueres' }
                     ]
     ), [userIsDirecao, userIsEncarregado, userIsProfessor]);
 
@@ -330,4 +330,7 @@ const Portal = () => {
 };
 
 export default Portal;
+
+
+
 

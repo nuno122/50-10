@@ -83,6 +83,25 @@ const userRepository = {
         });
     },
 
+    findGuardianIdsByStudentIds: async (studentIds = []) => {
+        const ids = [...new Set((Array.isArray(studentIds) ? studentIds : []).filter(Boolean))];
+        if (ids.length === 0) {
+            return [];
+        }
+
+        return await prisma.encarregadoAluno.findMany({
+            where: {
+                IdAluno: {
+                    in: ids
+                }
+            },
+            select: {
+                IdEncarregado: true,
+                IdAluno: true
+            }
+        });
+    },
+
     updatePasswordHash: async (idUtilizador, palavraPasseHash) => {
         return await prisma.utilizador.update({
             where: { IdUtilizador: idUtilizador },

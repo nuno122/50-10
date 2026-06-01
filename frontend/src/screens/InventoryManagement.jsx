@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { criarArtigo, editarArtigo, getInventario } from '../services/api';
@@ -78,7 +78,7 @@ const InventoryManagement = ({ inventoryType = 'marketplace' }) => {
     const [error, setError] = useState('');
 
     const pageCopy = {
-        title: isRentalCatalog ? 'Catálogo de aluguer' : 'Meu inventário',
+        title: isRentalCatalog ? 'Catálogo de aluguer' : 'Inventário',
         subtitle: isRentalCatalog
             ? 'Todos veem aqui os artigos disponibilizados para aluguer e o respetivo stock.'
             : 'Consulta e gere apenas os artigos criados pela tua conta.',
@@ -594,3 +594,6 @@ const InventoryManagement = ({ inventoryType = 'marketplace' }) => {
 };
 
 export default InventoryManagement;
+
+
+

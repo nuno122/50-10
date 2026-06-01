@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import {
     adicionarComentarioEvento,
     atualizarEvento,
@@ -489,17 +489,15 @@ const EventManagement = () => {
                                             <strong>{formatDate(eventItem.DataEvento)}</strong>
                                         </div>
                                         <div>
-                                            <span>Publicação</span>
-                                            <strong>{formatDateTime(eventItem.DataPublicacaoInicio)} até {formatDateTime(eventItem.DataPublicacaoFim)}</strong>
-                                        </div>
-                                        <div>
                                             <span>Local</span>
                                             <strong>{eventItem.Local || '-'}</strong>
                                         </div>
-                                        <div>
-                                            <span>Criado por</span>
-                                            <strong>{eventItem.Criador?.NomeCompleto || '-'}</strong>
-                                        </div>
+                                        {canManageEvents && (
+                                            <div>
+                                                <span>Criado por</span>
+                                                <strong>{eventItem.Criador?.NomeCompleto || '-'}</strong>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="event-comments">
@@ -601,3 +599,4 @@ const EventManagement = () => {
 };
 
 export default EventManagement;
+

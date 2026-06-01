@@ -5,6 +5,7 @@ import {
     atualizarEstadoEstudio,
     atualizarEstilo,
     atualizarEstudio,
+    cancelarAulaDirecao,
     criarAula,
     criarAulasEmLote,
     criarEstilo,
@@ -40,12 +41,14 @@ const FIELD_ALIASES = {
 const initialForm = {
     date: '',
     anchorDate: '',
+    studentIds: [],
     dayOfWeek: '1',
     teacher: '',
     teacherSelectionMode: 'compatible',
     style: '',
     lessonType: 'Regular',
     capacity: '',
+    price: '',
     startTime: '',
     endTime: '',
     duration: '',
@@ -79,7 +82,7 @@ const getInitialImportForm = () => {
         defaultStyle: '',
         defaultLessonType: 'Regular',
         defaultCapacity: '',
-        defaultPrice: '0',
+        defaultPrice: '',
         file: null
     };
 };
@@ -762,6 +765,7 @@ const ScheduleManagement = () => {
     const [estudios, setEstudios] = useState([]);
     const [estilos, setEstilos] = useState([]);
     const [professores, setProfessores] = useState([]);
+    const [students, setStudents] = useState([]);
     const [disponibilidades, setDisponibilidades] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -771,6 +775,9 @@ const ScheduleManagement = () => {
     const [feedback, setFeedback] = useState('');
     const [operationSummary, setOperationSummary] = useState(null);
     const [selectedLesson, setSelectedLesson] = useState(null);
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [cancelReason, setCancelReason] = useState('');
+    const [studentSearchQuery, setStudentSearchQuery] = useState('');
     const [styleForm, setStyleForm] = useState(emptyStyleForm);
     const [studioForm, setStudioForm] = useState(emptyStudioForm);
     const [editingStyleId, setEditingStyleId] = useState('');
@@ -814,6 +821,13 @@ const ScheduleManagement = () => {
             setAulas(aulasData.filter((aula) => aula.EstaAtivo !== false));
             setDisponibilidades(disponibilidadesData);
             applyCatalogData(catalogData);
+            setStudents(
+                utilizadoresData.filter((user) => (
+                    user.EstaAtivo !== false &&
+                    user.Aluno &&
+                    (user.Aluno.IdAluno || user.Aluno.IdUtilizador || user.IdUtilizador)
+                ))
+            );
             setProfessores(
                 utilizadoresData.filter((user) => (
                     user.Permissoes === PERMISSOES.PROFESSOR &&
@@ -988,6 +1002,39 @@ const ScheduleManagement = () => {
         professores.find((teacher) => teacher.IdUtilizador === formData.teacher)?.NomeCompleto || 'O professor selecionado'
     ), [formData.teacher, professores]);
 
+    const studentOptions = useMemo(() => (
+        [...students]
+            .sort((left, right) => String(left.NomeCompleto || '').localeCompare(String(right.NomeCompleto || ''), 'pt-PT'))
+            .map((student) => ({
+                id: String(student.Aluno?.IdAluno || student.Aluno?.IdUtilizador || student.IdUtilizador || ''),
+                name: student.NomeCompleto || 'Aluno',
+                email: student.Email || '',
+                searchKey: normalizeText(`${student.NomeCompleto || ''} ${student.Email || ''}`)
+            }))
+            .filter((student) => student.id)
+    ), [students]);
+
+    const selectedStudentOptions = useMemo(() => (
+        (Array.isArray(formData.studentIds) ? formData.studentIds : [])
+            .map((studentId) => studentOptions.find((student) => student.id === studentId))
+            .filter(Boolean)
+    ), [formData.studentIds, studentOptions]);
+
+    const selectedStudentIds = useMemo(() => (
+        new Set(selectedStudentOptions.map((student) => student.id))
+    ), [selectedStudentOptions]);
+
+    const filteredStudentOptions = useMemo(() => {
+        const query = normalizeText(studentSearchQuery);
+        const baseOptions = studentOptions.filter((student) => !selectedStudentIds.has(student.id));
+        const options = query
+            ? baseOptions.filter((student) => student.searchKey.includes(query))
+            : [];
+
+        return options
+            .slice(0, 3);
+    }, [selectedStudentIds, studentOptions, studentSearchQuery]);
+
     const hasCompatibleTeacherSelection = teacherState.compatibleOptions.some((teacher) => teacher.IdUtilizador === formData.teacher);
     const hasAvailableTeacherSelection = teacherState.allAvailableOptions.some((teacher) => teacher.IdUtilizador === formData.teacher);
     const canUnlockAlternativeTeacher = !isCoaching && teacherState.alternativeOptions.length > 0;
@@ -1044,6 +1091,7 @@ const ScheduleManagement = () => {
             setFormData((prev) => ({
                 ...prev,
                 style: '',
+                studentIds: [],
                 teacher: '',
                 studio: '',
                 teacherSelectionMode: 'compatible',
@@ -1140,6 +1188,37 @@ const ScheduleManagement = () => {
         setError('');
         setFeedback('');
         setOperationSummary(null);
+    };
+
+    const openCancelLessonModal = () => {
+        if (!selectedLesson) return;
+        setCancelReason('');
+        setIsCancelModalOpen(true);
+    };
+
+    const handleCancelLesson = async () => {
+        if (!selectedLesson) return;
+
+        setSaving(true);
+        setError('');
+
+        try {
+            await cancelarAulaDirecao(selectedLesson.id);
+            setIsCancelModalOpen(false);
+            setSelectedLesson(null);
+            await refreshSnapshot();
+            notify({
+                title: 'Aula cancelada',
+                message: `${selectedLesson.style} foi cancelada com sucesso.`,
+                tone: 'success'
+            });
+            setFeedback('Aula cancelada com sucesso.');
+            await loadData();
+        } catch (err) {
+            setError(err.message || 'Nao foi possivel cancelar a aula.');
+        } finally {
+            setSaving(false);
+        }
     };
 
     const resetImportForm = () => {
@@ -1323,6 +1402,7 @@ const ScheduleManagement = () => {
             lessonType,
             repeatMode: lessonType === 'Particular' ? 'none' : 'weekly'
         });
+        setStudentSearchQuery('');
         setIsQuickBookOpen(true);
         setActiveAction(lessonType === 'Regular' ? 'regular' : activeAction);
         clearMessages();
@@ -1337,6 +1417,7 @@ const ScheduleManagement = () => {
     };
 
     const handleCloseLessonDetails = () => {
+        setIsCancelModalOpen(false);
         setSelectedLesson(null);
     };
 
@@ -1353,6 +1434,7 @@ const ScheduleManagement = () => {
             return {
                 ...prev,
                 lessonType: nextType,
+                studentIds: nextType === 'Particular' ? prev.studentIds : [],
                 date: nextType === 'Particular'
                     ? (prev.date || anchorDate)
                     : getNextOccurrenceDateKey(anchorDate, dayOfWeek),
@@ -1365,6 +1447,10 @@ const ScheduleManagement = () => {
                 studioSelectionMode: 'compatible'
             };
         });
+
+        if (nextType !== 'Particular') {
+            setStudentSearchQuery('');
+        }
     };
 
     const handleCoachingDateChange = (value) => {
@@ -1419,13 +1505,14 @@ const ScheduleManagement = () => {
         HoraInicio: buildIsoTime(dateValue, formData.startTime),
         HoraFim: buildIsoTime(dateValue, effectiveEndTime),
         CapacidadeMaxima: Number(formData.capacity),
-        Preco: 0,
+        Preco: isCoaching ? Number(String(formData.price || '').replace(',', '.')) : 0,
         TipoAula: formData.lessonType || 'Regular',
         OrigemAula: 'Direcao',
         PermitirProfessorAlternativo: formData.teacherSelectionMode === 'alternative',
         IdProfessor: formData.teacher,
         IdEstudio: formData.studio,
         IdEstiloDanca: formData.style,
+        IdsAluno: isCoaching ? formData.studentIds : undefined,
         PermitirEstudioAlternativo: formData.studioSelectionMode === 'alternative',
         Referencia: `${dateValue} ${formData.startTime}`
     }));
@@ -1436,8 +1523,19 @@ const ScheduleManagement = () => {
             return;
         }
 
+        const parsedPrice = Number(String(formData.price || '').replace(',', '.'));
+        if (isCoaching && (!Number.isFinite(parsedPrice) || parsedPrice <= 0)) {
+            setError('Indica um preço superior a 0.');
+            return;
+        }
+
         if (isCoaching && !formData.date) {
             setError('Escolhe a data do Coaching.');
+            return;
+        }
+
+        if (isCoaching && formData.studentIds.length === 0) {
+            setError('Escolhe pelo menos um aluno para o Coaching.');
             return;
         }
 
@@ -1463,6 +1561,11 @@ const ScheduleManagement = () => {
         const capacity = Number(formData.capacity);
         if (!Number.isInteger(capacity) || capacity < 1) {
             setError('Indica um numero valido de vagas.');
+            return;
+        }
+
+        if (isCoaching && capacity < formData.studentIds.length) {
+            setError('A capacidade do Coaching tem de ser igual ou superior ao numero de alunos selecionados.');
             return;
         }
 
@@ -1512,6 +1615,9 @@ const ScheduleManagement = () => {
                         ? `Aula agendada com sucesso para ${formatDate(scheduleReferenceDate)}.`
                         : `${result.totalCriadas} aulas criadas com sucesso.`
                 );
+                if (isCoaching) {
+                    setStudentSearchQuery('');
+                }
                 await loadData();
             }
 
@@ -1562,7 +1668,7 @@ const ScheduleManagement = () => {
                 }
 
                 const capacityValue = readRowValue(row, FIELD_ALIASES.capacidade) || importForm.defaultCapacity;
-                const priceValue = readRowValue(row, FIELD_ALIASES.preco) || importForm.defaultPrice || '0';
+                const priceValue = readRowValue(row, FIELD_ALIASES.preco) || importForm.defaultPrice || '';
                 const lessonTypeValue = readRowValue(row, FIELD_ALIASES.tipoAula) || importForm.defaultLessonType;
 
                 const capacity = Number(capacityValue);
@@ -1572,7 +1678,7 @@ const ScheduleManagement = () => {
                     throw new Error('Capacidade invalida.');
                 }
 
-                if (!Number.isFinite(price) || price < 0) {
+                if (!Number.isFinite(price) || (resolveLessonType(lessonTypeValue, importForm.defaultLessonType) === 'Particular' ? price <= 0 : price < 0)) {
                     throw new Error('Preco invalido.');
                 }
 
@@ -2266,14 +2372,84 @@ const ScheduleManagement = () => {
                             </label>
 
                             {isCoaching ? (
-                                <label>
-                                    <span>Data do Coaching *</span>
-                                    <input
-                                        type="date"
-                                        value={formData.date}
-                                        onChange={(event) => handleCoachingDateChange(event.target.value)}
-                                    />
-                                </label>
+                                <>
+                                    <label>
+                                        <span>Data do Coaching *</span>
+                                        <input
+                                            type="date"
+                                            value={formData.date}
+                                            onChange={(event) => handleCoachingDateChange(event.target.value)}
+                                        />
+                                    </label>
+
+                                    <div>
+                                        <span className="schedule-form-label">Alunos do Coaching *</span>
+                                        <input
+                                            type="search"
+                                            value={studentSearchQuery}
+                                            onChange={(event) => setStudentSearchQuery(event.target.value)}
+                                            placeholder="Pesquisar alunos por nome..."
+                                        />
+                                        {selectedStudentOptions.length > 0 && (
+                                            <div className="schedule-duration-list">
+                                                {selectedStudentOptions.slice(0, 3).map((student) => (
+                                                    <button
+                                                        key={student.id}
+                                                        type="button"
+                                                        className="schedule-button schedule-button--primary"
+                                                        onClick={() => {
+                                                            setFormData((prev) => ({
+                                                                ...prev,
+                                                                studentIds: prev.studentIds.filter((studentId) => studentId !== student.id)
+                                                            }));
+                                                        }}
+                                                    >
+                                                        {student.name} x
+                                                    </button>
+                                                ))}
+                                                {selectedStudentOptions.length > 3 && (
+                                                    <span className="schedule-helper">
+                                                        +{selectedStudentOptions.length - 3} aluno(s)
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                        <div className="schedule-duration-list">
+                                            {filteredStudentOptions.map((student) => (
+                                                <button
+                                                    key={student.id}
+                                                    type="button"
+                                                    className="schedule-button schedule-button--ghost"
+                                                    onClick={() => {
+                                                        setFormData((prev) => {
+                                                            const nextStudentIds = prev.studentIds.includes(student.id)
+                                                                ? prev.studentIds
+                                                                : [...prev.studentIds, student.id];
+                                                            const nextCapacity = Math.max(Number(prev.capacity || 0), nextStudentIds.length);
+
+                                                            return {
+                                                                ...prev,
+                                                                studentIds: nextStudentIds,
+                                                                capacity: nextCapacity > 0 ? String(nextCapacity) : prev.capacity
+                                                            };
+                                                        });
+                                                        setStudentSearchQuery('');
+                                                    }}
+                                                >
+                                                    {student.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {selectedStudentOptions.length > 0 && (
+                                            <p className="schedule-helper">
+                                                {selectedStudentOptions.length} aluno(s) selecionado(s).
+                                            </p>
+                                        )}
+                                        {studentSearchQuery && filteredStudentOptions.length === 0 && (
+                                            <p className="schedule-helper">Nao foram encontrados alunos com esse nome.</p>
+                                        )}
+                                    </div>
+                                </>
                             ) : (
                                 <>
                                     <div className="schedule-form-grid">
@@ -2345,6 +2521,23 @@ const ScheduleManagement = () => {
                                     />
                                 </label>
                             </div>
+
+                            {isCoaching && (
+                                <label>
+                                    <span>Preço *</span>
+                                    <input
+                                        type="number"
+                                        min="0.01"
+                                        step="0.01"
+                                        value={formData.price}
+                                        onChange={(event) => setFormData((prev) => ({
+                                            ...prev,
+                                            price: event.target.value
+                                        }))}
+                                        placeholder="Ex: 25.00"
+                                    />
+                                </label>
+                            )}
 
                             <div className="schedule-form-grid">
                                 <label>
@@ -2679,6 +2872,50 @@ const ScheduleManagement = () => {
                                 <span>Validação da direção</span>
                                 <strong>{getDirectorLessonStatus(selectedLesson)}</strong>
                             </div>
+                        </div>
+                        <div className="schedule-modal-actions">
+                            <button type="button" className="schedule-button schedule-button--ghost" onClick={handleCloseLessonDetails}>
+                                Fechar
+                            </button>
+                            <button type="button" className="schedule-button schedule-button--danger" onClick={openCancelLessonModal} disabled={saving}>
+                                {saving ? 'A cancelar...' : 'Cancelar aula'}
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            )}
+
+            {isCancelModalOpen && selectedLesson && (
+                <div className="schedule-modal-backdrop" onClick={() => setIsCancelModalOpen(false)}>
+                    <section className="schedule-modal schedule-modal--small" onClick={(event) => event.stopPropagation()}>
+                        <div className="schedule-modal-header">
+                            <div>
+                                <p className="schedule-eyebrow">Cancelar aula</p>
+                                <h2>{selectedLesson.style}</h2>
+                                <p>{selectedLesson.dateLabel}</p>
+                            </div>
+                        </div>
+
+                        <div className="schedule-helper">
+                            Ao confirmar, a aula sera marcada como cancelada no sistema. O motivo abaixo e apenas informativo no frontend atual.
+                        </div>
+
+                        <label>
+                            <span>Motivo do cancelamento (opcional)</span>
+                            <input
+                                value={cancelReason}
+                                onChange={(event) => setCancelReason(event.target.value)}
+                                placeholder="Ex: indisponibilidade do estudio, ajuste de horario..."
+                            />
+                        </label>
+
+                        <div className="schedule-modal-actions">
+                            <button type="button" className="schedule-button schedule-button--ghost" onClick={() => setIsCancelModalOpen(false)}>
+                                Voltar
+                            </button>
+                            <button type="button" className="schedule-button schedule-button--danger" onClick={handleCancelLesson} disabled={saving}>
+                                {saving ? 'A cancelar...' : 'Confirmar cancelamento'}
+                            </button>
                         </div>
                     </section>
                 </div>

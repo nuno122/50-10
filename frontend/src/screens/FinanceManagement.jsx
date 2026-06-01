@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { getAulas, getPagamentos, getPagamentosEncarregado, pagarPagamento, validarAulaDirecao } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { PERMISSOES } from '../utils/permissions';
@@ -107,7 +107,7 @@ const getValidationLabel = (lesson) => {
 
 const getActionNote = (lesson, isGuardian) => {
     if (isGuardian) {
-        return lesson.paid ? 'Sem pagamento pendente' : 'Pagamento presencial';
+        return lesson.hasPendingPayments ? 'Pagamento presencial' : 'Sem pagamento pendente';
     }
 
     switch (lesson.operationalStatus) {
@@ -120,7 +120,11 @@ const getActionNote = (lesson, isGuardian) => {
         case 'awaiting-director':
             return 'Dar aula como concluída';
         case 'validated':
-            return lesson.paid ? 'Sem ação pendente' : 'Registar pagamento presencial';
+            if (lesson.hasPendingPayments) {
+                return 'Registar pagamento presencial';
+            }
+
+            return lesson.paid ? 'Sem ação pendente' : 'Gerar pagamentos em falta';
         default:
             return 'Sem ação pendente';
     }
@@ -130,10 +134,6 @@ const buildPaymentsByLesson = (payments) => {
     const grouped = new Map();
 
     payments.forEach((payment) => {
-        if (payment.Marcacao && payment.Marcacao.EstaAtivo === false) {
-            return;
-        }
-
         if (normalizeStatus(payment.EstadoPagamento) === 'cancelado') {
             return;
         }
@@ -161,18 +161,19 @@ const buildDirectorLessons = (aulas, pagamentos) => {
             : fallbackAmount;
 
         const paid = lessonPayments.length > 0 && lessonPayments.every((payment) => normalizeStatus(payment.EstadoPagamento) === 'pago');
+        const hasPendingPayments = lessonPayments.some((payment) => normalizeStatus(payment.EstadoPagamento) !== 'pago');
         const lessonEnded = getLessonEndDateTime(aula) <= new Date();
         const teacherConfirmed = Boolean(aula.ConfirmacaoProfessor);
         const directorValidated = Boolean(aula.ValidacaoDirecao);
-        const operationalStatus = directorValidated
-            ? 'validated'
-            : activeBookings.length === 0 && lessonEnded
+        const operationalStatus = activeBookings.length === 0 && lessonEnded
                 ? 'expired-empty'
                 : !lessonEnded
                     ? 'scheduled'
                     : !teacherConfirmed
                         ? 'awaiting-teacher'
-                        : 'awaiting-director';
+                        : directorValidated
+                            ? 'validated'
+                            : 'awaiting-director';
 
         return {
             id: aula.IdAula,
@@ -190,10 +191,11 @@ const buildDirectorLessons = (aulas, pagamentos) => {
             operationalStatus,
             deadlineDate: getDeadlineDate(aula, lessonPayments),
             paid,
+            hasPendingPayments,
             studentCount: activeBookings.length,
             payments: lessonPayments
         };
-    });
+    }).filter((lesson) => (lesson.studentCount > 0 || lesson.payments.length > 0) && Number(lesson.amount || 0) > 0);
 };
 
 const buildGuardianLessons = (aulas, pagamentos) => {
@@ -204,6 +206,7 @@ const buildGuardianLessons = (aulas, pagamentos) => {
         const aula = aulasMap.get(lessonId) || lessonPayments[0]?.Marcacao?.Aula;
         const amount = lessonPayments.reduce((sum, payment) => sum + Number(payment.Custo || 0), 0);
         const paid = lessonPayments.every((payment) => normalizeStatus(payment.EstadoPagamento) === 'pago');
+        const hasPendingPayments = lessonPayments.some((payment) => normalizeStatus(payment.EstadoPagamento) !== 'pago');
         const students = [...new Set(lessonPayments.map((payment) => payment.Marcacao?.Aluno?.Utilizador?.NomeCompleto).filter(Boolean))];
 
         return {
@@ -221,11 +224,12 @@ const buildGuardianLessons = (aulas, pagamentos) => {
             },
             deadlineDate: getDeadlineDate(aula, lessonPayments),
             paid,
+            hasPendingPayments,
             studentCount: students.length,
             students,
             payments: lessonPayments
         };
-    });
+    }).filter((lesson) => Number(lesson.amount || 0) > 0);
 };
 
 const exportLessonsCsv = (lessons) => {
@@ -405,8 +409,11 @@ const FinanceManagement = () => {
         .filter((lesson) => lesson.validation.teacher && lesson.validation.director)
         .reduce((sum, lesson) => sum + lesson.amount, 0);
 
-    const totalPending = lessons
-        .filter((lesson) => !lesson.validation.teacher || !lesson.validation.director)
+    const pendingValidationLessons = lessons.filter((lesson) => (
+        lesson.operationalStatus === 'awaiting-teacher' || lesson.operationalStatus === 'awaiting-director'
+    ));
+
+    const totalPending = pendingValidationLessons
         .reduce((sum, lesson) => sum + lesson.amount, 0);
 
     const totalAmount = lessons.reduce((sum, lesson) => sum + lesson.amount, 0);
@@ -416,10 +423,10 @@ const FinanceManagement = () => {
         .reduce((sum, lesson) => sum + lesson.amount, 0);
 
     const totalToPay = lessons
-        .filter((lesson) => !lesson.paid)
+        .filter((lesson) => lesson.hasPendingPayments)
         .reduce((sum, lesson) => sum + lesson.amount, 0);
 
-    const pendingPaymentsCount = lessons.filter((lesson) => !lesson.paid).length;
+    const pendingPaymentsCount = lessons.filter((lesson) => lesson.hasPendingPayments).length;
 
     return (
         <div className="finance-page">
@@ -487,7 +494,9 @@ const FinanceManagement = () => {
                                             const isFullyValidated = lesson.validation.teacher && lesson.validation.director;
                                             const canValidate = isDirector && lesson.operationalStatus === 'awaiting-director';
                                             const canValidateByException = isDirector && lesson.operationalStatus === 'awaiting-teacher';
-                                            const canRegisterPayment = isDirector && isFullyValidated && !lesson.paid;
+                                            const canRegisterPayment = isDirector && isFullyValidated && lesson.hasPendingPayments;
+                                            const canGenerateMissingPayments = isDirector && isFullyValidated && !lesson.paid && !lesson.hasPendingPayments;
+                                            const shouldShowPaymentDeadline = isFullyValidated && lesson.hasPendingPayments;
 
                                             return (
                                                 <tr key={lesson.id} className={isFullyValidated ? 'finance-row finance-row--validated' : 'finance-row'}>
@@ -516,9 +525,9 @@ const FinanceManagement = () => {
                                                         )}
                                                     </td>
                                                     <td>
-                                                        {isFullyValidated ? (
+                                                        {!shouldShowPaymentDeadline ? (
                                                             <span className={`finance-badge ${lesson.paid ? 'finance-badge--paid' : 'finance-badge--success'}`}>
-                                                                {lesson.paid ? 'Pago' : 'Completo'}
+                                                                {lesson.paid ? 'Pago' : 'Aguarda validação'}
                                                             </span>
                                                         ) : (
                                                             <div className="finance-deadline">
@@ -562,6 +571,15 @@ const FinanceManagement = () => {
                                                             >
                                                                 {submittingId === lesson.id ? 'A registar...' : 'Registar Pagamento'}
                                                             </button>
+                                                        ) : canGenerateMissingPayments ? (
+                                                            <button
+                                                                type="button"
+                                                                className="finance-button finance-button--primary"
+                                                                onClick={() => handleValidateDirector(lesson)}
+                                                                disabled={submittingId === lesson.id}
+                                                            >
+                                                                {submittingId === lesson.id ? 'A gerar...' : 'Gerar Pagamentos'}
+                                                            </button>
                                                         ) : (
                                                             <span className="finance-action-note">
                                                                 {getActionNote(lesson, isGuardian)}
@@ -595,7 +613,7 @@ const FinanceManagement = () => {
                         <article className="finance-summary-card finance-summary-card--success">
                             <p>Pendente de Validação</p>
                             <strong>{formatCurrency(totalPending)}</strong>
-                            <span>{lessons.filter((lesson) => !lesson.validation.teacher || !lesson.validation.director).length} aulas pendentes</span>
+                            <span>{pendingValidationLessons.length} aulas pendentes</span>
                         </article>
                     )}
 
@@ -619,3 +637,4 @@ const FinanceManagement = () => {
 };
 
 export default FinanceManagement;
+

@@ -3723,10 +3723,12 @@ button {
 
 .finance-table-wrap {
   overflow: auto;
+  padding-bottom: 8px;
 }
 
 .finance-table {
   width: 100%;
+  min-width: 1120px;
   border-collapse: collapse;
 }
 

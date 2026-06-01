@@ -230,6 +230,22 @@ model Pagamento {
   Marcacao        Marcacao? @relation(fields: [IdMarcacao], references: [IdMarcacao], onDelete: NoAction, onUpdate: NoAction, map: "FK__Pagamento__IdMar__2180FB33")
 }
 
+model Notificacao {
+  IdNotificacao String     @id @default(uuid()) @db.Uuid
+  IdUtilizador  String     @db.Uuid
+  Titulo        String     @db.VarChar(200)
+  Mensagem      String?    @db.Text
+  Tipo          String     @default("info") @db.VarChar(20)
+  Lida          Boolean    @default(false)
+  DataCriacao   DateTime   @default(now())
+  EntidadeTipo  String?    @db.VarChar(100)
+  EntidadeId    String?    @db.Uuid
+  Utilizador    Utilizador @relation(fields: [IdUtilizador], references: [IdUtilizador], onUpdate: NoAction)
+
+  @@index([IdUtilizador, DataCriacao])
+  @@index([IdUtilizador, Lida, DataCriacao])
+}
+
 model Pais {
   IdPais   String     @id(map: "PK__Pais__FC850A7BBDD42FB7") @default(uuid()) @db.Uuid
   Nome     String     @db.VarChar(100)
@@ -289,6 +305,7 @@ model Utilizador {
   Encarregado                                        Encarregado?
   EventosCriados                                     Evento[]     @relation("EventoCriador")
   Marcacao                                           Marcacao[]
+  Notificacao                                        Notificacao[]
   PedidoAula                                         PedidoAula[]
   Professor                                          Professor?
   CodigoPostal_Utilizador_CodigoPostalToCodigoPostal CodigoPostal @relation("Utilizador_CodigoPostalToCodigoPostal", fields: [CodigoPostal], references: [CodigoPostal], onUpdate: NoAction, map: "FK__Utilizado__Codig__5DCAEF64")
@@ -328,5 +345,3 @@ model PedidoAula {
   @@index([IdProfessorSolicitado, EstadoPedido])
   @@index([IdProfessorConfirmado, EstadoPedido])
 }
-
-

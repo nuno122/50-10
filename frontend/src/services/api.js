@@ -255,6 +255,9 @@ export const confirmarAulaProfessor = async (idAula) =>
 export const cancelarAulaProfessor = async (idAula) =>
     request(`/aulas/${idAula}/cancelar`, { method: 'PATCH' });
 
+export const cancelarAulaDirecao = async (idAula) =>
+    request(`/aulas/${idAula}/cancelar`, { method: 'PATCH' });
+
 export const validarAulaDirecao = async (idAula, dados = {}) =>
     request(`/aulas/${idAula}/validar-direcao`, {
         method: 'PATCH',
@@ -264,6 +267,26 @@ export const validarAulaDirecao = async (idAula, dados = {}) =>
 export const getPagamentos = async () => request('/pagamentos');
 
 export const getPagamentosEncarregado = async () => request('/pagamentos/encarregado');
+
+export const getNotificacoes = async ({ apenasNaoLidas = false, limit } = {}) => {
+    const params = new URLSearchParams();
+    if (apenasNaoLidas) params.set('apenasNaoLidas', 'true');
+    if (limit) params.set('limit', String(limit));
+    const query = params.toString();
+    return request(`/notificacoes${query ? `?${query}` : ''}`);
+};
+
+export const marcarNotificacaoComoLida = async (idNotificacao) =>
+    request(`/notificacoes/${idNotificacao}/lida`, { method: 'PATCH' });
+
+export const marcarTodasNotificacoesComoLidas = async () =>
+    request('/notificacoes/ler-todas', { method: 'PATCH' });
+
+export const removerNotificacao = async (idNotificacao) =>
+    request(`/notificacoes/${idNotificacao}`, { method: 'DELETE' });
+
+export const limparNotificacoes = async () =>
+    request('/notificacoes/limpar', { method: 'DELETE' });
 
 export const pagarPagamento = async (idPagamento) =>
     request(`/pagamentos/${idPagamento}/pagar`, { method: 'PATCH' });

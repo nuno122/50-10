@@ -1,5 +1,6 @@
 const bookingRepo = require('../repositories/bookingRepository');
 const classRepo = require('../repositories/classRepository');
+const notificationService = require('./notificationService');
 
 const ESTADOS_CANCELAMENTO = bookingRepo.ESTADOS_CANCELAMENTO || {
     SEM_PEDIDO: 'SemPedido',
@@ -164,6 +165,17 @@ const aprovarPedidoCancelamento = async (idMarcacao, idDiretor, observacao) => {
 
     const marcacaoAtualizada = await bookingRepo.aprovarPedidoCancelamento(idMarcacao, idDiretor, observacao);
 
+    await notificationService.createForUsers(
+        [marcacaoAtualizada.IdAluno, marcacaoAtualizada.Aula?.IdProfessor].filter(Boolean),
+        {
+            title: 'Cancelamento aprovado',
+            message: `${marcacaoAtualizada.Aula?.EstiloDanca?.Nome || 'A aula'} em ${construirDataAulaCompleta(marcacaoAtualizada).toLocaleString('pt-PT')} foi cancelada.`,
+            tone: 'warning',
+            entityType: 'Marcacao',
+            entityId: marcacaoAtualizada.IdMarcacao
+        }
+    );
+
     return {
         mensagem: 'Pedido de cancelamento aprovado pela Direção.',
         marcacao: marcacaoAtualizada
@@ -183,6 +195,17 @@ const rejeitarPedidoCancelamento = async (idMarcacao, idDiretor, observacao) => 
     }
 
     const marcacaoAtualizada = await bookingRepo.rejeitarPedidoCancelamento(idMarcacao, idDiretor, observacao);
+
+    await notificationService.createForUsers(
+        [marcacaoAtualizada.IdAluno].filter(Boolean),
+        {
+            title: 'Cancelamento rejeitado',
+            message: `${marcacaoAtualizada.Aula?.EstiloDanca?.Nome || 'A aula'} mantém-se agendada para ${construirDataAulaCompleta(marcacaoAtualizada).toLocaleString('pt-PT')}.`,
+            tone: 'warning',
+            entityType: 'Marcacao',
+            entityId: marcacaoAtualizada.IdMarcacao
+        }
+    );
 
     return {
         mensagem: 'Pedido de cancelamento rejeitado pela Direção.',
