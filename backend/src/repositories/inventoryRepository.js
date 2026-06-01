@@ -1,7 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../database/prisma');
 const path = require('path');
-
-const prisma = new PrismaClient();
 
 const criarErroRepositorio = (mensagem, statusCode) => {
     const erro = new Error(mensagem);

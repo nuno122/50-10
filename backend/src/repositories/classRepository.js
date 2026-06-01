@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../database/prisma');
 
 const normalizeDateOnly = (value) => {
     const dateOnlyMatch = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);

@@ -1,6 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../database/prisma');
 
 const normalizeDateKey = (value) => {
     const date = new Date(value);
