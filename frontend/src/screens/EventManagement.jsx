@@ -71,6 +71,23 @@ const buildFormFromEvent = (eventItem) => ({
     Link: eventItem?.Link || ''
 });
 
+const toIsoDateTimeOrEmpty = (value) => {
+    if (!value) return '';
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return '';
+    }
+
+    return date.toISOString();
+};
+
+const buildEventPayload = (formData) => ({
+    ...formData,
+    DataPublicacaoInicio: toIsoDateTimeOrEmpty(formData.DataPublicacaoInicio),
+    DataPublicacaoFim: toIsoDateTimeOrEmpty(formData.DataPublicacaoFim)
+});
+
 const getStatusBadge = (eventItem) => {
     const now = new Date();
     const publicationStart = new Date(eventItem?.DataPublicacaoInicio);
@@ -179,11 +196,13 @@ const EventManagement = () => {
         setFeedback('');
 
         try {
+            const payload = buildEventPayload(formData);
+
             if (selectedEventId) {
-                await atualizarEvento(selectedEventId, formData);
+                await atualizarEvento(selectedEventId, payload);
                 setFeedback('Evento atualizado com sucesso.');
             } else {
-                await criarEvento(formData);
+                await criarEvento(payload);
                 setFeedback('Evento criado com sucesso.');
             }
 
