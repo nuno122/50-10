@@ -3,16 +3,16 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlserver"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model Aluguer {
-  IdAluguer        String           @id(map: "PK__Aluguer__E38F97F3D7C02263") @default(dbgenerated("newsequentialid()"), map: "DF__Aluguer__IdAlugu__17F790F9") @db.UniqueIdentifier
-  IdUtilizador     String           @db.UniqueIdentifier
+  IdAluguer        String           @id(map: "PK__Aluguer__E38F97F3D7C02263") @default(uuid()) @db.Uuid
+  IdUtilizador     String           @db.Uuid
   DataLevantamento DateTime         @db.Date
   DataEntrega      DateTime         @db.Date
-  EstadoAluguer    String           @db.NVarChar(50)
+  EstadoAluguer    String           @db.VarChar(50)
   Utilizador       Utilizador       @relation(fields: [IdUtilizador], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Aluguer__IdUtili__18EBB532")
   ArtigoAluguer    ArtigoAluguer[]
   Pagamento        Pagamento[]
@@ -20,9 +20,9 @@ model Aluguer {
 }
 
 model Aluno {
-  IdUtilizador     String             @id(map: "PK__Aluno__7A170D745479A7D4") @db.UniqueIdentifier
+  IdUtilizador     String             @id(map: "PK__Aluno__7A170D745479A7D4") @db.Uuid
   DataNascimento   DateTime?          @db.Date
-  Informacao       String?            @db.NVarChar(Max)
+  Informacao       String?            @db.Text
   Utilizador       Utilizador         @relation(fields: [IdUtilizador], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Aluno__IdUtiliza__60A75C0F")
   EncarregadoAluno EncarregadoAluno[]
   Marcacao         Marcacao[]
@@ -30,13 +30,13 @@ model Aluno {
 }
 
 model Artigo {
-  IdArtigo            String          @id(map: "PK__Artigo__A420008D2C73DFA3") @default(dbgenerated("newsequentialid()"), map: "DF__Artigo__IdArtigo__0F624AF8") @db.UniqueIdentifier
-  Nome                String          @db.NVarChar(100)
+  IdArtigo            String          @id(map: "PK__Artigo__A420008D2C73DFA3") @default(uuid()) @db.Uuid
+  Nome                String          @db.VarChar(100)
   CustoPorDia         Decimal         @db.Decimal(18, 2)
-  EstadoArtigo        Boolean         @default(true, map: "DF__Artigo__EstadoAr__10566F31")
-  DisponivelParaAluguer Boolean       @default(false, map: "DF_Artigo_DisponivelParaAluguer")
-  ImagemPath          String?         @db.NVarChar(500)
-  IdUtilizadorCriador String?         @db.UniqueIdentifier
+  EstadoArtigo        Boolean         @default(true)
+  DisponivelParaAluguer Boolean       @default(false)
+  ImagemPath          String?         @db.VarChar(500)
+  IdUtilizadorCriador String?         @db.Uuid
   Criador             Utilizador?     @relation("ArtigoCriador", fields: [IdUtilizadorCriador], references: [IdUtilizador], onDelete: NoAction, onUpdate: NoAction)
   TamanhoArtigo       TamanhoArtigo[]
 
@@ -44,10 +44,10 @@ model Artigo {
 }
 
 model ArtigoAluguer {
-  IdTamanhoArtigo String        @db.UniqueIdentifier
-  IdAluguer       String        @db.UniqueIdentifier
+  IdTamanhoArtigo String        @db.Uuid
+  IdAluguer       String        @db.Uuid
   Quantidade      Int
-  EstadoDevolucao String        @db.NVarChar(50)
+  EstadoDevolucao String        @db.VarChar(50)
   Aluguer         Aluguer       @relation(fields: [IdAluguer], references: [IdAluguer], onUpdate: NoAction, map: "FK__ArtigoAlu__IdAlu__1CBC4616")
   TamanhoArtigo   TamanhoArtigo @relation(fields: [IdTamanhoArtigo], references: [IdTamanhoArtigo], onUpdate: NoAction, map: "FK__ArtigoAlu__IdTam__1BC821DD")
 
@@ -55,20 +55,20 @@ model ArtigoAluguer {
 }
 
 model Aula {
-  IdAula               String       @id(map: "PK__Aula__2C89573C7FD193B4") @default(dbgenerated("newsequentialid()"), map: "DF__Aula__IdAula__7F2BE32F") @db.UniqueIdentifier
-  IdProfessor          String       @db.UniqueIdentifier
-  IdEstudio            String       @db.UniqueIdentifier
-  IdEstiloDanca        String       @db.UniqueIdentifier
+  IdAula               String       @id(map: "PK__Aula__2C89573C7FD193B4") @default(uuid()) @db.Uuid
+  IdProfessor          String       @db.Uuid
+  IdEstudio            String       @db.Uuid
+  IdEstiloDanca        String       @db.Uuid
   Data                 DateTime     @db.Date
-  HoraInicio           DateTime     @db.Time
-  HoraFim              DateTime     @db.Time
-  ConfirmacaoProfessor Boolean      @default(false, map: "DF__Aula__Confirmaca__00200768")
-  ValidacaoDirecao     Boolean      @default(false, map: "DF__Aula__ValidacaoD__01142BA1")
+  HoraInicio           DateTime     @db.Time(6)
+  HoraFim              DateTime     @db.Time(6)
+  ConfirmacaoProfessor Boolean      @default(false)
+  ValidacaoDirecao     Boolean      @default(false)
   Preco                Decimal      @db.Decimal(18, 2)
-  EstaAtivo            Boolean      @default(true, map: "DF__Aula__EstaAtivo__02084FDA")
+  EstaAtivo            Boolean      @default(true)
   CapacidadeMaxima     Int
-  TipoAula             String       @default("Regular", map: "DF_Aula_TipoAula") @db.NVarChar(50)
-  OrigemAula           String       @default("Direcao") @db.NVarChar(50)
+  TipoAula             String       @default("Regular") @db.VarChar(50)
+  OrigemAula           String       @default("Direcao") @db.VarChar(50)
   EstiloDanca          EstiloDanca  @relation(fields: [IdEstiloDanca], references: [IdEstiloDanca], onUpdate: NoAction, map: "FK__Aula__IdEstiloDa__04E4BC85")
   Estudio              Estudio      @relation(fields: [IdEstudio], references: [IdEstudio], onUpdate: NoAction, map: "FK__Aula__IdEstudio__03F0984C")
   Professor            Professor    @relation(fields: [IdProfessor], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Aula__IdProfesso__02FC7413")
@@ -77,9 +77,9 @@ model Aula {
 }
 
 model Cidade {
-  IdCidade     String         @id(map: "PK__Cidade__160879A31C3006C8") @default(dbgenerated("newsequentialid()"), map: "DF__Cidade__IdCidade__5165187F") @db.UniqueIdentifier
-  IdDistrito   String         @db.UniqueIdentifier
-  Nome         String         @db.NVarChar(100)
+  IdCidade     String         @id(map: "PK__Cidade__160879A31C3006C8") @default(uuid()) @db.Uuid
+  IdDistrito   String         @db.Uuid
+  Nome         String         @db.VarChar(100)
   Distrito     Distrito       @relation(fields: [IdDistrito], references: [IdDistrito], onUpdate: NoAction, map: "FK__Cidade__IdDistri__52593CB8")
   CodigoPostal CodigoPostal[]
 
@@ -88,24 +88,24 @@ model Cidade {
 
 model CodigoPostal {
   CodigoPostal                                     String       @id(map: "PK__CodigoPo__B3F46974B3A53033") @db.VarChar(20)
-  IdCidade                                         String       @db.UniqueIdentifier
+  IdCidade                                         String       @db.Uuid
   Cidade                                           Cidade       @relation(fields: [IdCidade], references: [IdCidade], onUpdate: NoAction, map: "FK__CodigoPos__IdCid__5629CD9C")
   Utilizador_Utilizador_CodigoPostalToCodigoPostal Utilizador[] @relation("Utilizador_CodigoPostalToCodigoPostal")
 }
 
 model Disponibilidade {
-  IdDisponibilidade String    @id(map: "PK__Disponib__BC5612FD31CE530E") @default(dbgenerated("newsequentialid()"), map: "DF__Disponibi__IdDis__7A672E12") @db.UniqueIdentifier
-  IdProfessor       String    @db.UniqueIdentifier
+  IdDisponibilidade String    @id(map: "PK__Disponib__BC5612FD31CE530E") @default(uuid()) @db.Uuid
+  IdProfessor       String    @db.Uuid
   Data              DateTime  @db.Date
-  HoraInicio        DateTime  @db.Time
-  HoraFim           DateTime  @db.Time
+  HoraInicio        DateTime  @db.Time(6)
+  HoraFim           DateTime  @db.Time(6)
   Professor         Professor @relation(fields: [IdProfessor], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Disponibi__IdPro__7B5B524B")
 }
 
 model Distrito {
-  IdDistrito String   @id(map: "PK__Distrito__DE8EED590ECF81B6") @default(dbgenerated("newsequentialid()"), map: "DF__Distrito__IdDist__4CA06362") @db.UniqueIdentifier
-  IdPais     String   @db.UniqueIdentifier
-  Nome       String   @db.NVarChar(100)
+  IdDistrito String   @id(map: "PK__Distrito__DE8EED590ECF81B6") @default(uuid()) @db.Uuid
+  IdPais     String   @db.Uuid
+  Nome       String   @db.VarChar(100)
   Cidade     Cidade[]
   Pais       Pais     @relation(fields: [IdPais], references: [IdPais], onUpdate: NoAction, map: "FK__Distrito__IdPais__4D94879B")
 
@@ -113,16 +113,16 @@ model Distrito {
 }
 
 model Encarregado {
-  IdUtilizador     String             @id(map: "PK__Encarreg__7A170D7422D1B127") @db.UniqueIdentifier
+  IdUtilizador     String             @id(map: "PK__Encarreg__7A170D7422D1B127") @db.Uuid
   Utilizador       Utilizador         @relation(fields: [IdUtilizador], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Encarrega__IdUti__6383C8BA")
   EncarregadoAluno EncarregadoAluno[]
   PedidoAula       PedidoAula[]
 }
 
 model EncarregadoAluno {
-  IdEncarregado   String      @db.UniqueIdentifier
-  IdAluno         String      @db.UniqueIdentifier
-  RelacaoParental String      @db.NVarChar(50)
+  IdEncarregado   String      @db.Uuid
+  IdAluno         String      @db.Uuid
+  RelacaoParental String      @db.VarChar(50)
   Aluno           Aluno       @relation(fields: [IdAluno], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Encarrega__IdAlu__6A30C649")
   Encarregado     Encarregado @relation(fields: [IdEncarregado], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Encarrega__IdEnc__693CA210")
 
@@ -130,9 +130,9 @@ model EncarregadoAluno {
 }
 
 model EstiloDanca {
-  IdEstiloDanca   String            @id(map: "PK__EstiloDa__CCE73E132A676A15") @default(dbgenerated("newsequentialid()"), map: "DF__EstiloDan__IdEst__6D0D32F4") @db.UniqueIdentifier
-  Nome            String            @db.NVarChar(100)
-  EstaAtivo       Boolean           @default(true, map: "DF_EstiloDanca_EstaAtivo")
+  IdEstiloDanca   String            @id(map: "PK__EstiloDa__CCE73E132A676A15") @default(uuid()) @db.Uuid
+  Nome            String            @db.VarChar(100)
+  EstaAtivo       Boolean           @default(true)
   Aula            Aula[]
   EstiloProfessor EstiloProfessor[]
   EstudioEstilo   EstudioEstilo[]
@@ -140,8 +140,8 @@ model EstiloDanca {
 }
 
 model EstiloProfessor {
-  IdProfessor   String      @db.UniqueIdentifier
-  IdEstiloDanca String      @db.UniqueIdentifier
+  IdProfessor   String      @db.Uuid
+  IdEstiloDanca String      @db.Uuid
   EstiloDanca   EstiloDanca @relation(fields: [IdEstiloDanca], references: [IdEstiloDanca], onUpdate: NoAction, map: "FK__EstiloPro__IdEst__70DDC3D8")
   Professor     Professor   @relation(fields: [IdProfessor], references: [IdUtilizador], onUpdate: NoAction, map: "FK__EstiloPro__IdPro__6FE99F9F")
 
@@ -149,17 +149,17 @@ model EstiloProfessor {
 }
 
 model Estudio {
-  IdEstudio     String          @id(map: "PK__Estudio__0C3B43559A1E42D8") @default(dbgenerated("newsequentialid()"), map: "DF__Estudio__IdEstud__73BA3083") @db.UniqueIdentifier
+  IdEstudio     String          @id(map: "PK__Estudio__0C3B43559A1E42D8") @default(uuid()) @db.Uuid
   Numero        Int
   Capacidade    Int
-  EstaAtivo     Boolean         @default(true, map: "DF_Estudio_EstaAtivo")
+  EstaAtivo     Boolean         @default(true)
   Aula          Aula[]
   EstudioEstilo EstudioEstilo[]
 }
 
 model EstudioEstilo {
-  IdEstudio     String      @db.UniqueIdentifier
-  IdEstiloDanca String      @db.UniqueIdentifier
+  IdEstudio     String      @db.Uuid
+  IdEstiloDanca String      @db.Uuid
   Estudio       Estudio     @relation(fields: [IdEstudio], references: [IdEstudio], onUpdate: NoAction, map: "FK__EstudioEs__IdEst__76969D2E")
   EstiloDanca   EstiloDanca @relation(fields: [IdEstiloDanca], references: [IdEstiloDanca], onUpdate: NoAction, map: "FK__EstudioEs__IdEst__778AC167")
 
@@ -167,17 +167,17 @@ model EstudioEstilo {
 }
 
 model Evento {
-  IdEvento             String             @id(map: "PK_Evento") @default(dbgenerated("newsequentialid()"), map: "DF_Evento_IdEvento") @db.UniqueIdentifier
-  IdUtilizadorCriador  String             @db.UniqueIdentifier
-  Titulo               String             @db.NVarChar(200)
-  Descricao            String             @db.NVarChar(Max)
+  IdEvento             String             @id(map: "PK_Evento") @default(uuid()) @db.Uuid
+  IdUtilizadorCriador  String             @db.Uuid
+  Titulo               String             @db.VarChar(200)
+  Descricao            String             @db.Text
   DataPublicacaoInicio DateTime
   DataPublicacaoFim    DateTime
   DataEvento           DateTime           @db.Date
-  Local                String             @db.NVarChar(200)
-  TipoEvento           String             @db.NVarChar(100)
-  Link                 String             @db.NVarChar(500)
-  EstadoEvento         Boolean            @default(true, map: "DF_Evento_EstadoEvento")
+  Local                String             @db.VarChar(200)
+  TipoEvento           String             @db.VarChar(100)
+  Link                 String             @db.VarChar(500)
+  EstadoEvento         Boolean            @default(true)
   Criador              Utilizador         @relation("EventoCriador", fields: [IdUtilizadorCriador], references: [IdUtilizador], onUpdate: NoAction)
   EventoComentario     EventoComentario[]
 
@@ -187,11 +187,11 @@ model Evento {
 }
 
 model EventoComentario {
-  IdEventoComentario String    @id(map: "PK_EventoComentario") @default(dbgenerated("newsequentialid()"), map: "DF_EventoComentario_IdEventoComentario") @db.UniqueIdentifier
-  IdEvento           String    @db.UniqueIdentifier
-  IdProfessor        String    @db.UniqueIdentifier
-  Comentario         String    @db.NVarChar(Max)
-  DataComentario     DateTime  @default(now(), map: "DF_EventoComentario_DataComentario")
+  IdEventoComentario String    @id(map: "PK_EventoComentario") @default(uuid()) @db.Uuid
+  IdEvento           String    @db.Uuid
+  IdProfessor        String    @db.Uuid
+  Comentario         String    @db.Text
+  DataComentario     DateTime  @default(now())
   Evento             Evento    @relation(fields: [IdEvento], references: [IdEvento], onDelete: Cascade, onUpdate: NoAction)
   Professor          Professor @relation(fields: [IdProfessor], references: [IdUtilizador], onUpdate: NoAction)
 
@@ -200,17 +200,17 @@ model EventoComentario {
 }
 
 model Marcacao {
-  IdMarcacao                    String      @id(map: "PK__Marcacao__0FFD43310A4D8F8C") @default(dbgenerated("newsequentialid()"), map: "DF__Marcacao__IdMarc__08B54D69") @db.UniqueIdentifier
-  IdAluno                       String      @db.UniqueIdentifier
-  IdAula                        String      @db.UniqueIdentifier
-  EstaAtivo                     Boolean     @default(true, map: "DF__Marcacao__EstaAt__09A971A2")
-  PresencaConfirmada            Boolean     @default(false, map: "DF__Marcacao__Presen__0A9D95DB")
-  MotivoCancelamento            String?     @db.NVarChar(Max)
+  IdMarcacao                    String      @id(map: "PK__Marcacao__0FFD43310A4D8F8C") @default(uuid()) @db.Uuid
+  IdAluno                       String      @db.Uuid
+  IdAula                        String      @db.Uuid
+  EstaAtivo                     Boolean     @default(true)
+  PresencaConfirmada            Boolean     @default(false)
+  MotivoCancelamento            String?     @db.Text
   DataDecisaoCancelamento       DateTime?
   DataPedidoCancelamento        DateTime?
-  EstadoCancelamento            String      @default("SemPedido") @db.NVarChar(50)
-  IdDiretorCancelamento         String?     @db.UniqueIdentifier
-  ObservacaoDirecaoCancelamento String?     @db.NVarChar(Max)
+  EstadoCancelamento            String      @default("SemPedido") @db.VarChar(50)
+  IdDiretorCancelamento         String?     @db.Uuid
+  ObservacaoDirecaoCancelamento String?     @db.Text
   Aluno                         Aluno       @relation(fields: [IdAluno], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Marcacao__IdAlun__0B91BA14")
   Aula                          Aula        @relation(fields: [IdAula], references: [IdAula], onUpdate: NoAction, map: "FK__Marcacao__IdAula__0C85DE4D")
   Utilizador                    Utilizador? @relation(fields: [IdDiretorCancelamento], references: [IdUtilizador], onUpdate: NoAction)
@@ -218,27 +218,27 @@ model Marcacao {
 }
 
 model Pagamento {
-  IdPagamento     String    @id(map: "PK__Pagament__D474651EAA61CF44") @default(dbgenerated("newsequentialid()"), map: "DF__Pagamento__IdPag__1F98B2C1") @db.UniqueIdentifier
-  IdAluguer       String?   @db.UniqueIdentifier
-  IdMarcacao      String?   @db.UniqueIdentifier
+  IdPagamento     String    @id(map: "PK__Pagament__D474651EAA61CF44") @default(uuid()) @db.Uuid
+  IdAluguer       String?   @db.Uuid
+  IdMarcacao      String?   @db.Uuid
   DataPagamento   DateTime? @db.Date
   PrazoPagamento  DateTime  @db.Date
   Custo           Decimal   @db.Decimal(18, 2)
-  EstadoPagamento String    @db.NVarChar(50)
+  EstadoPagamento String    @db.VarChar(50)
   Aluguer         Aluguer?  @relation(fields: [IdAluguer], references: [IdAluguer], onDelete: NoAction, onUpdate: NoAction, map: "FK__Pagamento__IdAlu__208CD6FA")
   Marcacao        Marcacao? @relation(fields: [IdMarcacao], references: [IdMarcacao], onDelete: NoAction, onUpdate: NoAction, map: "FK__Pagamento__IdMar__2180FB33")
 }
 
 model Notificacao {
-  IdNotificacao String     @id @default(dbgenerated("newsequentialid()")) @db.UniqueIdentifier
-  IdUtilizador  String     @db.UniqueIdentifier
-  Titulo        String     @db.NVarChar(200)
-  Mensagem      String?    @db.NVarChar(Max)
-  Tipo          String     @default("info") @db.NVarChar(20)
+  IdNotificacao String     @id @default(uuid()) @db.Uuid
+  IdUtilizador  String     @db.Uuid
+  Titulo        String     @db.VarChar(200)
+  Mensagem      String?    @db.Text
+  Tipo          String     @default("info") @db.VarChar(20)
   Lida          Boolean    @default(false)
   DataCriacao   DateTime   @default(now())
-  EntidadeTipo  String?    @db.NVarChar(100)
-  EntidadeId    String?    @db.UniqueIdentifier
+  EntidadeTipo  String?    @db.VarChar(100)
+  EntidadeId    String?    @db.Uuid
   Utilizador    Utilizador @relation(fields: [IdUtilizador], references: [IdUtilizador], onUpdate: NoAction)
 
   @@index([IdUtilizador, DataCriacao])
@@ -246,24 +246,24 @@ model Notificacao {
 }
 
 model Pais {
-  IdPais   String     @id(map: "PK__Pais__FC850A7BBDD42FB7") @default(dbgenerated("newsequentialid()"), map: "DF__Pais__IdPais__49C3F6B7") @db.UniqueIdentifier
-  Nome     String     @db.NVarChar(100)
-  Sigla    String     @db.NVarChar(10)
+  IdPais   String     @id(map: "PK__Pais__FC850A7BBDD42FB7") @default(uuid()) @db.Uuid
+  Nome     String     @db.VarChar(100)
+  Sigla    String     @db.VarChar(10)
   Distrito Distrito[]
 }
 
 model PedidoExtensao {
-  IdPedido         String   @id(map: "PK__PedidoEx__9D335DC30447FBEE") @default(dbgenerated("newsequentialid()"), map: "DF__PedidoExt__IdPed__25518C17") @db.UniqueIdentifier
-  IdAluguer        String   @db.UniqueIdentifier
+  IdPedido         String   @id(map: "PK__PedidoEx__9D335DC30447FBEE") @default(uuid()) @db.Uuid
+  IdAluguer        String   @db.Uuid
   NovaDataProposta DateTime @db.Date
-  EstadoAprovacao  String   @db.NVarChar(50)
+  EstadoAprovacao  String   @db.VarChar(50)
   ValorAdicional   Decimal  @db.Decimal(18, 2)
-  DataPedido       DateTime @default(now(), map: "DF__PedidoExt__DataP__2645B050") @db.Date
+  DataPedido       DateTime @default(now()) @db.Date
   Aluguer          Aluguer  @relation(fields: [IdAluguer], references: [IdAluguer], onUpdate: NoAction, map: "FK__PedidoExt__IdAlu__2739D489")
 }
 
 model Professor {
-  IdUtilizador       String             @id(map: "PK__Professo__7A170D74A70F451A") @db.UniqueIdentifier
+  IdUtilizador       String             @id(map: "PK__Professo__7A170D74A70F451A") @db.Uuid
   Iban               String?            @db.VarChar(50)
   Aula               Aula[]
   Disponibilidade    Disponibilidade[]
@@ -274,38 +274,28 @@ model Professor {
   Utilizador         Utilizador         @relation(fields: [IdUtilizador], references: [IdUtilizador], onUpdate: NoAction, map: "FK__Professor__IdUti__66603565")
 }
 
-model sysdiagrams {
-  name         String @db.NVarChar(128)
-  principal_id Int
-  diagram_id   Int    @id(map: "PK__sysdiagr__C2B05B61FA85802F") @default(autoincrement())
-  version      Int?
-  definition   Bytes?
-
-  @@unique([principal_id, name], map: "UK_principal_name")
-}
-
 model TamanhoArtigo {
-  IdTamanhoArtigo String          @id(map: "PK__TamanhoA__382349348AC1E89B") @default(dbgenerated("newsequentialid()"), map: "DF__TamanhoAr__IdTam__1332DBDC") @db.UniqueIdentifier
-  IdArtigo        String          @db.UniqueIdentifier
-  Tamanho         String          @db.NVarChar(20)
-  Quantidade      Int             @default(0, map: "DF__TamanhoAr__Quant__14270015")
-  Condicao        String          @default("Bom", map: "DF_TamanhoArtigo_Condicao") @db.NVarChar(50)
+  IdTamanhoArtigo String          @id(map: "PK__TamanhoA__382349348AC1E89B") @default(uuid()) @db.Uuid
+  IdArtigo        String          @db.Uuid
+  Tamanho         String          @db.VarChar(20)
+  Quantidade      Int             @default(0)
+  Condicao        String          @default("Bom") @db.VarChar(50)
   ArtigoAluguer   ArtigoAluguer[]
   Artigo          Artigo          @relation(fields: [IdArtigo], references: [IdArtigo], onUpdate: NoAction, map: "FK__TamanhoAr__IdArt__151B244E")
 }
 
 model Utilizador {
-  IdUtilizador                                       String       @id(map: "PK__Utilizad__7A170D742B9663F5") @default(dbgenerated("newsequentialid()"), map: "DF__Utilizado__IdUti__5BE2A6F2") @db.UniqueIdentifier
+  IdUtilizador                                       String       @id(map: "PK__Utilizad__7A170D742B9663F5") @default(uuid()) @db.Uuid
   CodigoPostal                                       String       @db.VarChar(20)
-  Morada                                             String       @db.NVarChar(255)
+  Morada                                             String       @db.VarChar(255)
   Permissoes                                         Int
-  NomeCompleto                                       String       @db.NVarChar(200)
-  NomeUtilizador                                     String       @unique(map: "UQ__Utilizad__2A35525707669BB9") @db.NVarChar(100)
-  Email                                              String       @unique(map: "UQ__Utilizad__A9D10534DACDCC00") @db.NVarChar(150)
-  PalavraPasseHash                                   String       @db.NVarChar(255)
+  NomeCompleto                                       String       @db.VarChar(200)
+  NomeUtilizador                                     String       @unique(map: "UQ__Utilizad__2A35525707669BB9") @db.VarChar(100)
+  Email                                              String       @unique(map: "UQ__Utilizad__A9D10534DACDCC00") @db.VarChar(150)
+  PalavraPasseHash                                   String       @db.VarChar(255)
   NumeroTelemovel                                    String?      @db.VarChar(20)
   Nif                                                String?      @unique(map: "UQ__Utilizad__C7D1D6C8219C9627") @db.VarChar(20)
-  EstaAtivo                                          Boolean      @default(true, map: "DF__Utilizado__EstaA__5CD6CB2B")
+  EstaAtivo                                          Boolean      @default(true)
   NumeroCartaoCidadao                                String?      @db.VarChar(30)
   ValidadeCartaoCidadao                              DateTime?    @db.Date
   Aluguer                                            Aluguer[]
@@ -321,24 +311,24 @@ model Utilizador {
 }
 
 model PedidoAula {
-  IdPedidoAulaPrivada   String      @id @default(dbgenerated("newsequentialid()")) @db.UniqueIdentifier
-  IdEncarregado         String      @db.UniqueIdentifier
-  IdAluno               String      @db.UniqueIdentifier
-  IdEstiloDanca         String      @db.UniqueIdentifier
-  IdAulaCriada          String?     @db.UniqueIdentifier
-  IdDiretorDecisao      String?     @db.UniqueIdentifier
+  IdPedidoAulaPrivada   String      @id @default(uuid()) @db.Uuid
+  IdEncarregado         String      @db.Uuid
+  IdAluno               String      @db.Uuid
+  IdEstiloDanca         String      @db.Uuid
+  IdAulaCriada          String?     @db.Uuid
+  IdDiretorDecisao      String?     @db.Uuid
   DataPretendida        DateTime    @db.Date
-  HoraPretendida        DateTime    @db.Time
+  HoraPretendida        DateTime    @db.Time(6)
   DuracaoMinutos        Int
   CapacidadePretendida  Int         @default(1)
-  Observacoes           String?     @db.NVarChar(Max)
-  EstadoPedido          String      @default("N'PendenteProfessor'", map: "DF_PedidoAula_EstadoPedido") @db.NVarChar(50)
-  ObservacaoDirecao     String?     @db.NVarChar(Max)
+  Observacoes           String?     @db.Text
+  EstadoPedido          String      @default("PendenteProfessor") @db.VarChar(50)
+  ObservacaoDirecao     String?     @db.Text
   DataPedido            DateTime    @default(now())
   DataDecisao           DateTime?
-  IdProfessorSolicitado String?     @db.UniqueIdentifier
-  IdProfessorConfirmado String?     @db.UniqueIdentifier
-  ObservacaoProfessor   String?     @db.NVarChar(Max)
+  IdProfessorSolicitado String?     @db.Uuid
+  IdProfessorConfirmado String?     @db.Uuid
+  ObservacaoProfessor   String?     @db.Text
   DataRespostaProfessor DateTime?
   Aluno                 Aluno       @relation(fields: [IdAluno], references: [IdUtilizador], onUpdate: NoAction)
   Aula                  Aula?       @relation(fields: [IdAulaCriada], references: [IdAula], onUpdate: NoAction)
@@ -354,3 +344,4 @@ model PedidoAula {
   @@index([IdProfessorSolicitado, EstadoPedido])
   @@index([IdProfessorConfirmado, EstadoPedido])
 }
+

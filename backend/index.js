@@ -18,8 +18,21 @@ const notificationService = require('./src/services/notificationService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const allowedOrigins = String(process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
-app.use(cors());
+app.use(cors({
+    origin(origin, callback) {
+        if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+            callback(null, true);
+            return;
+        }
+
+        callback(new Error('Origem nao permitida por CORS.'));
+    }
+}));
 app.use(express.json());
 app.use('/images', express.static(path.join(__dirname, '..', 'frontend', 'Images')));
 

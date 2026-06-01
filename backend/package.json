@@ -8,7 +8,7 @@
     "test:coverage": "jest --coverage --collectCoverageFrom=\"src/**/*.js\"",
     "test:integration": "jest --config jest.integration.config.js",
     "tests:integration": "npm run test:integration",
-    "start": "npm --prefix .. run build && electron ../electron/main.cjs",
+    "start": "node index.js",
     "open": "electron ../electron/main.cjs",
     "open:direcao": "electron ../electron/main.cjs --profile=direcao",
     "open:professor": "electron ../electron/main.cjs --profile=professor",

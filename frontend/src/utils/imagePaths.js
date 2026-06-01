@@ -1,4 +1,8 @@
-const API_ORIGIN = 'http://localhost:3000';
+const DEFAULT_API_ORIGIN = 'http://localhost:3000';
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+const API_ORIGIN = rawApiBaseUrl
+    ? rawApiBaseUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '')
+    : DEFAULT_API_ORIGIN;
 
 export const resolveInventoryImageUrl = (imagePath) => {
     if (!imagePath || typeof imagePath !== 'string') {
