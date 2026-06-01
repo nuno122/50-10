@@ -21,9 +21,9 @@ import { PERMISSOES } from '../utils/permissions';
 
 const NotificationContext = createContext();
 
-const POLL_INTERVAL_MS = 15000;
+const POLL_INTERVAL_MS = 60000;
 const MAX_POPUP_NOTIFICATIONS = 4;
-const MAX_INBOX_NOTIFICATIONS = 40;
+const MAX_INBOX_NOTIFICATIONS = 25;
 const SUPPRESSED_NOTIFICATION_TITLES = new Set([
     'Artigo publicado',
     'Artigo atualizado',
@@ -277,8 +277,9 @@ const buildGuardianSnapshot = async () => {
         getAlunosEncarregado()
     ]);
 
+    const limitedStudents = (students || []).slice(0, 3);
     const bookingGroups = await Promise.all(
-        (students || []).map(async (student) => ({
+        limitedStudents.map(async (student) => ({
             student,
             bookings: await getMarcacoesEncarregado(student.IdAluno)
         }))
@@ -847,7 +848,7 @@ export const NotificationProvider = ({ children }) => {
             return [];
         }
 
-        const serverNotifications = (await getNotificacoes({ limit: 100 })).map(mapServerNotification);
+        const serverNotifications = (await getNotificacoes({ limit: 25 })).map(mapServerNotification);
 
         setNotificationFeed((current) => mergeNotifications(current, serverNotifications));
 
