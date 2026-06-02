@@ -30,6 +30,27 @@ const SUPPRESSED_NOTIFICATION_TITLES = new Set([
     'Artigo de aluguer criado',
     'Artigo de aluguer atualizado'
 ]);
+const BACKEND_PERSISTED_NOTIFICATION_TITLES = new Set([
+    'Novo evento publicado',
+    'Novos eventos publicados',
+    'Novo pedido de Coaching',
+    'Novos pedidos de Coaching',
+    'Aula cancelada',
+    'Aulas canceladas',
+    'Coaching cancelado',
+    'Novo Coaching agendado',
+    'Nova aula agendada',
+    'Novas aulas agendadas',
+    'Cancelamento aprovado',
+    'Cancelamento rejeitado',
+    'Coaching confirmado pelo professor',
+    'Coaching aprovado',
+    'Coaching rejeitado pelo professor',
+    'Coaching rejeitado pela Direção',
+    'Aula validada pela Direção',
+    'Nova aula disponível',
+    'Novas aulas disponíveis'
+]);
 
 const getUserId = (user) => user?.IdUtilizador || user?.Id || null;
 
@@ -953,7 +974,9 @@ export const NotificationProvider = ({ children }) => {
                 const previousSnapshot = lastSnapshotRef.current;
 
                 if (previousSnapshot && !isHydratingRef.current) {
-                    compareSnapshots(previousSnapshot, nextSnapshot).forEach((notification) => notify(notification));
+                    compareSnapshots(previousSnapshot, nextSnapshot)
+                        .filter((notification) => !BACKEND_PERSISTED_NOTIFICATION_TITLES.has(String(notification?.title || '').trim()))
+                        .forEach((notification) => notify(notification));
                 }
 
                 lastSnapshotRef.current = nextSnapshot;

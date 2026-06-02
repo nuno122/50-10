@@ -332,7 +332,7 @@ const criarPedido = async (dados, idEncarregado) => {
         DuracaoMinutos: duracao
     }, IdProfessorSolicitado);
 
-    return await privateLessonRequestRepo.create({
+    const novoPedido = await privateLessonRequestRepo.create({
         IdEncarregado: idEncarregado,
         IdAluno,
         IdEstiloDanca,
@@ -341,6 +341,7 @@ const criarPedido = async (dados, idEncarregado) => {
         HoraPretendida: dataHoraPretendida,
         DuracaoMinutos: duracao,
         CapacidadePretendida: capacidade,
+        Observacoes: buildObservationsWithParticipants(Observacoes, participantesAdicionais),
         EstadoPedido: ESTADOS_PEDIDO.PENDENTE_PROFESSOR
     });
 
