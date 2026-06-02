@@ -39,21 +39,23 @@ const findByUser = async (idUtilizador, { apenasNaoLidas = false, limit = 100 } 
 };
 
 const findEntityIdsByUserAndType = async (idUtilizador, entidadeTipo) => {
-    return await withPool(async (pool) => {
-        const request = pool.request();
-        request.input('idUtilizador', sql.UniqueIdentifier, idUtilizador);
-        request.input('entidadeTipo', sql.NVarChar(100), entidadeTipo);
-
-        const result = await request.query(`
-            SELECT EntidadeId
-            FROM dbo.Notificacao
-            WHERE IdUtilizador = @idUtilizador
-              AND EntidadeTipo = @entidadeTipo
-              AND EntidadeId IS NOT NULL
-        `);
-
-        return result.recordset.map((row) => String(row.EntidadeId));
+    const rows = await prisma.notificacao.findMany({
+        where: {
+            IdUtilizador: idUtilizador,
+            EntidadeTipo: entidadeTipo,
+            NOT: {
+                EntidadeId: null
+            }
+        },
+        select: {
+            EntidadeId: true
+        }
     });
+
+    return rows
+        .map((row) => row.EntidadeId)
+        .filter(Boolean)
+        .map((value) => String(value));
 };
 
 const createMany = async (notifications = []) => {
