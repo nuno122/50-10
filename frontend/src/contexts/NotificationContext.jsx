@@ -28,9 +28,7 @@ const SUPPRESSED_NOTIFICATION_TITLES = new Set([
     'Artigo publicado',
     'Artigo atualizado',
     'Artigo de aluguer criado',
-    'Artigo de aluguer atualizado',
-    'Novo evento publicado',
-    'Novos eventos publicados'
+    'Artigo de aluguer atualizado'
 ]);
 
 const getUserId = (user) => user?.IdUtilizador || user?.Id || null;
