@@ -28,9 +28,7 @@ const SUPPRESSED_NOTIFICATION_TITLES = new Set([
     'Artigo publicado',
     'Artigo atualizado',
     'Artigo de aluguer criado',
-    'Artigo de aluguer atualizado',
-    'Novo evento publicado',
-    'Novos eventos publicados'
+    'Artigo de aluguer atualizado'
 ]);
 
 const getUserId = (user) => user?.IdUtilizador || user?.Id || null;
@@ -471,16 +469,6 @@ const buildTeacherNotifications = (previousSnapshot, nextSnapshot) => {
         });
     }
 
-    if (newEvents.length > 0) {
-        const firstEvent = newEvents[0];
-        notifications.push({
-            title: newEvents.length === 1 ? 'Novo evento publicado' : 'Novos eventos publicados',
-            message: newEvents.length === 1
-                ? `${firstEvent.title} para ${firstEvent.when}.`
-                : `${newEvents.length} novos eventos ficaram visíveis no portal.`,
-            tone: 'info'
-        });
-    }
 
     nextLessons.forEach((lesson) => {
         const previousLesson = previousLessons.get(lesson.id);
@@ -536,16 +524,7 @@ const buildGuardianNotifications = (previousSnapshot, nextSnapshot) => {
         });
     }
 
-    if (newEvents.length > 0) {
-        const firstEvent = newEvents[0];
-        notifications.push({
-            title: newEvents.length === 1 ? 'Novo evento publicado' : 'Novos eventos publicados',
-            message: newEvents.length === 1
-                ? `${firstEvent.title} para ${firstEvent.when}.`
-                : `${newEvents.length} novos eventos ficaram disponíveis para consulta.`,
-            tone: 'info'
-        });
-    }
+
 
     if (newBookings.length > 0) {
         const firstBooking = newBookings[0];

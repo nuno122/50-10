@@ -48,9 +48,9 @@ const createDueEventNotificationsForUser = async (utilizador) => {
         notificationRepository.findEntityIdsByUserAndType(utilizador.IdUtilizador, 'Evento')
     ]);
 
-    const notifiedIds = new Set(notifiedEventIds);
+    const notifiedIds = new Set(notifiedEventIds.map(id => String(id).toLowerCase()));
     const eventsToNotify = (publishedEvents || []).filter((eventItem) => (
-        eventItem?.IdEvento && !notifiedIds.has(String(eventItem.IdEvento))
+        eventItem?.IdEvento && !notifiedIds.has(String(eventItem.IdEvento).toLowerCase())
     ));
 
     if (eventsToNotify.length === 0) {
@@ -76,12 +76,12 @@ const filterEventNotificationsByPublication = async (notifications = []) => {
     }
 
     const publishedEvents = await eventRepository.findPublished(new Date());
-    const publishedEventIds = new Set((publishedEvents || []).map((eventItem) => String(eventItem.IdEvento)));
+    const publishedEventIds = new Set((publishedEvents || []).map((eventItem) => String(eventItem.IdEvento).toLowerCase()));
 
     return notifications.filter((notification) => (
         notification.EntidadeTipo !== 'Evento'
         || !notification.EntidadeId
-        || publishedEventIds.has(String(notification.EntidadeId))
+        || publishedEventIds.has(String(notification.EntidadeId).toLowerCase())
     ));
 };
 
